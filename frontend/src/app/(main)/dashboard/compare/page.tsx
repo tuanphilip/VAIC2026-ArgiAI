@@ -58,7 +58,7 @@ export default function Page() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
-            Báo cáo So sánh Chu kỳ (YoY/QoQ)
+            Báo cáo So sánh Chu kỳ
           </h1>
           <p className="text-muted-foreground">
             Báo cáo phân tích so sánh diện tích gieo trồng, sản lượng dự kiến và dịch bệnh của cán bộ quản lý.

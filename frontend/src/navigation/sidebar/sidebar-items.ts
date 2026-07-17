@@ -59,7 +59,7 @@ export const sidebarItems: NavGroup[] = [
       },
       {
         id: "compare",
-        title: "So sánh Chu kỳ (YoY/QoQ)",
+        title: "So sánh Chu kỳ",
         url: "/dashboard/compare",
         icon: BarChart3,
       },
