@@ -1,16 +1,10 @@
 import {
   Bug,
-  ClipboardCheck,
   CloudSun,
-  Cpu,
-  DollarSign,
   LayoutDashboard,
   type LucideIcon,
   Map,
-  QrCode,
-  Sliders,
   Sprout,
-  Warehouse,
   BarChart3,
 } from "lucide-react";
 
@@ -76,12 +70,6 @@ export const sidebarItems: NavGroup[] = [
         icon: Map,
       },
       {
-        id: "iot",
-        title: "Điều khiển IoT",
-        url: "/dashboard/iot",
-        icon: Cpu,
-      },
-      {
         id: "pest-doctor",
         title: "Bác sĩ Cây trồng AI",
         url: "/dashboard/pest-doctor",
@@ -100,48 +88,11 @@ export const sidebarItems: NavGroup[] = [
         icon: CloudSun,
       },
       {
-        id: "tasks",
-        title: "Lịch trình Công việc",
-        url: "/dashboard/tasks",
-        icon: ClipboardCheck,
-      },
-      {
-        id: "inventory",
-        title: "Kho & Vật tư",
-        url: "/dashboard/inventory",
-        icon: Warehouse,
-      },
-      {
-        id: "finance",
-        title: "Thu chi & Tài chính",
-        url: "/dashboard/finance",
-        icon: DollarSign,
-      },
-    ],
-  },
-  {
-    id: 3,
-    label: "Chuỗi cung ứng & Cài đặt",
-    items: [
-      {
         id: "market",
         title: "Giá cả Thị trường",
         url: "/dashboard/market",
         icon: Sprout,
       },
-      {
-        id: "traceability",
-        title: "Truy xuất nguồn gốc QR",
-        url: "/dashboard/traceability",
-        icon: QrCode,
-      },
-      {
-        id: "settings",
-        title: "Cài đặt hệ thống",
-        url: "/dashboard/settings",
-        icon: Sliders,
-      },
     ],
   },
 ];
-

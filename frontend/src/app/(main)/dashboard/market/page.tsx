@@ -7,6 +7,7 @@ import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YA
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useUserStore } from "@/stores/user-store";
 
 // Fluctuating crop price logs for testing chart
 const priceFluctuation = [
@@ -20,6 +21,7 @@ const priceFluctuation = [
 ];
 
 export default function Page() {
+  const { activeUser } = useUserStore();
   const [searchTerm, setSearchTerm] = useState("");
   const [cropPrices, setCropPrices] = useState([
     { name: "Cà phê Robusta", price: 86000, unit: "kg", change: 1.2, status: "up", min: 82000, max: 86000 },
@@ -130,16 +132,18 @@ export default function Page() {
                 className="w-full text-xs pl-8 pr-3 py-2 border rounded-lg dark:bg-slate-950 focus:outline-emerald-500"
               />
             </div>
-            <Button
-              onClick={() => {
-                setIsAddingPrice(!isAddingPrice);
-                setNewCropName("");
-                setNewCropPrice("");
-              }}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 shrink-0 text-xs py-2 px-3 h-auto"
-            >
-              <Plus className="size-3.5" /> Thêm giá mới
-            </Button>
+            {activeUser.role !== "farmer" && (
+              <Button
+                onClick={() => {
+                  setIsAddingPrice(!isAddingPrice);
+                  setNewCropName("");
+                  setNewCropPrice("");
+                }}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 shrink-0 text-xs py-2 px-3 h-auto"
+              >
+                <Plus className="size-3.5" /> Thêm giá mới
+              </Button>
+            )}
           </div>
         </CardHeader>
         {isAddingPrice && (
@@ -230,7 +234,7 @@ export default function Page() {
                   <th className="p-4">Biến động (24h)</th>
                   <th className="p-4">Giá thấp nhất tuần</th>
                   <th className="p-4">Giá cao nhất tuần</th>
-                  <th className="p-4 text-center">Thao tác</th>
+                  {activeUser.role !== "farmer" && <th className="p-4 text-center">Thao tác</th>}
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -258,20 +262,22 @@ export default function Page() {
                     </td>
                     <td className="p-4 text-slate-500 text-xs">{new Intl.NumberFormat("vi-VN").format(crop.min)} đ</td>
                     <td className="p-4 text-slate-500 text-xs">{new Intl.NumberFormat("vi-VN").format(crop.max)} đ</td>
-                    <td className="p-4 text-center">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          if (confirm(`Bạn có chắc chắn muốn xóa dòng giá cho ${crop.name}?`)) {
-                            setCropPrices(cropPrices.filter((_, idx) => idx !== i));
-                          }
-                        }}
-                        className="text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20"
-                      >
-                        <Trash2 className="size-4" />
-                      </Button>
-                    </td>
+                    {activeUser.role !== "farmer" && (
+                      <td className="p-4 text-center">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            if (confirm(`Bạn có chắc chắn muốn xóa dòng giá cho ${crop.name}?`)) {
+                              setCropPrices(cropPrices.filter((_, idx) => idx !== i));
+                            }
+                          }}
+                          className="text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20"
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
