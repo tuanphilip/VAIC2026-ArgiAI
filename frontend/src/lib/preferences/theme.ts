@@ -23,8 +23,8 @@ export const THEME_PRESET_OPTIONS = [
     label: "Agriculture",
     value: "agriculture",
     primary: {
-      light: "oklch(0.627 0.194 149.214)",
-      dark: "oklch(0.727 0.15 149.214)",
+      light: "oklch(0.59 0.18 145)",
+      dark: "oklch(0.68 0.16 145)",
     },
   },
   {

@@ -145,7 +145,7 @@ export default function Page() {
       {/* KPI Stats Grid */}
       <div className="grid gap-4 md:grid-cols-3">
         {/* KPI 1: Area */}
-        <Card className="shadow-sm border-l-4 border-l-emerald-600">
+        <Card className="agri-metric-card shadow-sm">
           <CardContent className="p-6">
             <span className="text-xs font-semibold text-slate-500 block mb-1">Diện tích Gieo trồng</span>
             <div className="flex items-baseline gap-2">
@@ -161,7 +161,7 @@ export default function Page() {
         </Card>
 
         {/* KPI 2: Yield */}
-        <Card className="shadow-sm border-l-4 border-l-emerald-600">
+        <Card className="agri-metric-card shadow-sm">
           <CardContent className="p-6">
             <span className="text-xs font-semibold text-slate-500 block mb-1">Sản lượng Dự báo</span>
             <div className="flex items-baseline gap-2">
@@ -177,7 +177,7 @@ export default function Page() {
         </Card>
 
         {/* KPI 3: Diseases */}
-        <Card className="shadow-sm border-l-4 border-l-rose-500">
+        <Card className="agri-metric-card shadow-sm">
           <CardContent className="p-6">
             <span className="text-xs font-semibold text-slate-500 block mb-1">Số ca nhiễm bệnh hại</span>
             <div className="flex items-baseline gap-2">

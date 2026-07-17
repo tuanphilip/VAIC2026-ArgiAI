@@ -6,6 +6,7 @@
 @import "./../styles/presets/brutalist.css";
 @import "./../styles/presets/soft-pop.css";
 @import "./../styles/presets/tangerine.css";
+@import "./../styles/presets/agriculture.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -56,75 +57,75 @@
 These serve as the fallback; there is no separate default.css file. */
 :root {
   --radius: 0.625rem;
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.627 0.194 149.214); /* Emerald 600 */
+  --card: oklch(0.995 0.004 145 / 92%);
+  --card-foreground: oklch(0.16 0.015 145);
+  --popover: oklch(0.995 0.004 145);
+  --popover-foreground: oklch(0.16 0.015 145);
+  --primary: oklch(0.59 0.18 145);
   --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0.01 145); /* Very light green tint */
-  --secondary-foreground: oklch(0.205 0.02 145);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0.01 145);
-  --accent-foreground: oklch(0.205 0.02 145);
+  --secondary: oklch(0.955 0.025 145);
+  --secondary-foreground: oklch(0.24 0.055 145);
+  --muted: oklch(0.945 0.013 150);
+  --muted-foreground: oklch(0.48 0.022 145);
+  --accent: oklch(0.94 0.035 145);
+  --accent-foreground: oklch(0.25 0.07 145);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.627 0.194 149.214);
-  --chart-1: oklch(0.627 0.194 149.214); /* Green */
-  --chart-2: oklch(0.727 0.15 149.214);  /* Medium Green */
-  --chart-3: oklch(0.827 0.12 149.214);  /* Light Green */
-  --chart-4: oklch(0.527 0.16 149.214);  /* Dark Green */
-  --chart-5: oklch(0.427 0.14 149.214);  /* Very Dark Green */
-  --sidebar: oklch(0.985 0.005 145); /* Light green-tinted sidebar */
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.627 0.194 149.214);
+  --border: oklch(0.88 0.018 145 / 72%);
+  --input: oklch(0.93 0.015 145);
+  --ring: oklch(0.59 0.18 145);
+  --chart-1: oklch(0.59 0.18 145);
+  --chart-2: oklch(0.69 0.13 142);
+  --chart-3: oklch(0.77 0.13 110);
+  --chart-4: oklch(0.62 0.12 205);
+  --chart-5: oklch(0.72 0.11 75);
+  --sidebar: oklch(0.94 0.016 145);
+  --sidebar-foreground: oklch(0.18 0.018 145);
+  --sidebar-primary: oklch(0.59 0.18 145);
   --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0.01 145);
-  --sidebar-accent-foreground: oklch(0.205 0.02 145);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.627 0.194 149.214);
+  --sidebar-accent: oklch(0.985 0.01 145);
+  --sidebar-accent-foreground: oklch(0.28 0.08 145);
+  --sidebar-border: oklch(0.86 0.018 145 / 78%);
+  --sidebar-ring: oklch(0.59 0.18 145);
 
   /* fonts */
   --font-sans: var(--font-geist);
   --font-mono: var(--font-geist-mono);
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  --background: oklch(0.93 0.015 145);
+  --foreground: oklch(0.16 0.015 145);
 }
 
 .dark {
-  --background: oklch(0.145 0.01 145);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0.02 145);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0.02 145);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.727 0.15 149.214); /* Lighter green for dark mode */
-  --primary-foreground: oklch(0.145 0.01 145);
-  --secondary: oklch(0.269 0.02 145);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0.02 145);
-  --muted-foreground: oklch(0.708 0.02 145);
-  --accent: oklch(0.269 0.02 145);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.727 0.15 149.214);
-  --chart-1: oklch(0.727 0.15 149.214);
-  --chart-2: oklch(0.627 0.18 149.214);
-  --chart-3: oklch(0.527 0.16 149.214);
-  --chart-4: oklch(0.827 0.12 149.214);
-  --chart-5: oklch(0.427 0.14 149.214);
-  --sidebar: oklch(0.205 0.02 145);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.727 0.15 149.214);
-  --sidebar-primary-foreground: oklch(0.145 0.01 145);
-  --sidebar-accent: oklch(0.269 0.02 145);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.727 0.15 149.214);
+  --background: oklch(0.155 0.018 150);
+  --foreground: oklch(0.965 0.006 150);
+  --card: oklch(0.225 0.022 150 / 96%);
+  --card-foreground: oklch(0.965 0.006 150);
+  --popover: oklch(0.205 0.02 150);
+  --popover-foreground: oklch(0.965 0.006 150);
+  --primary: oklch(0.64 0.16 145);
+  --primary-foreground: oklch(0.985 0.006 145);
+  --secondary: oklch(0.285 0.025 150);
+  --secondary-foreground: oklch(0.93 0.012 150);
+  --muted: oklch(0.28 0.018 150);
+  --muted-foreground: oklch(0.76 0.018 150);
+  --accent: oklch(0.32 0.04 145);
+  --accent-foreground: oklch(0.955 0.008 145);
+  --destructive: oklch(0.68 0.19 24);
+  --border: oklch(0.38 0.022 150 / 72%);
+  --input: oklch(0.3 0.02 150);
+  --ring: oklch(0.66 0.15 145);
+  --chart-1: oklch(0.68 0.15 145);
+  --chart-2: oklch(0.74 0.12 110);
+  --chart-3: oklch(0.7 0.11 205);
+  --chart-4: oklch(0.76 0.12 75);
+  --chart-5: oklch(0.64 0.14 25);
+  --sidebar: oklch(0.18 0.02 150);
+  --sidebar-foreground: oklch(0.94 0.01 150);
+  --sidebar-primary: oklch(0.64 0.16 145);
+  --sidebar-primary-foreground: oklch(0.985 0.006 145);
+  --sidebar-accent: oklch(0.27 0.032 150);
+  --sidebar-accent-foreground: oklch(0.95 0.01 150);
+  --sidebar-border: oklch(0.36 0.022 150 / 72%);
+  --sidebar-ring: oklch(0.66 0.15 145);
 }
 
 @layer base {
@@ -135,9 +136,298 @@ These serve as the fallback; there is no separate default.css file. */
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-sans), system-ui, sans-serif;
+    background:
+      radial-gradient(circle at 12% 8%, oklch(0.98 0.022 145 / 72%), transparent 30rem),
+      radial-gradient(circle at 88% 18%, oklch(0.9 0.032 220 / 56%), transparent 34rem),
+      linear-gradient(135deg, oklch(0.89 0.018 225), oklch(0.95 0.018 145) 42%, oklch(0.9 0.012 210));
+  }
+
+  .dark body {
+    background:
+      radial-gradient(circle at 12% 6%, oklch(0.31 0.055 150 / 42%), transparent 28rem),
+      radial-gradient(circle at 88% 18%, oklch(0.25 0.04 215 / 34%), transparent 34rem),
+      linear-gradient(135deg, oklch(0.13 0.018 155), oklch(0.18 0.02 150) 46%, oklch(0.14 0.018 210));
   }
   html {
     @apply font-sans;
+  }
+}
+
+@layer components {
+  [data-slot="sidebar-inset"] {
+    background: transparent;
+  }
+
+  [data-slot="sidebar-wrapper"] {
+    background:
+      radial-gradient(circle at 8% 8%, oklch(0.97 0.018 145 / 80%), transparent 26rem),
+      linear-gradient(135deg, oklch(0.86 0.018 220), oklch(0.93 0.018 145) 48%, oklch(0.87 0.014 215));
+  }
+
+  [data-slot="sidebar-inner"] {
+    border-right: 1px solid oklch(0.86 0.018 145 / 70%);
+    background: oklch(0.94 0.017 145 / 86%);
+    box-shadow: inset -1px 0 0 oklch(1 0 0 / 62%);
+    backdrop-filter: blur(18px);
+  }
+
+  .dark [data-slot="sidebar-inner"] {
+    border-right-color: oklch(0.36 0.024 150 / 72%);
+    background: oklch(0.18 0.02 150 / 94%);
+    box-shadow: inset -1px 0 0 oklch(1 0 0 / 8%);
+  }
+
+  [data-slot="card"] {
+    border: 1px solid oklch(1 0 0 / 82%);
+    border-radius: 0.625rem;
+    background: linear-gradient(180deg, oklch(1 0.004 145 / 98%), oklch(0.988 0.009 145 / 95%));
+    box-shadow:
+      0 16px 42px oklch(0.34 0.05 145 / 9%),
+      0 1px 0 oklch(1 0 0 / 76%) inset;
+    backdrop-filter: blur(18px);
+  }
+
+  .dark [data-slot="card"] {
+    border-color: oklch(0.38 0.024 150 / 76%);
+    background: linear-gradient(180deg, oklch(0.245 0.024 150 / 98%), oklch(0.205 0.022 150 / 96%));
+    box-shadow:
+      0 18px 42px oklch(0.05 0.01 150 / 34%),
+      0 1px 0 oklch(1 0 0 / 7%) inset;
+  }
+
+  [data-slot="card"][class*="border-l-4"],
+  [data-slot="card"] [class*="border-l-4"] {
+    border: 1px solid oklch(1 0 0 / 78%) !important;
+    background: linear-gradient(180deg, oklch(1 0.004 145 / 98%), oklch(0.988 0.011 145 / 94%)) !important;
+    box-shadow:
+      0 16px 42px oklch(0.34 0.05 145 / 9%),
+      0 1px 0 oklch(1 0 0 / 80%) inset !important;
+  }
+
+  .dark [data-slot="card"][class*="border-l-4"],
+  .dark [data-slot="card"] [class*="border-l-4"] {
+    border-color: oklch(0.39 0.024 150 / 76%) !important;
+    background: linear-gradient(180deg, oklch(0.245 0.024 150 / 98%), oklch(0.205 0.022 150 / 96%)) !important;
+    box-shadow:
+      0 18px 42px oklch(0.05 0.01 150 / 34%),
+      0 1px 0 oklch(1 0 0 / 7%) inset !important;
+  }
+
+  .agri-metric-card {
+    border: 1px solid oklch(1 0 0 / 84%) !important;
+    background:
+      linear-gradient(180deg, oklch(1 0.004 145 / 98%), oklch(0.985 0.012 145 / 94%)),
+      radial-gradient(circle at 88% 16%, oklch(0.9 0.055 135 / 58%), transparent 9rem) !important;
+  }
+
+  .dark .agri-metric-card {
+    border-color: oklch(0.4 0.03 150 / 78%) !important;
+    background:
+      linear-gradient(180deg, oklch(0.255 0.026 150 / 98%), oklch(0.205 0.022 150 / 96%)),
+      radial-gradient(circle at 88% 16%, oklch(0.37 0.08 145 / 36%), transparent 9rem) !important;
+  }
+
+  .agri-metric-card [data-slot="card-content"] {
+    gap: 1rem;
+  }
+
+  .agri-metric-value {
+    color: oklch(0.43 0.15 145) !important;
+    font-weight: 760;
+    letter-spacing: 0;
+  }
+
+  .dark .agri-metric-value {
+    color: oklch(0.78 0.15 145) !important;
+  }
+
+  .agri-icon-box {
+    border: 1px solid oklch(0.83 0.045 145 / 70%) !important;
+    background: linear-gradient(180deg, oklch(0.96 0.03 145), oklch(0.91 0.05 145)) !important;
+    color: oklch(0.46 0.15 145) !important;
+    box-shadow:
+      0 12px 24px oklch(0.37 0.08 145 / 10%),
+      0 1px 0 oklch(1 0 0 / 72%) inset;
+  }
+
+  .dark .agri-icon-box {
+    border-color: oklch(0.48 0.08 145 / 62%) !important;
+    background: linear-gradient(180deg, oklch(0.32 0.055 145), oklch(0.25 0.04 145)) !important;
+    color: oklch(0.78 0.14 145) !important;
+    box-shadow:
+      0 12px 24px oklch(0.05 0.01 150 / 28%),
+      0 1px 0 oklch(1 0 0 / 8%) inset;
+  }
+
+  .agri-soft-panel {
+    border: 1px solid oklch(0.88 0.028 145 / 72%) !important;
+    background: oklch(0.95 0.026 145 / 72%) !important;
+    box-shadow: 0 1px 0 oklch(1 0 0 / 72%) inset;
+  }
+
+  .dark .agri-soft-panel {
+    border-color: oklch(0.38 0.03 150 / 72%) !important;
+    background: oklch(0.27 0.024 150 / 72%) !important;
+    color: oklch(0.94 0.01 150);
+    box-shadow: 0 1px 0 oklch(1 0 0 / 8%) inset;
+  }
+
+  [data-slot="card-title"] {
+    color: oklch(0.16 0.018 145);
+    font-weight: 700;
+    letter-spacing: 0;
+  }
+
+  .dark [data-slot="card-title"] {
+    color: oklch(0.96 0.008 150);
+  }
+
+  [data-slot="button"][data-variant="default"] {
+    border-radius: 0.5rem;
+    background: linear-gradient(180deg, oklch(0.69 0.16 145), oklch(0.51 0.17 145));
+    box-shadow:
+      0 9px 20px oklch(0.43 0.14 145 / 22%),
+      0 1px 0 oklch(1 0 0 / 35%) inset;
+  }
+
+  .dark [data-slot="button"][data-variant="default"] {
+    background: linear-gradient(180deg, oklch(0.66 0.15 145), oklch(0.48 0.14 145));
+    color: white;
+    box-shadow:
+      0 10px 24px oklch(0.08 0.02 150 / 38%),
+      0 1px 0 oklch(1 0 0 / 18%) inset;
+  }
+
+  [data-slot="button"][data-variant="default"]:hover {
+    background: linear-gradient(180deg, oklch(0.72 0.16 145), oklch(0.56 0.17 145));
+  }
+
+  .dark [data-slot="button"][data-variant="default"]:hover {
+    background: linear-gradient(180deg, oklch(0.72 0.15 145), oklch(0.54 0.15 145));
+  }
+
+  [data-slot="button"][data-variant="outline"],
+  [data-slot="button"][data-variant="secondary"],
+  [data-slot="button"][data-variant="ghost"],
+  [data-slot="input"],
+  input,
+  select,
+  textarea {
+    border-color: oklch(0.86 0.018 145 / 82%);
+    background-color: oklch(0.99 0.006 145 / 78%);
+    box-shadow: 0 1px 0 oklch(1 0 0 / 75%) inset;
+  }
+
+  .dark [data-slot="button"][data-variant="outline"],
+  .dark [data-slot="button"][data-variant="secondary"],
+  .dark [data-slot="button"][data-variant="ghost"],
+  .dark [data-slot="input"],
+  .dark input,
+  .dark select,
+  .dark textarea {
+    border-color: oklch(0.39 0.024 150 / 82%);
+    background-color: oklch(0.25 0.022 150 / 88%);
+    color: oklch(0.94 0.01 150);
+    box-shadow: 0 1px 0 oklch(1 0 0 / 7%) inset;
+  }
+
+  [data-slot="button"][data-variant="outline"],
+  [data-slot="button"][data-variant="secondary"] {
+    background: linear-gradient(180deg, oklch(1 0.004 145 / 88%), oklch(0.95 0.022 145 / 78%));
+  }
+
+  .dark [data-slot="button"][data-variant="outline"],
+  .dark [data-slot="button"][data-variant="secondary"] {
+    background: linear-gradient(180deg, oklch(0.28 0.026 150 / 92%), oklch(0.23 0.022 150 / 88%));
+    color: oklch(0.94 0.01 150);
+  }
+
+  [data-slot="button"][data-size^="icon"],
+  [data-sidebar="menu-button"] {
+    box-shadow:
+      0 10px 22px oklch(0.34 0.035 145 / 8%),
+      0 1px 0 oklch(1 0 0 / 70%) inset;
+  }
+
+  [data-sidebar="menu-button"] {
+    color: oklch(0.3 0.04 145);
+  }
+
+  .dark [data-sidebar="menu-button"] {
+    color: oklch(0.86 0.014 150);
+  }
+
+  [data-sidebar="menu"] {
+    gap: 0.375rem;
+  }
+
+  [data-sidebar="group"] {
+    padding-block: 0.625rem;
+  }
+
+  [data-sidebar="group-content"] {
+    padding-inline: 0.125rem;
+  }
+
+  [data-sidebar="menu-button"] svg,
+  [data-slot="button"] svg,
+  [data-slot="card"] svg {
+    color: oklch(0.5 0.15 145);
+  }
+
+  .dark [data-sidebar="menu-button"] svg,
+  .dark [data-slot="button"] svg,
+  .dark [data-slot="card"] svg {
+    color: oklch(0.76 0.13 145);
+  }
+
+  [data-sidebar="menu-button"]:hover,
+  [data-sidebar="menu-button"][data-active="true"] {
+    background: linear-gradient(180deg, oklch(0.73 0.14 145), oklch(0.53 0.17 145));
+    color: white !important;
+  }
+
+  [data-sidebar="menu-button"]:hover svg,
+  [data-sidebar="menu-button"][data-active="true"] svg {
+    color: white !important;
+  }
+
+  [data-sidebar="menu-button"]:hover span,
+  [data-sidebar="menu-button"][data-active="true"] span {
+    color: white !important;
+  }
+
+  [data-sidebar="menu-sub"] {
+    gap: 0.25rem;
+    margin-top: 0.375rem;
+    margin-bottom: 0.25rem;
+  }
+
+  [data-sidebar="menu-sub-button"][data-active="true"],
+  [data-sidebar="menu-sub-button"][data-active="true"] span,
+  [data-sidebar="menu-sub-button"][data-active="true"] svg {
+    color: white !important;
+  }
+
+  [data-sidebar="menu-sub-button"][data-active="true"] {
+    background: linear-gradient(180deg, oklch(0.72 0.13 145), oklch(0.54 0.16 145)) !important;
+  }
+
+  [data-slot="badge"] {
+    border-color: oklch(0.82 0.055 145 / 65%);
+    background: oklch(0.93 0.04 145 / 82%);
+    color: oklch(0.32 0.11 145);
+  }
+
+  .dark [data-slot="badge"] {
+    border-color: oklch(0.52 0.08 145 / 58%);
+    background: oklch(0.3 0.052 145 / 82%);
+    color: oklch(0.84 0.12 145);
+  }
+
+  [data-slot="progress"] > div,
+  [role="progressbar"] > div {
+    background: linear-gradient(90deg, oklch(0.59 0.18 145), oklch(0.72 0.14 130));
   }
 }
 

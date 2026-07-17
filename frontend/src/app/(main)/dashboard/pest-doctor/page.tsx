@@ -344,7 +344,7 @@ export default function Page() {
 
         {/* 3 mini stats cards for epidemic monitoring */}
         <div className="grid gap-4 grid-cols-3">
-          <Card className="shadow-sm border-l-4 border-l-rose-500">
+          <Card className="agri-metric-card shadow-sm">
             <CardContent className="p-4 flex items-center justify-between">
               <div>
                 <span className="text-[10px] font-bold text-slate-500 block">Ổ DỊCH HOẠT ĐỘNG</span>
@@ -353,7 +353,7 @@ export default function Page() {
               <ShieldAlert className="size-6 text-rose-500" />
             </CardContent>
           </Card>
-          <Card className="shadow-sm border-l-4 border-l-emerald-600">
+          <Card className="agri-metric-card shadow-sm">
             <CardContent className="p-4 flex items-center justify-between">
               <div>
                 <span className="text-[10px] font-bold text-slate-500 block">ĐÃ KHỐNG CHẾ</span>
@@ -362,7 +362,7 @@ export default function Page() {
               <Check className="size-6 text-emerald-600" />
             </CardContent>
           </Card>
-          <Card className="shadow-sm border-l-4 border-l-indigo-500">
+          <Card className="agri-metric-card shadow-sm">
             <CardContent className="p-4 flex items-center justify-between">
               <div>
                 <span className="text-[10px] font-bold text-slate-500 block">TỔNG CA KHẢO SÁT</span>

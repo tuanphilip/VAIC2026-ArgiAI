@@ -158,63 +158,63 @@ export default function Page() {
 
         {/* 4 Sensor Summary Cards */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card className="border-l-4 border-l-emerald-500 shadow-sm">
+          <Card className="agri-metric-card shadow-sm">
             <CardContent className="flex items-center justify-between p-6">
               <div className="space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">Độ ẩm đất thửa A1</p>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-bold tracking-tight">{moisture}%</span>
+                  <span className="agri-metric-value text-3xl tracking-tight">{moisture}%</span>
                   <Badge className={moisture < 50 ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"}>
                     {moisture < 50 ? "Cần tưới" : "Tốt"}
                   </Badge>
                 </div>
               </div>
-              <div className="rounded-full bg-emerald-50 dark:bg-emerald-950/30 p-3">
+              <div className="agri-icon-box rounded-lg p-3">
                 <Droplet className="size-6 text-emerald-600" />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-l-4 border-l-orange-500 shadow-sm">
+          <Card className="agri-metric-card shadow-sm">
             <CardContent className="flex items-center justify-between p-6">
               <div className="space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">Nhiệt độ không khí</p>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-bold tracking-tight">28.5°C</span>
+                  <span className="agri-metric-value text-3xl tracking-tight">28.5°C</span>
                   <Badge className="bg-emerald-100 text-emerald-800">Tối ưu</Badge>
                 </div>
               </div>
-              <div className="rounded-full bg-orange-50 dark:bg-orange-950/30 p-3">
+              <div className="agri-icon-box rounded-lg p-3">
                 <Thermometer className="size-6 text-orange-600" />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-l-4 border-l-sky-500 shadow-sm">
+          <Card className="agri-metric-card shadow-sm">
             <CardContent className="flex items-center justify-between p-6">
               <div className="space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">Độ ẩm không khí</p>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-bold tracking-tight">72%</span>
+                  <span className="agri-metric-value text-3xl tracking-tight">72%</span>
                   <Badge className="bg-emerald-100 text-emerald-800">Tốt</Badge>
                 </div>
               </div>
-              <div className="rounded-full bg-sky-50 dark:bg-sky-950/30 p-3">
+              <div className="agri-icon-box rounded-lg p-3">
                 <Wind className="size-6 text-sky-600" />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-l-4 border-l-lime-500 shadow-sm">
+          <Card className="agri-metric-card shadow-sm">
             <CardContent className="flex items-center justify-between p-6">
               <div className="space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">Độ pH của đất</p>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-bold tracking-tight">6.4</span>
+                  <span className="agri-metric-value text-3xl tracking-tight">6.4</span>
                   <Badge className="bg-emerald-100 text-emerald-800">Trung tính</Badge>
                 </div>
               </div>
-              <div className="rounded-full bg-lime-50 dark:bg-lime-950/30 p-3">
+              <div className="agri-icon-box rounded-lg p-3">
                 <Activity className="size-6 text-lime-600" />
               </div>
             </CardContent>
@@ -384,57 +384,57 @@ export default function Page() {
         {/* 3 Large KPI cards as described in 1.5 docs */}
         <div className="grid gap-4 md:grid-cols-3">
           {/* KPI 1: Area */}
-          <Card className="border-l-4 border-l-emerald-600 shadow-sm">
+          <Card className="agri-metric-card shadow-sm">
             <CardContent className="p-6 flex justify-between items-center">
               <div>
                 <span className="text-xs font-semibold text-slate-500 block mb-1">TỔNG DIỆN TÍCH CANH TÁC</span>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-extrabold text-slate-800 dark:text-slate-100">1,250.5 ha</span>
+                  <span className="agri-metric-value text-3xl">1,250.5 ha</span>
                   <span className="text-xs text-emerald-600 font-bold flex items-center">
                     <TrendingUp className="size-3 mr-0.5" /> +5.9%
                   </span>
                 </div>
                 <span className="text-[10px] text-muted-foreground block mt-1">So với cùng kỳ vụ trước (1,180 ha)</span>
               </div>
-              <div className="rounded-full bg-emerald-50 dark:bg-emerald-950/20 p-3.5 text-emerald-600">
+              <div className="agri-icon-box rounded-lg p-3.5 text-emerald-600">
                 <Sprout className="size-7" />
               </div>
             </CardContent>
           </Card>
 
           {/* KPI 2: Yield */}
-          <Card className="border-l-4 border-l-sky-600 shadow-sm">
+          <Card className="agri-metric-card shadow-sm">
             <CardContent className="p-6 flex justify-between items-center">
               <div>
                 <span className="text-xs font-semibold text-slate-500 block mb-1">TỔNG SẢN LƯỢNG DỰ BÁO</span>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-extrabold text-slate-800 dark:text-slate-100">8,100.0 tấn</span>
+                  <span className="agri-metric-value text-3xl">8,100.0 tấn</span>
                   <span className="text-xs text-emerald-600 font-bold flex items-center">
                     <TrendingUp className="size-3 mr-0.5" /> +8.0%
                   </span>
                 </div>
                 <span className="text-[10px] text-muted-foreground block mt-1">Sản lượng quy hoạch vụ mùa 2026</span>
               </div>
-              <div className="rounded-full bg-sky-50 dark:bg-sky-950/20 p-3.5 text-sky-600">
+              <div className="agri-icon-box rounded-lg p-3.5 text-sky-600">
                 <BarChart3 className="size-7" />
               </div>
             </CardContent>
           </Card>
 
           {/* KPI 3: Outbreaks */}
-          <Card className="border-l-4 border-l-rose-500 shadow-sm">
+          <Card className="agri-metric-card shadow-sm">
             <CardContent className="p-6 flex justify-between items-center">
               <div>
                 <span className="text-xs font-semibold text-slate-500 block mb-1">Ổ DỊCH BỆNH ĐANG HOẠT ĐỘNG</span>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-extrabold text-rose-600">42 ca</span>
+                  <span className="agri-metric-value text-3xl">42 ca</span>
                   <span className="text-xs text-emerald-600 font-bold flex items-center">
                     <TrendingDown className="size-3 mr-0.5" /> -35.4%
                   </span>
                 </div>
                 <span className="text-[10px] text-muted-foreground block mt-1">Đã kiểm soát tốt tại Mường Ảng</span>
               </div>
-              <div className="rounded-full bg-rose-50 dark:bg-rose-950/20 p-3.5 text-rose-500">
+              <div className="agri-icon-box rounded-lg p-3.5 text-rose-500">
                 <ShieldAlert className="size-7" />
               </div>
             </CardContent>
@@ -472,11 +472,11 @@ export default function Page() {
               <CardDescription>Các công việc thanh tra địa bàn.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 text-xs">
-              <div className="p-3 bg-slate-50 dark:bg-slate-900/40 rounded-lg border-l-4 border-l-amber-500">
+              <div className="agri-soft-panel p-3 rounded-lg">
                 <span className="font-bold text-slate-800 dark:text-slate-200 block">Thanh tra mầm bệnh Đạo ôn</span>
                 <p className="text-slate-500 mt-1">Xuất hiện rải rác 12 hộ báo cáo tại xã Ẳng Cang. Cần cử kỹ sư hỗ trợ cấp thuốc.</p>
               </div>
-              <div className="p-3 bg-slate-50 dark:bg-slate-900/40 rounded-lg border-l-4 border-l-emerald-500">
+              <div className="agri-soft-panel p-3 rounded-lg">
                 <span className="font-bold text-slate-800 dark:text-slate-200 block">Kiểm tra giá cà phê thị trường</span>
                 <p className="text-slate-500 mt-1">Thực hiện cập nhật biểu giá tại sàn giao dịch Mường Ảng phục vụ bà con tham khảo.</p>
               </div>
