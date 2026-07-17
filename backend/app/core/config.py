@@ -1,7 +1,9 @@
 from functools import lru_cache
+import json
 from typing import Annotated
 
 from pydantic import AnyHttpUrl, Field, PostgresDsn, computed_field
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -27,6 +29,20 @@ class Settings(BaseSettings):
 
     upload_dir: str = "uploads"
     public_upload_base_url: str | None = None
+
+    @field_validator("backend_cors_origins", mode="before")
+    @classmethod
+    def parse_cors_origins(cls, value: object) -> object:
+        if isinstance(value, str):
+            stripped = value.strip()
+            if not stripped:
+                return []
+            if stripped.startswith("["):
+                return json.loads(stripped)
+            return [origin.strip().rstrip("/") for origin in stripped.split(",") if origin.strip()]
+        if isinstance(value, list):
+            return [str(origin).rstrip("/") for origin in value]
+        return value
 
     @computed_field  # type: ignore[prop-decorator]
     @property

@@ -1,7 +1,7 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -110,7 +110,7 @@ async def delete_plot(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Plot not found")
     if current_user.role == "farmer" and plot.user_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot delete another user's plot")
-    await db.delete(plot)
+    await db.execute(delete(Plot).where(Plot.id == plot.id))
     await db.commit()
     return {"status": "success", "message": "Plot deleted successfully"}
 
