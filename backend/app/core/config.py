@@ -11,10 +11,10 @@ class Settings(BaseSettings):
     app_name: str = "ArgiAI API"
     environment: str = "development"
     api_v1_prefix: str = "/api/v1"
-    backend_cors_origins: Annotated[list[AnyHttpUrl] | list[str], Field(default_factory=list)] = [
+    backend_cors_origins: Annotated[list[AnyHttpUrl] | list[str], Field(default_factory=lambda: [
         "http://localhost:3000",
         "http://localhost:4000",
-    ]
+    ])]
 
     database_url: PostgresDsn | str
     jwt_secret_key: str = Field(min_length=32)
