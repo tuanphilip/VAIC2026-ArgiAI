@@ -91,16 +91,16 @@ export default function WeatherPage() {
   };
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <Tabs defaultValue="map">
+    <div data-content-padding="false" className="w-full min-w-0">
+      <div className="flex w-full min-w-0 flex-col gap-3 px-4 py-3 md:px-6 md:py-4">
+        <Tabs className="w-full min-w-0" defaultValue="map">
           <TabsList>
             <TabsTrigger value="map">Bản đồ</TabsTrigger>
             <TabsTrigger value="local">Dự báo</TabsTrigger>
             <TabsTrigger value="alerts">Cảnh báo</TabsTrigger>
           </TabsList>
 
-          <TabsContent className="mt-3 space-y-3" value="map">
+          <TabsContent className="mt-3 min-w-0 space-y-3" value="map">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <Select value={location.id} onValueChange={handleLocationChange}>
@@ -112,14 +112,14 @@ export default function WeatherPage() {
               <Button asChild variant="ghost" size="sm" className="gap-2"><a href={windyUrl} target="_blank" rel="noreferrer">Mở rộng <ExternalLink className="size-4" /></a></Button>
             </div>
             {status === "error" && <Card className="border-rose-200"><CardContent className="p-3 text-rose-700 text-sm">{message}</CardContent></Card>}
-            <Card className="overflow-hidden">
+            <Card className="w-full max-w-none overflow-hidden">
               <CardContent className="p-0">
-                <iframe className="h-[calc(100vh-190px)] min-h-[620px] w-full border-0 bg-muted sm:min-h-[700px]" src={windyUrl} title="Bản đồ thời tiết" loading="lazy" allow="fullscreen" />
+                <iframe className="block h-[calc(100vh-190px)] min-h-[620px] w-full max-w-none border-0 bg-muted sm:min-h-[700px]" src={windyUrl} title="Bản đồ thời tiết" loading="lazy" allow="fullscreen" />
               </CardContent>
             </Card>
           </TabsContent>
 
-          <TabsContent className="mt-3 space-y-4" value="local">
+          <TabsContent className="mt-3 min-w-0 space-y-4" value="local">
             <div className="flex items-center justify-between gap-2">
               <p className="text-muted-foreground text-sm">{location.label}</p>
               <Button onClick={() => void loadWeather(location)} variant="outline" size="sm" className="gap-2"><RefreshCw className="size-4" /> Cập nhật</Button>
@@ -129,7 +129,7 @@ export default function WeatherPage() {
             <DailyForecast daily={weather?.daily ?? []} />
           </TabsContent>
 
-          <TabsContent className="mt-3" value="alerts">
+          <TabsContent className="mt-3 min-w-0" value="alerts">
             <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50/60 p-4 text-amber-900 text-sm dark:bg-amber-950/20 dark:text-amber-200">Cảnh báo được tổng hợp từ dữ liệu thời tiết và nguồn cảnh báo đã cấu hình. Hãy kiểm tra thời gian cập nhật trước khi ra quyết định sản xuất.</div>
             <div className="grid gap-4 lg:grid-cols-2">{alerts.length === 0 ? <Card><CardContent className="p-8 text-center text-muted-foreground text-sm">Chưa có cảnh báo thiên tai hoạt động.</CardContent></Card> : alerts.map((alert) => <WeatherAlertCard alert={alert} key={alert.id} />)}</div>
           </TabsContent>
