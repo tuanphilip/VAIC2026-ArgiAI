@@ -2,12 +2,41 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import require_roles
+from app.core.dependencies import get_current_user, require_roles
 from app.database.session import get_db
 from app.models import Crop, DiseaseLog, Plot, User, YieldForecast
-from app.schemas.dashboard import CropCompareDetail, DashboardCompareResponse, PeriodMetric
+from app.schemas.dashboard import CropCompareDetail, DashboardCompareResponse, DashboardSummaryResponse, PeriodMetric
 
 router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
+
+
+@router.get("/summary", response_model=DashboardSummaryResponse)
+async def dashboard_summary(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> DashboardSummaryResponse:
+    plot_filter = Plot.user_id == current_user.id if current_user.role == "farmer" else True
+    plot_count_result = await db.execute(select(func.count(Plot.id)).where(plot_filter))
+    area_result = await db.execute(select(func.coalesce(func.sum(Plot.area_hectares), 0.0)).where(plot_filter))
+    disease_query = select(func.count(DiseaseLog.id)).join(Plot, DiseaseLog.plot_id == Plot.id, isouter=True).where(DiseaseLog.status == "active")
+    if current_user.role == "farmer":
+        disease_query = disease_query.where(Plot.user_id == current_user.id)
+    disease_result = await db.execute(disease_query)
+    yield_query = select(
+        func.coalesce(func.sum(YieldForecast.forecasted_yield_tons), 0.0),
+        func.avg(YieldForecast.confidence_score),
+    ).join(Plot, YieldForecast.plot_id == Plot.id)
+    if current_user.role == "farmer":
+        yield_query = yield_query.where(Plot.user_id == current_user.id)
+    yield_result = await db.execute(yield_query)
+    forecasted_yield, confidence = yield_result.one()
+    return DashboardSummaryResponse(
+        plot_count=int(plot_count_result.scalar_one()),
+        cultivated_area_ha=round(float(area_result.scalar_one()), 2),
+        active_disease_cases=int(disease_result.scalar_one()),
+        forecasted_yield_tons=round(float(forecasted_yield), 2),
+        average_forecast_confidence=round(float(confidence), 4) if confidence is not None else None,
+    )
 
 
 @router.get("/compare", response_model=DashboardCompareResponse)
