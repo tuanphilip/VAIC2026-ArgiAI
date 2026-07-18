@@ -22,7 +22,7 @@ import { useActiveUser } from "@/stores/auth-store";
 
 import { NavMain } from "./nav-main";
 import { NavUser } from "./nav-user";
-import { SidebarSupportCard } from "./sidebar-support-card";
+
 
 const _data = {
   navSecondary: [
@@ -115,7 +115,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         {/* <NavSecondary items={data.navSecondary} className="mt-auto" /> */}
       </SidebarContent>
       <SidebarFooter>
-        <SidebarSupportCard />
         <NavUser user={activeUser} />
       </SidebarFooter>
     </Sidebar>
