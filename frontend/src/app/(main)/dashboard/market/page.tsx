@@ -7,7 +7,7 @@ import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YA
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useUserStore } from "@/stores/user-store";
+import { useActiveUser } from "@/stores/auth-store";
 
 // Fluctuating crop price logs for testing chart
 const priceFluctuation = [
@@ -21,7 +21,7 @@ const priceFluctuation = [
 ];
 
 export default function Page() {
-  const { activeUser } = useUserStore();
+  const activeUser = useActiveUser();
   const [searchTerm, setSearchTerm] = useState("");
   const [cropPrices, setCropPrices] = useState([
     { name: "Cà phê Robusta", price: 86000, unit: "kg", change: 1.2, status: "up", min: 82000, max: 86000 },
