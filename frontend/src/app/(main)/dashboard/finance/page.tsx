@@ -55,7 +55,7 @@ export default function Page() {
   const [transactions, setTransactions] = useState<Transaction[]>([
     {
       id: 1,
-      title: "Bán lô lúa hữu cơ Jasmine 85",
+      title: "Bán lô lúa Seng Cù Điện Biên",
       type: "income",
       amount: 42000000,
       date: "15/07/2026",
@@ -71,7 +71,7 @@ export default function Page() {
     },
     {
       id: 3,
-      title: "Bán 500kg Cà chua VietGAP",
+      title: "Mua 500kg cà phê Mường Ảng",
       type: "income",
       amount: 15000000,
       date: "10/07/2026",

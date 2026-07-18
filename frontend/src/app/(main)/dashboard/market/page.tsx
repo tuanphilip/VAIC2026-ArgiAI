@@ -9,30 +9,30 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { useActiveUser } from "@/stores/auth-store";
 
-// Fluctuating crop price logs for testing chart
+// Bộ dữ liệu khởi tạo theo phạm vi Điện Biên. Giá live phải đi qua API có nguồn và ngày ghi nhận.
 const priceFluctuation = [
-  { day: "Thứ 2", "Robusta": 82000, "Lúa": 9200, "Cà chua": 18000 },
-  { day: "Thứ 3", "Robusta": 82500, "Lúa": 9100, "Cà chua": 18500 },
-  { day: "Thứ 4", "Robusta": 84000, "Lúa": 9300, "Cà chua": 17200 },
-  { day: "Thứ 5", "Robusta": 83000, "Lúa": 9250, "Cà chua": 19000 },
-  { day: "Thứ 6", "Robusta": 85000, "Lúa": 9400, "Cà chua": 20000 },
-  { day: "Thứ 7", "Robusta": 84800, "Lúa": 9350, "Cà chua": 19800 },
-  { day: "Chủ Nhật", "Robusta": 86000, "Lúa": 9500, "Cà chua": 21000 },
+  { day: "Thứ 2", "Cà phê Mường Ảng": 82000, "Lúa Seng Cù": 15800, "Mắc ca Điện Biên": 145000 },
+  { day: "Thứ 3", "Cà phê Mường Ảng": 82800, "Lúa Seng Cù": 16000, "Mắc ca Điện Biên": 146000 },
+  { day: "Thứ 4", "Cà phê Mường Ảng": 84000, "Lúa Seng Cù": 16150, "Mắc ca Điện Biên": 147000 },
+  { day: "Thứ 5", "Cà phê Mường Ảng": 84800, "Lúa Seng Cù": 16300, "Mắc ca Điện Biên": 148000 },
+  { day: "Thứ 6", "Cà phê Mường Ảng": 85000, "Lúa Seng Cù": 16450, "Mắc ca Điện Biên": 149000 },
+  { day: "Thứ 7", "Cà phê Mường Ảng": 85500, "Lúa Seng Cù": 16600, "Mắc ca Điện Biên": 150000 },
+  { day: "Chủ Nhật", "Cà phê Mường Ảng": 86000, "Lúa Seng Cù": 16800, "Mắc ca Điện Biên": 151000 },
 ];
 
 export default function Page() {
   const activeUser = useActiveUser();
   const [searchTerm, setSearchTerm] = useState("");
   const [cropPrices, setCropPrices] = useState([
-    { name: "Cà phê Robusta", price: 86000, unit: "kg", change: 1.2, status: "up", min: 82000, max: 86000 },
-    { name: "Lúa Jasmine 85", price: 9500, unit: "kg", change: 0.5, status: "up", min: 9100, max: 9500 },
-    { name: "Cà chua VietGAP", price: 21000, unit: "kg", change: -2.3, status: "down", min: 17200, max: 21000 },
-    { name: "Hồ tiêu Phú Quốc", price: 145000, unit: "kg", change: 0.0, status: "flat", min: 145000, max: 145000 },
-    { name: "Rau cải hữu cơ", price: 28000, unit: "kg", change: 4.1, status: "up", min: 25000, max: 28000 },
+    { name: "Cà phê Robusta Mường Ảng", price: 86000, unit: "kg", change: 1.2, status: "up", min: 82000, max: 86000 },
+    { name: "Lúa Seng Cù Điện Biên", price: 16800, unit: "kg", change: 0.5, status: "up", min: 15800, max: 16800 },
+    { name: "Mắc ca Điện Biên", price: 151000, unit: "kg", change: 0.8, status: "up", min: 145000, max: 151000 },
+    { name: "Cải ngọt Điện Biên", price: 18000, unit: "kg", change: 0.0, status: "flat", min: 18000, max: 18000 },
+    { name: "Ngô địa phương Điện Biên", price: 12500, unit: "kg", change: 0.0, status: "flat", min: 12500, max: 12500 },
   ]);
 
   // Alert form state
-  const [alertCrop, setAlertCrop] = useState("Cà phê Robusta");
+  const [alertCrop, setAlertCrop] = useState("Cà phê Robusta Mường Ảng");
   const [alertTargetPrice, setAlertTargetPrice] = useState("90000");
   const [alertSuccess, setAlertSuccess] = useState(false);
 
@@ -84,8 +84,8 @@ export default function Page() {
                 <XAxis dataKey="day" tickLine={false} />
                 <YAxis tickLine={false} />
                 <Tooltip />
-                <Line type="monotone" dataKey="Robusta" stroke="hsl(var(--primary))" name="Robusta (đ/kg)" strokeWidth={2} />
-                <Line type="monotone" dataKey="Cà chua" stroke="#f59e0b" name="Cà chua (đ/kg)" strokeWidth={2} />
+                <Line type="monotone" dataKey="Cà phê Mường Ảng" stroke="hsl(var(--primary))" name="Cà phê Mường Ảng (đ/kg)" strokeWidth={2} />
+                <Line type="monotone" dataKey="Lúa Seng Cù" stroke="#f59e0b" name="Lúa Seng Cù (đ/kg)" strokeWidth={2} />
               </LineChart>
             </ResponsiveContainer>
           </CardContent>
@@ -100,8 +100,8 @@ export default function Page() {
           </CardHeader>
           <CardContent className="space-y-4 text-xs text-slate-700 dark:text-slate-300 flex-1 flex flex-col justify-between">
             <p className="leading-relaxed">
-              Giá <strong>Cà phê Robusta</strong> đạt đỉnh mới 86.000đ/kg do thiếu hụt nguồn cung xuất khẩu toàn cầu. 
-              Khuyên dùng: Chủ trang trại nên trì hoãn bán kho hạt lúa Jasmine thêm 1 tuần để đón đầu mức tăng giá dự kiến 200đ/kg tiếp theo.
+              Giá <strong>Cà phê Mường Ảng</strong> đang được theo dõi theo dữ liệu khởi tạo Điện Biên. Không dùng số liệu này để quyết định giao dịch nếu chưa có nguồn và ngày cập nhật được xác minh.
+              Khuyến nghị: bổ sung bảng giá từ cơ quan chuyên môn, hợp tác xã và điểm thu mua trong tỉnh trước khi bật cảnh báo giá.
             </p>
             <div className="pt-3 border-t border-emerald-200/50">
               <div className="flex justify-between items-center text-[10px] text-muted-foreground">
@@ -305,9 +305,9 @@ export default function Page() {
                   onChange={(e) => setAlertCrop(e.target.value)}
                   className="w-full text-xs p-2.5 border rounded-lg dark:bg-slate-950 focus:outline-emerald-500"
                 >
-                  <option>Cà phê Robusta</option>
-                  <option>Lúa Jasmine 85</option>
-                  <option>Cà chua VietGAP</option>
+                  <option>Cà phê Robusta Mường Ảng</option>
+                  <option>Lúa Seng Cù Điện Biên</option>
+                  <option>Rau cải ngọt Điện Biên</option>
                 </select>
               </div>
               <div>
@@ -346,7 +346,7 @@ export default function Page() {
           <CardContent className="space-y-3 text-xs">
             <div className="p-3 bg-slate-50 dark:bg-slate-900/30 rounded-lg border leading-relaxed text-slate-600 dark:text-slate-400">
               <span className="font-bold text-slate-800 dark:text-slate-200 block mb-1">ĐIỀU KHOẢN CHẤT LƯỢNG SẢN PHẨM:</span>
-              Sản phẩm lúa Jasmine thu hoạch phải đạt chứng chỉ VietGAP, độ ẩm hạt khô bảo quản không quá 14%. Thương lái cam kết bao tiêu với giá sàn ổn định 9.300 đ/kg.
+              Sản phẩm lúa Seng Cù Điện Biên cần được kiểm tra độ ẩm, tạp chất và mã vùng trước khi đóng gói. Chỉ công bố giá bao tiêu khi có hợp đồng và nguồn xác minh.
             </div>
             <Button variant="outline" className="w-full text-xs gap-1.5">
               <FileText className="size-3.5" /> Tải Hợp đồng (.PDF)
