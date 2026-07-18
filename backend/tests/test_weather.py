@@ -1,8 +1,11 @@
 """Tests for the weather service module and weather routes."""
 
+import asyncio
+import json
 import time
 from collections.abc import Iterator
 from datetime import date
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -18,9 +21,12 @@ from app.services.weather import (
     _cache_get,
     _cache_set,
     _make_cache_key,
+    cli_main,
     fetch_current_weather,
     fetch_forecast,
     fetch_tile,
+    refresh_weather_cache,
+    run_weather_cache_refresh_loop,
 )
 
 
@@ -154,6 +160,27 @@ class TestFetchCurrentWeather:
 
         with pytest.raises(httpx.HTTPStatusError):
             await fetch_current_weather(21.02, 105.8)
+
+    @pytest.mark.asyncio
+    @patch.object(httpx.AsyncClient, "get", new_callable=AsyncMock)
+    async def test_uses_sqlite_cache_when_configured(self, mock_get: AsyncMock, tmp_path: Path) -> None:
+        cache_path = tmp_path / "weather-cache.sqlite3"
+        key = _make_cache_key("current", 21.02, 105.8)
+        payload = self.SAMPLE_RESPONSE
+
+        with patch("app.services.weather.get_settings") as mock_settings:
+            mock_settings.return_value.weather_cache_sqlite_path = str(cache_path)
+            mock_settings.return_value.openweather_api_key = ""
+            mock_settings.return_value.weather_cache_refresh_interval_seconds = 1800
+            mock_settings.return_value.weather_cache_background_enabled = True
+
+            from app.services.weather import _persistent_cache_set
+
+            _persistent_cache_set(key, payload, ttl=300)
+            result = await fetch_current_weather(21.02, 105.8)
+
+        assert result == payload
+        assert mock_get.await_count == 0
 
 
 # ── fetch_forecast ────────────────────────────────────────────────────────────
@@ -398,3 +425,73 @@ class TestWeatherRoutes:
             "openweather-temperature",
         ]
         assert body["tile_layers"][0]["url_template"] == "/api/v1/weather/tiles/precipitation_new/{z}/{x}/{y}.png"
+
+
+class TestWeatherCacheRefresh:
+    @pytest.mark.asyncio
+    async def test_refreshes_unique_plot_locations(self) -> None:
+        rows = [
+            (21.0285, 105.8542),
+            (21.0285, 105.8542),
+            (10.8231, 106.6297),
+        ]
+        fake_result = MagicMock()
+        fake_result.all.return_value = rows
+        fake_session = AsyncMock()
+        fake_session.execute.return_value = fake_result
+
+        class FakeSessionContext:
+            async def __aenter__(self) -> AsyncMock:
+                return fake_session
+
+            async def __aexit__(self, exc_type: object, exc: object, tb: object) -> None:
+                return None
+
+        fake_session_factory = MagicMock(return_value=FakeSessionContext())
+
+        with (
+            patch("app.services.weather.AsyncSessionLocal", fake_session_factory),
+            patch("app.services.weather.fetch_current_weather", new_callable=AsyncMock) as mock_current,
+            patch("app.services.weather.fetch_forecast", new_callable=AsyncMock) as mock_forecast,
+        ):
+            summary = await refresh_weather_cache()
+
+        assert summary == {
+            "plots": 3,
+            "locations": 2,
+            "current_refreshed": 2,
+            "forecast_refreshed": 2,
+        }
+        assert mock_current.await_count == 2
+        assert mock_forecast.await_count == 2
+
+    @pytest.mark.asyncio
+    async def test_refresh_loop_runs_immediately_and_stops(self) -> None:
+        stop_event = asyncio.Event()
+
+        async def fake_wait() -> bool:
+            stop_event.set()
+            return True
+
+        stop_event.wait = fake_wait  # type: ignore[method-assign]
+
+        with patch("app.services.weather.refresh_weather_cache", new_callable=AsyncMock) as mock_refresh:
+            await run_weather_cache_refresh_loop(stop_event, interval_seconds=0.01)
+
+        mock_refresh.assert_awaited_once()
+
+    def test_cli_main_prints_refresh_summary(self, capsys: pytest.CaptureFixture[str]) -> None:
+        async def fake_refresh() -> dict[str, int]:
+            return {"plots": 2, "locations": 2, "current_refreshed": 2, "forecast_refreshed": 2}
+
+        with patch("app.services.weather.run_weather_cache_refresh_once", fake_refresh):
+            exit_code = cli_main()
+
+        captured = capsys.readouterr()
+        assert exit_code == 0
+        assert json.loads(captured.out) == {
+            "plots": 2,
+            "locations": 2,
+            "current_refreshed": 2,
+            "forecast_refreshed": 2,
+        }
