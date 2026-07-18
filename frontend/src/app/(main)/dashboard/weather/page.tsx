@@ -12,6 +12,7 @@ import {
   CloudSun,
   Droplet,
   Layers,
+  Loader2,
   MapPin,
   Navigation,
   Radar,
@@ -29,15 +30,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type RiskLevel = "low" | "medium" | "high";
-type WeatherLayer = "radar" | "rain" | "wind" | "temperature";
+type WeatherLayer = "rainviewer-radar" | "openweather-rain" | "openweather-wind" | "openweather-temperature";
+type LoadStatus = "loading" | "ready" | "error";
 
-interface FarmPlotWeather {
+interface FarmPlotBase {
   id: string;
   name: string;
   crop: string;
   owner: string;
   lat: number;
   lng: number;
+}
+
+interface FarmPlotWeather extends FarmPlotBase {
   temperature: number;
   humidity: number;
   rainfallToday: number;
@@ -47,22 +52,29 @@ interface FarmPlotWeather {
   soilMoisture: number;
   soilTemperature: number;
   evapotranspiration: number;
+  weatherCode: number;
   risk: RiskLevel;
   mainAlert: string;
   recommendation: string;
+  forecast: ForecastDay[];
+  source: "Open-Meteo" | "Fallback";
 }
 
 interface ForecastDay {
   day: string;
   date: string;
+  isoDate: string;
   icon: typeof CloudSun;
   tempMax: number;
   tempMin: number;
   rain: number;
   rainProbability: number;
   wind: number;
+  windGust: number;
   humidity: number;
   soilMoisture: number;
+  evapotranspiration: number;
+  weatherCode: number;
   advice: string;
 }
 
@@ -84,6 +96,58 @@ interface ActionPlan {
   status: "ready" | "wait" | "avoid";
 }
 
+interface WeatherDataState {
+  status: LoadStatus;
+  plots: FarmPlotWeather[];
+  alerts: WeatherAlert[];
+  actions: ActionPlan[];
+  updatedAt?: string;
+  message?: string;
+}
+
+interface OpenMeteoResponse {
+  current?: {
+    temperature_2m?: number;
+    relative_humidity_2m?: number;
+    precipitation?: number;
+    weather_code?: number;
+    wind_speed_10m?: number;
+    wind_gusts_10m?: number;
+  };
+  hourly?: {
+    time?: string[];
+    temperature_2m?: number[];
+    relative_humidity_2m?: number[];
+    precipitation_probability?: number[];
+    precipitation?: number[];
+    wind_speed_10m?: number[];
+    wind_gusts_10m?: number[];
+    soil_temperature_6cm?: number[];
+    soil_moisture_3_9cm?: number[];
+    evapotranspiration?: number[];
+  };
+  daily?: {
+    time?: string[];
+    weather_code?: number[];
+    temperature_2m_max?: number[];
+    temperature_2m_min?: number[];
+    precipitation_sum?: number[];
+    precipitation_probability_max?: number[];
+    wind_speed_10m_max?: number[];
+    wind_gusts_10m_max?: number[];
+  };
+}
+
+interface RainViewerResponse {
+  host?: string;
+  radar?: {
+    past?: Array<{ path: string; time: number }>;
+    nowcast?: Array<{ path: string; time: number }>;
+  };
+}
+
+const openWeatherApiKey = process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY;
+
 const riskStyles: Record<RiskLevel, string> = {
   low: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300",
   medium: "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300",
@@ -96,7 +160,26 @@ const riskLabels: Record<RiskLevel, string> = {
   high: "Nguy cơ cao",
 };
 
-const farmPlots: FarmPlotWeather[] = [
+const markerColors: Record<RiskLevel, string> = {
+  low: "#059669",
+  medium: "#d97706",
+  high: "#e11d48",
+};
+
+const mapLayerLabels: Record<WeatherLayer, string> = {
+  "rainviewer-radar": "Radar mưa RainViewer",
+  "openweather-rain": "Mưa OpenWeather",
+  "openweather-wind": "Gió OpenWeather",
+  "openweather-temperature": "Nhiệt OpenWeather",
+};
+
+const openWeatherLayerNames: Record<Exclude<WeatherLayer, "rainviewer-radar">, string> = {
+  "openweather-rain": "precipitation_new",
+  "openweather-wind": "wind_new",
+  "openweather-temperature": "temp_new",
+};
+
+const farmPlots: FarmPlotBase[] = [
   {
     id: "A1",
     name: "Lô A1 - Mường Thanh",
@@ -104,18 +187,6 @@ const farmPlots: FarmPlotWeather[] = [
     owner: "Nguyễn Văn A",
     lat: 21.52,
     lng: 103.22,
-    temperature: 29,
-    humidity: 82,
-    rainfallToday: 18,
-    rainProbability: 74,
-    windSpeed: 14,
-    windGust: 36,
-    soilMoisture: 68,
-    soilTemperature: 25.4,
-    evapotranspiration: 3.2,
-    risk: "medium",
-    mainAlert: "Mưa rào tăng từ chiều, cần kiểm tra rãnh thoát nước.",
-    recommendation: "Hoãn bón phân lá, ưu tiên thoát nước cuối ruộng.",
   },
   {
     id: "B1",
@@ -124,18 +195,6 @@ const farmPlots: FarmPlotWeather[] = [
     owner: "Lê Văn C",
     lat: 21.51,
     lng: 103.225,
-    temperature: 31,
-    humidity: 61,
-    rainfallToday: 2,
-    rainProbability: 22,
-    windSpeed: 9,
-    windGust: 18,
-    soilMoisture: 39,
-    soilTemperature: 27.1,
-    evapotranspiration: 5.8,
-    risk: "medium",
-    mainAlert: "Đất khô nhanh, nguy cơ thiếu ẩm tầng mặt.",
-    recommendation: "Tưới nhỏ giọt 20 phút vào sáng sớm mai.",
   },
   {
     id: "C1",
@@ -144,208 +203,201 @@ const farmPlots: FarmPlotWeather[] = [
     owner: "Phạm Thị D",
     lat: 21.53,
     lng: 103.215,
-    temperature: 27,
-    humidity: 91,
-    rainfallToday: 46,
-    rainProbability: 88,
-    windSpeed: 22,
-    windGust: 54,
-    soilMoisture: 83,
-    soilTemperature: 23.6,
-    evapotranspiration: 2.4,
-    risk: "high",
-    mainAlert: "Mưa lớn kèm gió giật, nguy cơ úng và nấm bệnh.",
-    recommendation: "Dừng phun thuốc, che phủ luống non và mở thoát nước.",
   },
 ];
 
-const forecastDays: ForecastDay[] = [
+const fallbackForecast: ForecastDay[] = [
   {
     day: "Thứ 2",
     date: "20/07",
+    isoDate: "2026-07-20",
     icon: CloudSun,
     tempMax: 30,
     tempMin: 23,
     rain: 12,
     rainProbability: 45,
     wind: 12,
+    windGust: 24,
     humidity: 78,
     soilMoisture: 61,
+    evapotranspiration: 3.2,
+    weatherCode: 3,
     advice: "Có thể làm cỏ và kiểm tra sâu bệnh vào buổi sáng.",
   },
   {
     day: "Thứ 3",
     date: "21/07",
+    isoDate: "2026-07-21",
     icon: Sun,
     tempMax: 32,
     tempMin: 24,
     rain: 2,
     rainProbability: 18,
     wind: 9,
+    windGust: 18,
     humidity: 63,
     soilMoisture: 54,
+    evapotranspiration: 4.5,
+    weatherCode: 1,
     advice: "Phù hợp bón phân gốc, tránh tưới mạnh giữa trưa.",
   },
   {
     day: "Thứ 4",
     date: "22/07",
+    isoDate: "2026-07-22",
     icon: Sun,
     tempMax: 35,
     tempMin: 25,
     rain: 0,
     rainProbability: 8,
     wind: 11,
+    windGust: 20,
     humidity: 58,
     soilMoisture: 46,
+    evapotranspiration: 5.6,
+    weatherCode: 0,
     advice: "Tăng tưới sáng sớm cho cà phê và rau màu.",
   },
   {
     day: "Thứ 5",
     date: "23/07",
+    isoDate: "2026-07-23",
     icon: CloudSun,
     tempMax: 31,
     tempMin: 24,
     rain: 8,
     rainProbability: 40,
     wind: 16,
+    windGust: 32,
     humidity: 76,
     soilMoisture: 59,
+    evapotranspiration: 3.8,
+    weatherCode: 3,
     advice: "Theo dõi mưa chiều trước khi phun chế phẩm sinh học.",
   },
   {
     day: "Thứ 6",
     date: "24/07",
+    isoDate: "2026-07-24",
     icon: CloudRain,
     tempMax: 28,
     tempMin: 22,
     rain: 58,
     rainProbability: 86,
     wind: 24,
+    windGust: 54,
     humidity: 92,
     soilMoisture: 84,
+    evapotranspiration: 2.1,
+    weatherCode: 95,
     advice: "Không bón phân, kiểm tra bờ vùng và thoát nước.",
   },
   {
     day: "Thứ 7",
     date: "25/07",
+    isoDate: "2026-07-25",
     icon: CloudRain,
     tempMax: 27,
     tempMin: 21,
     rain: 36,
     rainProbability: 72,
     wind: 21,
+    windGust: 42,
     humidity: 89,
     soilMoisture: 79,
+    evapotranspiration: 2.4,
+    weatherCode: 80,
     advice: "Cảnh giác nấm bệnh sau mưa, ưu tiên vệ sinh đồng ruộng.",
   },
   {
     day: "Chủ nhật",
     date: "26/07",
+    isoDate: "2026-07-26",
     icon: CloudSun,
     tempMax: 29,
     tempMin: 22,
     rain: 10,
     rainProbability: 34,
     wind: 10,
+    windGust: 18,
     humidity: 74,
     soilMoisture: 67,
+    evapotranspiration: 3.1,
+    weatherCode: 2,
     advice: "Kiểm tra cây non và phục hồi luống sau đợt mưa.",
   },
 ];
 
-const weatherAlerts: WeatherAlert[] = [
-  {
-    id: "alert-rain",
-    title: "Mưa lớn cục bộ",
-    plot: "Lô C1 - Tuần Giáo",
-    level: "high",
-    window: "18:00 hôm nay - 06:00 ngày mai",
-    trigger: "Lượng mưa dự báo 58 mm, độ ẩm không khí trên 90%.",
-    action: "Mở rãnh thoát nước, ngừng tưới tự động và che phủ luống rau non.",
-  },
-  {
-    id: "alert-wind",
-    title: "Gió giật mạnh",
-    plot: "Lô C1 - Tuần Giáo",
-    level: "high",
-    window: "Chiều tối nay",
-    trigger: "Gió giật tối đa 54 km/h.",
-    action: "Gia cố nhà lưới, cọc chống và vật tư phủ luống.",
-  },
-  {
-    id: "alert-dry",
-    title: "Thiếu ẩm tầng mặt",
-    plot: "Lô B1 - Mường Ảng",
-    level: "medium",
-    window: "48 giờ tới",
-    trigger: "Độ ẩm đất 39%, bốc thoát hơi nước 5.8 mm/ngày.",
-    action: "Tưới nhỏ giọt sáng sớm, ưu tiên vùng cây đang ra hoa.",
-  },
-];
-
-const actionPlans: ActionPlan[] = [
-  {
-    time: "06:00",
-    plot: "Lô B1",
-    task: "Tưới nhỏ giọt 20 phút",
-    reason: "Độ ẩm đất thấp và nắng tăng trong ngày.",
-    status: "ready",
-  },
-  {
-    time: "09:00",
-    plot: "Lô A1",
-    task: "Kiểm tra bờ vùng",
-    reason: "Mưa chiều có thể làm nước dồn về cuối ruộng.",
-    status: "ready",
-  },
-  {
-    time: "15:00",
-    plot: "Lô C1",
-    task: "Dừng phun chế phẩm",
-    reason: "Mưa lớn và gió giật làm giảm hiệu quả phun.",
-    status: "avoid",
-  },
-  {
-    time: "Ngày mai",
-    plot: "Lô C1",
-    task: "Theo dõi nấm bệnh sau mưa",
-    reason: "Độ ẩm cao kéo dài là điều kiện phát sinh bệnh lá.",
-    status: "wait",
-  },
-];
-
-const weatherTrend = forecastDays.map((item) => ({
-  day: item.day,
-  "Nhiệt độ cao nhất": item.tempMax,
-  "Lượng mưa": item.rain,
-  "Độ ẩm đất": item.soilMoisture,
-}));
-
-const mapLayerLabels: Record<WeatherLayer, string> = {
-  radar: "Radar mưa",
-  rain: "Mưa",
-  wind: "Gió",
-  temperature: "Nhiệt độ",
-};
-
-const markerColors: Record<RiskLevel, string> = {
-  low: "#059669",
-  medium: "#d97706",
-  high: "#e11d48",
-};
-
 export default function Page() {
   const [selectedPlotId, setSelectedPlotId] = useState(farmPlots[0].id);
-  const [selectedLayer, setSelectedLayer] = useState<WeatherLayer>("radar");
+  const [selectedLayer, setSelectedLayer] = useState<WeatherLayer>("rainviewer-radar");
   const [phone, setPhone] = useState("");
   const [subscribeSuccess, setSubscribeSuccess] = useState(false);
+  const [weatherData, setWeatherData] = useState<WeatherDataState>(() => {
+    const plots = buildFallbackPlots();
+    return {
+      status: "loading",
+      plots,
+      alerts: buildAlerts(plots),
+      actions: buildActions(plots),
+      message: "Đang tải dữ liệu thật từ Open-Meteo...",
+    };
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadWeather() {
+      setWeatherData((current) => ({
+        ...current,
+        status: "loading",
+        message: "Đang tải dữ liệu thật từ Open-Meteo...",
+      }));
+
+      try {
+        const plots = await Promise.all(farmPlots.map((plot) => fetchPlotWeather(plot)));
+        if (cancelled) return;
+        setWeatherData({
+          status: "ready",
+          plots,
+          alerts: buildAlerts(plots),
+          actions: buildActions(plots),
+          updatedAt: new Date().toLocaleString("vi-VN"),
+          message: "Dữ liệu đang lấy trực tiếp từ Open-Meteo.",
+        });
+      } catch (error) {
+        if (cancelled) return;
+        const plots = buildFallbackPlots();
+        setWeatherData({
+          status: "error",
+          plots,
+          alerts: buildAlerts(plots),
+          actions: buildActions(plots),
+          updatedAt: new Date().toLocaleString("vi-VN"),
+          message: error instanceof Error ? error.message : "Không thể tải Open-Meteo, đang dùng dữ liệu dự phòng.",
+        });
+      }
+    }
+
+    void loadWeather();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const selectedPlot = useMemo(
-    () => farmPlots.find((plot) => plot.id === selectedPlotId) ?? farmPlots[0],
-    [selectedPlotId],
+    () => weatherData.plots.find((plot) => plot.id === selectedPlotId) ?? weatherData.plots[0],
+    [selectedPlotId, weatherData.plots],
   );
 
-  const highAlerts = weatherAlerts.filter((alert) => alert.level === "high");
+  const highAlerts = weatherData.alerts.filter((alert) => alert.level === "high");
+  const weatherTrend = selectedPlot.forecast.map((item) => ({
+    day: item.day,
+    "Nhiệt độ cao nhất": item.tempMax,
+    "Lượng mưa": item.rain,
+    "Độ ẩm đất": item.soilMoisture,
+  }));
 
   const handleSubscribe = (event: React.FormEvent) => {
     event.preventDefault();
@@ -364,7 +416,7 @@ export default function Page() {
           <div className="space-y-1">
             <h1 className="font-bold text-3xl text-slate-950 tracking-tight dark:text-white">Thời tiết nông nghiệp</h1>
             <p className="max-w-3xl text-muted-foreground text-sm">
-              Theo dõi bản đồ mưa, dự báo theo ngày và cảnh báo rủi ro cho từng thửa ruộng tại Điện Biên.
+              Dữ liệu dự báo lấy từ Open-Meteo theo tọa độ từng thửa; bản đồ radar lấy trực tiếp từ RainViewer.
             </p>
           </div>
 
@@ -378,13 +430,27 @@ export default function Page() {
               onChange={(event) => setSelectedPlotId(event.target.value)}
               className="h-10 rounded-md border bg-background px-3 text-sm outline-none ring-emerald-500 transition focus:ring-2"
             >
-              {farmPlots.map((plot) => (
+              {weatherData.plots.map((plot) => (
                 <option key={plot.id} value={plot.id}>
                   {plot.name} - {plot.crop}
                 </option>
               ))}
             </select>
           </div>
+        </div>
+
+        <div className="flex flex-col gap-3 rounded-md border bg-muted/35 p-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            {weatherData.status === "loading" ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <CloudSun className="size-4" />
+            )}
+            <span>{weatherData.message}</span>
+          </div>
+          <Badge variant="outline" className="w-fit">
+            {weatherData.updatedAt ? `Cập nhật: ${weatherData.updatedAt}` : "Đang cập nhật"}
+          </Badge>
         </div>
 
         {highAlerts.length > 0 && (
@@ -430,12 +496,12 @@ export default function Page() {
         </TabsList>
 
         <TabsContent value="overview" className="flex flex-col gap-5">
-          <OverviewTab selectedPlot={selectedPlot} />
+          <OverviewTab selectedPlot={selectedPlot} weatherTrend={weatherTrend} />
         </TabsContent>
 
         <TabsContent value="map" className="flex flex-col gap-5">
           <MapTab
-            plots={farmPlots}
+            plots={weatherData.plots}
             selectedLayer={selectedLayer}
             selectedPlot={selectedPlot}
             onLayerChange={setSelectedLayer}
@@ -444,11 +510,12 @@ export default function Page() {
         </TabsContent>
 
         <TabsContent value="forecast" className="flex flex-col gap-5">
-          <ForecastTab />
+          <ForecastTab selectedPlot={selectedPlot} weatherTrend={weatherTrend} />
         </TabsContent>
 
         <TabsContent value="alerts" className="flex flex-col gap-5">
           <AlertsTab
+            alerts={weatherData.alerts}
             phone={phone}
             subscribeSuccess={subscribeSuccess}
             onPhoneChange={setPhone}
@@ -457,14 +524,20 @@ export default function Page() {
         </TabsContent>
 
         <TabsContent value="actions" className="flex flex-col gap-5">
-          <ActionsTab />
+          <ActionsTab actions={weatherData.actions} />
         </TabsContent>
       </Tabs>
     </div>
   );
 }
 
-function OverviewTab({ selectedPlot }: { selectedPlot: FarmPlotWeather }) {
+function OverviewTab({
+  selectedPlot,
+  weatherTrend,
+}: {
+  selectedPlot: FarmPlotWeather;
+  weatherTrend: Array<Record<string, number | string>>;
+}) {
   const overviewCards = [
     {
       title: "Nhiệt độ",
@@ -522,7 +595,7 @@ function OverviewTab({ selectedPlot }: { selectedPlot: FarmPlotWeather }) {
         <Card className="shadow-sm">
           <CardHeader>
             <CardTitle>Xu hướng thời tiết 7 ngày</CardTitle>
-            <CardDescription>Nhiệt độ cao nhất, lượng mưa và độ ẩm đất dự báo.</CardDescription>
+            <CardDescription>Nhiệt độ cao nhất, lượng mưa và độ ẩm đất từ Open-Meteo.</CardDescription>
           </CardHeader>
           <CardContent className="h-[340px]">
             <ResponsiveContainer width="100%" height="100%">
@@ -556,7 +629,9 @@ function OverviewTab({ selectedPlot }: { selectedPlot: FarmPlotWeather }) {
         <Card className="shadow-sm">
           <CardHeader>
             <CardTitle>Rủi ro của {selectedPlot.id}</CardTitle>
-            <CardDescription>{selectedPlot.name}</CardDescription>
+            <CardDescription>
+              {selectedPlot.name} - nguồn {selectedPlot.source}
+            </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <Badge variant="outline" className={`w-fit ${riskStyles[selectedPlot.risk]}`}>
@@ -570,7 +645,7 @@ function OverviewTab({ selectedPlot }: { selectedPlot: FarmPlotWeather }) {
               <Metric label="Cây trồng" value={selectedPlot.crop} />
               <Metric label="Chủ hộ" value={selectedPlot.owner} />
               <Metric label="Độ ẩm không khí" value={`${selectedPlot.humidity}%`} />
-              <Metric label="Lượng mưa hôm nay" value={`${selectedPlot.rainfallToday} mm`} />
+              <Metric label="Mã thời tiết" value={String(selectedPlot.weatherCode)} />
             </div>
           </CardContent>
         </Card>
@@ -599,22 +674,30 @@ function MapTab({
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <CardTitle>Bản đồ thời tiết theo thửa ruộng</CardTitle>
-              <CardDescription>Radar mưa, vị trí canh tác và mức rủi ro tại từng lô.</CardDescription>
+              <CardDescription>
+                RainViewer hiển thị radar thật; OpenWeather hiển thị tile thật khi có API key.
+              </CardDescription>
             </div>
             <div className="flex flex-wrap gap-2">
-              {(Object.keys(mapLayerLabels) as WeatherLayer[]).map((layer) => (
-                <Button
-                  key={layer}
-                  type="button"
-                  variant={selectedLayer === layer ? "default" : "outline"}
-                  size="sm"
-                  className="gap-2"
-                  onClick={() => onLayerChange(layer)}
-                >
-                  <Layers className="size-3.5" />
-                  {mapLayerLabels[layer]}
-                </Button>
-              ))}
+              {(Object.keys(mapLayerLabels) as WeatherLayer[]).map((layer) => {
+                const needsOpenWeather = layer !== "rainviewer-radar";
+                const disabled = needsOpenWeather && !openWeatherApiKey;
+                return (
+                  <Button
+                    key={layer}
+                    type="button"
+                    variant={selectedLayer === layer ? "default" : "outline"}
+                    size="sm"
+                    className="gap-2"
+                    disabled={disabled}
+                    title={disabled ? "Thêm NEXT_PUBLIC_OPENWEATHER_API_KEY để bật lớp này" : mapLayerLabels[layer]}
+                    onClick={() => onLayerChange(layer)}
+                  >
+                    <Layers className="size-3.5" />
+                    {mapLayerLabels[layer]}
+                  </Button>
+                );
+              })}
             </div>
           </div>
         </CardHeader>
@@ -631,9 +714,15 @@ function MapTab({
       <Card className="shadow-sm">
         <CardHeader>
           <CardTitle>Thông tin lớp bản đồ</CardTitle>
-          <CardDescription>{mapLayerLabels[selectedLayer]} đang được ưu tiên hiển thị.</CardDescription>
+          <CardDescription>{mapLayerLabels[selectedLayer]} đang được hiển thị.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {!openWeatherApiKey && (
+            <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-amber-800 text-xs">
+              Các lớp OpenWeather bị tắt vì chưa có `NEXT_PUBLIC_OPENWEATHER_API_KEY`. Radar RainViewer vẫn hoạt động
+              không cần key.
+            </div>
+          )}
           <div className="rounded-md border p-4">
             <div className="flex items-start gap-3">
               <Navigation className="mt-0.5 size-5 text-emerald-600" />
@@ -740,11 +829,12 @@ function WeatherLeafletMap({
           .addTo(map)
           .bindPopup(
             `<div style="font-family: system-ui, sans-serif; min-width: 180px;">
-            <strong>${plot.name}</strong>
-            <p style="margin: 6px 0 0;">${plot.crop}</p>
-            <p style="margin: 4px 0;">Mưa: ${plot.rainfallToday} mm | Gió: ${plot.windSpeed} km/h</p>
-            <p style="margin: 4px 0;">${plot.mainAlert}</p>
-          </div>`,
+              <strong>${plot.name}</strong>
+              <p style="margin: 6px 0 0;">${plot.crop}</p>
+              <p style="margin: 4px 0;">Mưa: ${plot.rainfallToday} mm | Gió: ${plot.windSpeed} km/h</p>
+              <p style="margin: 4px 0;">Nguồn: ${plot.source}</p>
+              <p style="margin: 4px 0;">${plot.mainAlert}</p>
+            </div>`,
           )
           .on("click", () => onSelectPlot(plot.id));
 
@@ -773,12 +863,13 @@ function WeatherLeafletMap({
     void import("leaflet").then((L) => {
       if (cancelled || !mapRef.current) return;
 
-      if (selectedLayer === "radar") {
+      if (selectedLayer === "rainviewer-radar") {
         fetch("https://api.rainviewer.com/public/weather-maps.json")
-          .then((response) => response.json())
+          .then((response) => response.json() as Promise<RainViewerResponse>)
           .then((data) => {
-            const frame = data?.radar?.past?.at(-1);
-            if (!frame || !mapRef.current || cancelled) return;
+            const frames = [...(data.radar?.past ?? []), ...(data.radar?.nowcast ?? [])];
+            const frame = frames.at(-1);
+            if (!frame || !data.host || !mapRef.current || cancelled) return;
             weatherLayerRef.current = L.tileLayer(`${data.host}${frame.path}/256/{z}/{x}/{y}/2/1_1.png`, {
               opacity: 0.62,
               attribution: 'Weather radar by <a href="https://www.rainviewer.com/">RainViewer</a>',
@@ -786,46 +877,25 @@ function WeatherLeafletMap({
             }).addTo(mapRef.current);
           })
           .catch(() => {
-            if (!mapRef.current || cancelled) return;
-            weatherLayerRef.current = L.circle([21.526, 103.217], {
-              radius: 4200,
-              color: "#0284c7",
-              fillColor: "#38bdf8",
-              fillOpacity: 0.18,
-              weight: 2,
-            }).addTo(mapRef.current);
+            addFallbackWeatherCircle(L, mapRef.current, "rainviewer-radar");
           });
         return;
       }
 
-      const layerConfig = {
-        rain: {
-          center: [21.526, 103.217] as Leaflet.LatLngTuple,
-          radius: 4500,
-          color: "#0284c7",
-          fillColor: "#38bdf8",
-        },
-        wind: {
-          center: [21.516, 103.232] as Leaflet.LatLngTuple,
-          radius: 3800,
-          color: "#0891b2",
-          fillColor: "#67e8f9",
-        },
-        temperature: {
-          center: [21.509, 103.224] as Leaflet.LatLngTuple,
-          radius: 5200,
-          color: "#f97316",
-          fillColor: "#fdba74",
-        },
-      }[selectedLayer];
+      if (openWeatherApiKey) {
+        const layerName = openWeatherLayerNames[selectedLayer];
+        weatherLayerRef.current = L.tileLayer(
+          `https://tile.openweathermap.org/map/${layerName}/{z}/{x}/{y}.png?appid=${openWeatherApiKey}`,
+          {
+            opacity: 0.55,
+            attribution: 'Weather maps by <a href="https://openweathermap.org/">OpenWeather</a>',
+            maxZoom: 18,
+          },
+        ).addTo(mapRef.current);
+        return;
+      }
 
-      weatherLayerRef.current = L.circle(layerConfig.center, {
-        radius: layerConfig.radius,
-        color: layerConfig.color,
-        fillColor: layerConfig.fillColor,
-        fillOpacity: 0.22,
-        weight: 2,
-      }).addTo(mapRef.current);
+      addFallbackWeatherCircle(L, mapRef.current, selectedLayer);
     });
 
     return () => {
@@ -859,20 +929,26 @@ function WeatherLeafletMap({
   );
 }
 
-function ForecastTab() {
+function ForecastTab({
+  selectedPlot,
+  weatherTrend,
+}: {
+  selectedPlot: FarmPlotWeather;
+  weatherTrend: Array<Record<string, number | string>>;
+}) {
   return (
     <div className="grid gap-5 xl:grid-cols-[1fr_380px]">
       <Card className="shadow-sm">
         <CardHeader>
-          <CardTitle>Dự báo theo ngày</CardTitle>
-          <CardDescription>Theo dõi mưa, gió, nhiệt độ và khuyến nghị cho 7 ngày tới.</CardDescription>
+          <CardTitle>Dự báo theo ngày cho {selectedPlot.id}</CardTitle>
+          <CardDescription>Nhiệt độ, mưa, gió, độ ẩm đất và khuyến nghị được tính từ Open-Meteo.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          {forecastDays.map((forecast) => {
+          {selectedPlot.forecast.map((forecast) => {
             const Icon = forecast.icon;
             return (
               <div
-                key={forecast.date}
+                key={forecast.isoDate}
                 className="grid gap-3 rounded-md border p-4 md:grid-cols-[140px_1fr_auto] md:items-center"
               >
                 <div className="flex items-center gap-3">
@@ -888,7 +964,7 @@ function ForecastTab() {
                   <Metric label="Nhiệt độ" value={`${forecast.tempMax}/${forecast.tempMin}°C`} />
                   <Metric label="Mưa" value={`${forecast.rain} mm`} />
                   <Metric label="Xác suất" value={`${forecast.rainProbability}%`} />
-                  <Metric label="Gió" value={`${forecast.wind} km/h`} />
+                  <Metric label="Gió giật" value={`${forecast.windGust} km/h`} />
                   <Metric label="Ẩm đất" value={`${forecast.soilMoisture}%`} />
                 </div>
                 <Badge variant="outline" className="max-w-xs justify-start whitespace-normal text-left leading-relaxed">
@@ -923,11 +999,13 @@ function ForecastTab() {
 }
 
 function AlertsTab({
+  alerts,
   phone,
   subscribeSuccess,
   onPhoneChange,
   onSubscribe,
 }: {
+  alerts: WeatherAlert[];
   phone: string;
   subscribeSuccess: boolean;
   onPhoneChange: (value: string) => void;
@@ -938,10 +1016,10 @@ function AlertsTab({
       <Card className="shadow-sm">
         <CardHeader>
           <CardTitle>Danh sách cảnh báo</CardTitle>
-          <CardDescription>Cảnh báo được ưu tiên theo mức ảnh hưởng đến từng thửa ruộng.</CardDescription>
+          <CardDescription>Cảnh báo được sinh từ dữ liệu Open-Meteo theo từng thửa ruộng.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {weatherAlerts.map((alert) => (
+          {alerts.map((alert) => (
             <div key={alert.id} className="rounded-md border p-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="space-y-1">
@@ -1004,7 +1082,7 @@ function AlertsTab({
   );
 }
 
-function ActionsTab() {
+function ActionsTab({ actions }: { actions: ActionPlan[] }) {
   const statusStyles = {
     ready: "border-emerald-200 bg-emerald-50 text-emerald-700",
     wait: "border-amber-200 bg-amber-50 text-amber-700",
@@ -1022,12 +1100,12 @@ function ActionsTab() {
       <Card className="shadow-sm">
         <CardHeader>
           <CardTitle>Lịch hành động khuyến nghị</CardTitle>
-          <CardDescription>Chuyển dự báo thời tiết thành việc cần làm ngoài đồng.</CardDescription>
+          <CardDescription>Chuyển dự báo thật thành việc cần làm ngoài đồng.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          {actionPlans.map((plan) => (
+          {actions.map((plan) => (
             <div
-              key={`${plan.time}-${plan.plot}`}
+              key={`${plan.time}-${plan.plot}-${plan.task}`}
               className="grid gap-3 rounded-md border p-4 md:grid-cols-[100px_120px_1fr_auto] md:items-center"
             >
               <p className="font-semibold text-sm">{plan.time}</p>
@@ -1047,7 +1125,7 @@ function ActionsTab() {
       <Card className="shadow-sm">
         <CardHeader>
           <CardTitle>Quy tắc nông nghiệp</CardTitle>
-          <CardDescription>Các ngưỡng được dùng để sinh khuyến nghị tự động.</CardDescription>
+          <CardDescription>Các ngưỡng đang dùng để sinh cảnh báo tự động.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           <Rule
@@ -1066,6 +1144,465 @@ function ActionsTab() {
       </Card>
     </div>
   );
+}
+
+async function fetchPlotWeather(plot: FarmPlotBase): Promise<FarmPlotWeather> {
+  const url = new URL("https://api.open-meteo.com/v1/forecast");
+  url.searchParams.set("latitude", String(plot.lat));
+  url.searchParams.set("longitude", String(plot.lng));
+  url.searchParams.set("timezone", "Asia/Bangkok");
+  url.searchParams.set("forecast_days", "7");
+  url.searchParams.set(
+    "current",
+    [
+      "temperature_2m",
+      "relative_humidity_2m",
+      "precipitation",
+      "weather_code",
+      "wind_speed_10m",
+      "wind_gusts_10m",
+    ].join(","),
+  );
+  url.searchParams.set(
+    "hourly",
+    [
+      "temperature_2m",
+      "relative_humidity_2m",
+      "precipitation_probability",
+      "precipitation",
+      "wind_speed_10m",
+      "wind_gusts_10m",
+      "soil_temperature_6cm",
+      "soil_moisture_3_9cm",
+      "evapotranspiration",
+    ].join(","),
+  );
+  url.searchParams.set(
+    "daily",
+    [
+      "weather_code",
+      "temperature_2m_max",
+      "temperature_2m_min",
+      "precipitation_sum",
+      "precipitation_probability_max",
+      "wind_speed_10m_max",
+      "wind_gusts_10m_max",
+    ].join(","),
+  );
+
+  const response = await fetch(url.toString());
+  if (!response.ok) {
+    throw new Error(`Open-Meteo trả về lỗi ${response.status}`);
+  }
+
+  const data = (await response.json()) as OpenMeteoResponse;
+  const forecast = buildForecastDays(data);
+  const current = data.current ?? {};
+  const firstForecast = forecast[0] ?? fallbackForecast[0];
+  const soilMoisture =
+    averageToday(data.hourly?.time, data.hourly?.soil_moisture_3_9cm, "soil") ?? firstForecast.soilMoisture;
+  const soilTemperature = averageToday(data.hourly?.time, data.hourly?.soil_temperature_6cm, "temperature") ?? 24;
+  const evapotranspiration =
+    averageToday(data.hourly?.time, data.hourly?.evapotranspiration, "plain") ?? firstForecast.evapotranspiration;
+  const rainfallToday = firstForecast.rain;
+  const rainProbability = firstForecast.rainProbability;
+  const humidity = roundNumber(current.relative_humidity_2m ?? firstForecast.humidity);
+  const windGust = roundNumber(current.wind_gusts_10m ?? firstForecast.windGust);
+  const weatherCode = roundNumber(current.weather_code ?? firstForecast.weatherCode);
+  const risk = getRiskLevel({
+    rain: rainfallToday,
+    rainProbability,
+    windGust,
+    tempMax: firstForecast.tempMax,
+    humidity,
+    soilMoisture,
+  });
+
+  return {
+    ...plot,
+    temperature: roundNumber(current.temperature_2m ?? firstForecast.tempMax),
+    humidity,
+    rainfallToday,
+    rainProbability,
+    windSpeed: roundNumber(current.wind_speed_10m ?? firstForecast.wind),
+    windGust,
+    soilMoisture,
+    soilTemperature,
+    evapotranspiration,
+    weatherCode,
+    risk,
+    mainAlert: buildMainAlert(risk, firstForecast, soilMoisture, humidity),
+    recommendation: buildRecommendation(plot.crop, firstForecast, soilMoisture, humidity),
+    forecast,
+    source: "Open-Meteo",
+  };
+}
+
+function buildForecastDays(data: OpenMeteoResponse): ForecastDay[] {
+  const days = data.daily?.time ?? [];
+  return days.slice(0, 7).map((isoDate, index) => {
+    const humidity = averageForDate(isoDate, data.hourly?.time, data.hourly?.relative_humidity_2m, "plain") ?? 70;
+    const soilMoisture = averageForDate(isoDate, data.hourly?.time, data.hourly?.soil_moisture_3_9cm, "soil") ?? 55;
+    const evapotranspiration = sumForDate(isoDate, data.hourly?.time, data.hourly?.evapotranspiration) ?? 0;
+    const weatherCode = roundNumber(data.daily?.weather_code?.[index] ?? 0);
+    const day: ForecastDay = {
+      day: formatWeekday(isoDate),
+      date: formatShortDate(isoDate),
+      isoDate,
+      icon: getWeatherIcon(weatherCode),
+      tempMax: roundNumber(data.daily?.temperature_2m_max?.[index] ?? 0),
+      tempMin: roundNumber(data.daily?.temperature_2m_min?.[index] ?? 0),
+      rain: roundNumber(data.daily?.precipitation_sum?.[index] ?? 0),
+      rainProbability: roundNumber(data.daily?.precipitation_probability_max?.[index] ?? 0),
+      wind: roundNumber(data.daily?.wind_speed_10m_max?.[index] ?? 0),
+      windGust: roundNumber(data.daily?.wind_gusts_10m_max?.[index] ?? 0),
+      humidity,
+      soilMoisture,
+      evapotranspiration: roundNumber(evapotranspiration),
+      weatherCode,
+      advice: "",
+    };
+    return {
+      ...day,
+      advice: buildDailyAdvice(day),
+    };
+  });
+}
+
+function buildFallbackPlots(): FarmPlotWeather[] {
+  return farmPlots.map((plot, index) => {
+    const forecast = fallbackForecast.map((item) => ({ ...item }));
+    const firstForecast = forecast[0];
+    const soilMoisture = Math.max(38, firstForecast.soilMoisture - index * 6);
+    const humidity = Math.min(94, firstForecast.humidity + index * 5);
+    const risk = getRiskLevel({
+      rain: firstForecast.rain,
+      rainProbability: firstForecast.rainProbability,
+      windGust: firstForecast.windGust,
+      tempMax: firstForecast.tempMax,
+      humidity,
+      soilMoisture,
+    });
+
+    return {
+      ...plot,
+      temperature: firstForecast.tempMax - index,
+      humidity,
+      rainfallToday: firstForecast.rain + index * 8,
+      rainProbability: firstForecast.rainProbability + index * 8,
+      windSpeed: firstForecast.wind + index * 3,
+      windGust: firstForecast.windGust + index * 6,
+      soilMoisture,
+      soilTemperature: 25.4 - index,
+      evapotranspiration: firstForecast.evapotranspiration,
+      weatherCode: firstForecast.weatherCode,
+      risk,
+      mainAlert: buildMainAlert(risk, firstForecast, soilMoisture, humidity),
+      recommendation: buildRecommendation(plot.crop, firstForecast, soilMoisture, humidity),
+      forecast,
+      source: "Fallback",
+    };
+  });
+}
+
+function buildAlerts(plots: FarmPlotWeather[]): WeatherAlert[] {
+  const alerts: WeatherAlert[] = [];
+
+  plots.forEach((plot) => {
+    const today = plot.forecast[0];
+    const rainyDay = plot.forecast.find((day) => day.rain >= 50 || day.rainProbability >= 85);
+    const windyDay = plot.forecast.find((day) => day.windGust >= 50);
+    const hotDay = plot.forecast.find((day) => day.tempMax >= 38);
+    const dryDay = plot.forecast.find((day) => day.soilMoisture < 40 && day.evapotranspiration >= 4.5);
+
+    if (rainyDay) {
+      alerts.push({
+        id: `${plot.id}-rain-${rainyDay.isoDate}`,
+        title: "Mưa lớn cục bộ",
+        plot: plot.name,
+        level: rainyDay.rain >= 50 ? "high" : "medium",
+        window: rainyDay.date,
+        trigger: `Mưa ${rainyDay.rain} mm, xác suất ${rainyDay.rainProbability}%.`,
+        action: "Mở rãnh thoát nước, dừng tưới tự động và tránh bón phân trước mưa.",
+      });
+    }
+
+    if (windyDay) {
+      alerts.push({
+        id: `${plot.id}-wind-${windyDay.isoDate}`,
+        title: "Gió giật mạnh",
+        plot: plot.name,
+        level: windyDay.windGust >= 60 ? "high" : "medium",
+        window: windyDay.date,
+        trigger: `Gió giật dự báo ${windyDay.windGust} km/h.`,
+        action: "Gia cố nhà lưới, cọc chống và vật tư che phủ ngoài đồng.",
+      });
+    }
+
+    if (hotDay) {
+      alerts.push({
+        id: `${plot.id}-heat-${hotDay.isoDate}`,
+        title: "Nắng nóng",
+        plot: plot.name,
+        level: hotDay.tempMax >= 40 ? "high" : "medium",
+        window: hotDay.date,
+        trigger: `Nhiệt độ cao nhất ${hotDay.tempMax}°C.`,
+        action: "Che phủ cây non, tưới sáng sớm và tránh làm đồng giữa trưa.",
+      });
+    }
+
+    if (dryDay) {
+      alerts.push({
+        id: `${plot.id}-dry-${dryDay.isoDate}`,
+        title: "Thiếu ẩm tầng mặt",
+        plot: plot.name,
+        level: "medium",
+        window: dryDay.date,
+        trigger: `Độ ẩm đất ${dryDay.soilMoisture}%, ET0 ${dryDay.evapotranspiration} mm/ngày.`,
+        action: "Tưới nhỏ giọt vào sáng sớm, ưu tiên cây đang ra hoa hoặc cây non.",
+      });
+    }
+
+    if (today.humidity >= 85 && today.rain >= 20) {
+      alerts.push({
+        id: `${plot.id}-fungus-${today.isoDate}`,
+        title: "Nguy cơ nấm bệnh sau mưa",
+        plot: plot.name,
+        level: today.rain >= 50 ? "high" : "medium",
+        window: today.date,
+        trigger: `Độ ẩm ${today.humidity}%, mưa ${today.rain} mm.`,
+        action: "Theo dõi mặt dưới lá, vệ sinh đồng ruộng và chỉ phun khi trời ráo.",
+      });
+    }
+  });
+
+  if (alerts.length === 0) {
+    return [
+      {
+        id: "stable",
+        title: "Không có cảnh báo nghiêm trọng",
+        plot: "Toàn bộ vùng theo dõi",
+        level: "low",
+        window: "7 ngày tới",
+        trigger: "Các chỉ số mưa, gió, nhiệt và độ ẩm đất đang trong ngưỡng an toàn.",
+        action: "Duy trì lịch chăm sóc thường lệ và kiểm tra đồng ruộng sau mưa rào.",
+      },
+    ];
+  }
+
+  return alerts.sort((a, b) => riskPriority(b.level) - riskPriority(a.level)).slice(0, 8);
+}
+
+function buildActions(plots: FarmPlotWeather[]): ActionPlan[] {
+  const actions: ActionPlan[] = [];
+
+  plots.forEach((plot) => {
+    const today = plot.forecast[0];
+    if (today.rain >= 20) {
+      actions.push({
+        time: "Hôm nay",
+        plot: plot.id,
+        task: "Kiểm tra thoát nước",
+        reason: `Open-Meteo dự báo mưa ${today.rain} mm.`,
+        status: "ready",
+      });
+    }
+
+    if (today.windGust >= 45) {
+      actions.push({
+        time: "Trước chiều",
+        plot: plot.id,
+        task: "Gia cố vật tư che phủ",
+        reason: `Gió giật có thể đạt ${today.windGust} km/h.`,
+        status: "ready",
+      });
+    }
+
+    if (today.rainProbability >= 60 || today.wind >= 20) {
+      actions.push({
+        time: "Hôm nay",
+        plot: plot.id,
+        task: "Tạm dừng phun thuốc",
+        reason: `Xác suất mưa ${today.rainProbability}%, gió ${today.wind} km/h.`,
+        status: "avoid",
+      });
+    }
+
+    if (today.soilMoisture < 40) {
+      actions.push({
+        time: "Sáng sớm",
+        plot: plot.id,
+        task: "Tưới bổ sung",
+        reason: `Độ ẩm đất chỉ ${today.soilMoisture}%.`,
+        status: "ready",
+      });
+    }
+  });
+
+  if (actions.length === 0) {
+    return [
+      {
+        time: "Hôm nay",
+        plot: "Tất cả",
+        task: "Duy trì chăm sóc thường lệ",
+        reason: "Chưa có ngưỡng thời tiết bất lợi đáng kể.",
+        status: "wait",
+      },
+    ];
+  }
+
+  return actions.slice(0, 8);
+}
+
+function addFallbackWeatherCircle(L: typeof Leaflet, map: Leaflet.Map | null, layer: WeatherLayer) {
+  if (!map) return;
+
+  const config = {
+    "rainviewer-radar": {
+      center: [21.526, 103.217] as Leaflet.LatLngTuple,
+      radius: 4200,
+      color: "#0284c7",
+      fillColor: "#38bdf8",
+    },
+    "openweather-rain": {
+      center: [21.526, 103.217] as Leaflet.LatLngTuple,
+      radius: 4500,
+      color: "#0284c7",
+      fillColor: "#38bdf8",
+    },
+    "openweather-wind": {
+      center: [21.516, 103.232] as Leaflet.LatLngTuple,
+      radius: 3800,
+      color: "#0891b2",
+      fillColor: "#67e8f9",
+    },
+    "openweather-temperature": {
+      center: [21.509, 103.224] as Leaflet.LatLngTuple,
+      radius: 5200,
+      color: "#f97316",
+      fillColor: "#fdba74",
+    },
+  }[layer];
+
+  L.circle(config.center, {
+    radius: config.radius,
+    color: config.color,
+    fillColor: config.fillColor,
+    fillOpacity: 0.22,
+    weight: 2,
+  }).addTo(map);
+}
+
+function buildMainAlert(risk: RiskLevel, forecast: ForecastDay, soilMoisture: number, humidity: number) {
+  if (risk === "high") {
+    if (forecast.rain >= 50) return "Mưa lớn trong kỳ dự báo, nguy cơ úng và rửa trôi phân.";
+    if (forecast.windGust >= 50) return "Gió giật mạnh, cần gia cố cây và nhà lưới.";
+    if (forecast.tempMax >= 38) return "Nắng nóng cao điểm, cây non dễ mất nước.";
+  }
+  if (soilMoisture < 40) return "Đất khô nhanh, cần ưu tiên tưới bổ sung.";
+  if (humidity >= 85 && forecast.rain >= 20) return "Độ ẩm cao sau mưa, tăng nguy cơ nấm bệnh.";
+  return "Điều kiện thời tiết tương đối ổn định cho chăm sóc thường lệ.";
+}
+
+function buildRecommendation(crop: string, forecast: ForecastDay, soilMoisture: number, humidity: number) {
+  if (forecast.rain >= 20 || forecast.rainProbability >= 60) {
+    return "Hoãn phun thuốc và bón phân; kiểm tra rãnh thoát nước trước mưa.";
+  }
+  if (forecast.wind >= 20 || forecast.windGust >= 45) {
+    return "Tránh phun thuốc dạng sương; gia cố lưới che và cọc chống.";
+  }
+  if (soilMoisture < 40) {
+    return crop.includes("Cà phê")
+      ? "Tưới nhỏ giọt sáng sớm, ưu tiên cây đang ra hoa."
+      : "Tưới nhẹ sáng sớm và phủ gốc để giảm bốc hơi.";
+  }
+  if (humidity >= 85) {
+    return "Theo dõi nấm bệnh mặt dưới lá, chỉ phun phòng khi trời ráo.";
+  }
+  return "Có thể làm cỏ, kiểm tra sâu bệnh và chăm sóc thường lệ.";
+}
+
+function buildDailyAdvice(day: ForecastDay) {
+  return buildRecommendation("cây trồng", day, day.soilMoisture, day.humidity);
+}
+
+function getRiskLevel({
+  rain,
+  rainProbability,
+  windGust,
+  tempMax,
+  humidity,
+  soilMoisture,
+}: {
+  rain: number;
+  rainProbability: number;
+  windGust: number;
+  tempMax: number;
+  humidity: number;
+  soilMoisture: number;
+}): RiskLevel {
+  if (rain >= 50 || windGust >= 55 || tempMax >= 39) return "high";
+  if (rain >= 20 || rainProbability >= 70 || windGust >= 40 || soilMoisture < 40 || (humidity >= 85 && rain >= 10)) {
+    return "medium";
+  }
+  return "low";
+}
+
+function getWeatherIcon(code: number) {
+  if ([0, 1].includes(code)) return Sun;
+  if ([51, 53, 55, 61, 63, 65, 80, 81, 82, 95, 96, 99].includes(code)) return CloudRain;
+  return CloudSun;
+}
+
+function averageToday(times?: string[], values?: number[], mode: "plain" | "soil" | "temperature" = "plain") {
+  const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Bangkok" });
+  return averageForDate(today, times, values, mode);
+}
+
+function averageForDate(
+  date: string,
+  times?: string[],
+  values?: number[],
+  mode: "plain" | "soil" | "temperature" = "plain",
+) {
+  const matched = valuesForDate(date, times, values);
+  if (matched.length === 0) return undefined;
+  const average = matched.reduce((sum, value) => sum + value, 0) / matched.length;
+  if (mode === "soil") return roundNumber(Math.max(0, Math.min(100, average * 100)));
+  return roundNumber(average);
+}
+
+function sumForDate(date: string, times?: string[], values?: number[]) {
+  const matched = valuesForDate(date, times, values);
+  if (matched.length === 0) return undefined;
+  return roundNumber(matched.reduce((sum, value) => sum + value, 0));
+}
+
+function valuesForDate(date: string, times?: string[], values?: number[]) {
+  if (!times || !values) return [];
+  return times.reduce<number[]>((collection, time, index) => {
+    const value = values[index];
+    if (time.startsWith(date) && Number.isFinite(value)) {
+      collection.push(value);
+    }
+    return collection;
+  }, []);
+}
+
+function formatWeekday(isoDate: string) {
+  return new Intl.DateTimeFormat("vi-VN", { weekday: "long" }).format(new Date(`${isoDate}T00:00:00`));
+}
+
+function formatShortDate(isoDate: string) {
+  return new Intl.DateTimeFormat("vi-VN", { day: "2-digit", month: "2-digit" }).format(new Date(`${isoDate}T00:00:00`));
+}
+
+function riskPriority(level: RiskLevel) {
+  return { low: 1, medium: 2, high: 3 }[level];
+}
+
+function roundNumber(value: number) {
+  return Math.round(value * 10) / 10;
 }
 
 function Metric({ label, value }: { label: string; value: string }) {
