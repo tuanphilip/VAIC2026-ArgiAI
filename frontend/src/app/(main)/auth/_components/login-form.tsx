@@ -11,7 +11,7 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { backendUserToAuthUser, login, register } from "@/lib/auth-api";
+import { AuthApiError, backendUserToAuthUser, login, register } from "@/lib/auth-api";
 import { useAuthStore } from "@/stores/auth-store";
 
 const formSchema = z.object({
@@ -64,10 +64,16 @@ export function LoginForm() {
         const result = await login(account.username, account.password);
         finishLogin(result.access_token, result.user);
         return;
-      } catch {
-        // Tài khoản demo chưa tồn tại, tự đăng ký rồi đăng nhập lại.
+      } catch (error) {
+        // Chỉ tự đăng ký khi backend xác nhận tài khoản chưa đăng nhập được.
+        if (!(error instanceof AuthApiError) || error.status != 401) throw error;
       }
-      await register(account);
+      try {
+        await register(account);
+      } catch (error) {
+        // Một lượt click khác có thể vừa tạo tài khoản. 409 không phải lỗi chết.
+        if (!(error instanceof AuthApiError) || error.status != 409) throw error;
+      }
       const result = await login(account.username, account.password);
       finishLogin(result.access_token, result.user);
     } catch (error) {

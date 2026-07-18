@@ -20,6 +20,13 @@ export interface RegisterPayload {
   email?: string;
 }
 
+export class AuthApiError extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message);
+    this.name = "AuthApiError";
+  }
+}
+
 async function parseErrorDetail(res: Response, fallback: string): Promise<string> {
   const body = await res.json().catch(() => null);
   return body?.detail ?? fallback;
@@ -32,7 +39,7 @@ export async function login(username: string, password: string): Promise<LoginRe
     body: JSON.stringify({ username, password }),
   });
   if (!res.ok) {
-    throw new Error(await parseErrorDetail(res, "Sai tên đăng nhập hoặc mật khẩu."));
+    throw new AuthApiError(await parseErrorDetail(res, "Sai tên đăng nhập hoặc mật khẩu."), res.status);
   }
   const data = await res.json();
   return { access_token: data.access_token, user: data.user };
@@ -45,7 +52,7 @@ export async function register(payload: RegisterPayload): Promise<void> {
     body: JSON.stringify(payload),
   });
   if (!res.ok) {
-    throw new Error(await parseErrorDetail(res, "Đăng ký thất bại."));
+    throw new AuthApiError(await parseErrorDetail(res, "Đăng ký thất bại."), res.status);
   }
 }
 
