@@ -8,53 +8,25 @@ from sqlalchemy.orm import selectinload
 from app.core.dependencies import get_current_user
 from app.database.session import get_db
 from app.models import Plot, User
-from app.schemas.plots import (
-    CropTypeItem,
-    CropTypeResponseItem,
-    Location,
-    PlotCreateRequest,
-    PlotMutationResponse,
-    PlotResponse,
-    PlotUpdateRequest,
-)
+from app.schemas.plots import Location, PlotCreateRequest, PlotMutationResponse, PlotResponse, PlotUpdateRequest
 from app.services.crops import get_or_create_crop
 
 router = APIRouter(prefix="/plots", tags=["Plots"])
 
 
 def serialize_plot(plot: Plot) -> PlotResponse:
-    crops = [CropTypeResponseItem(name=item["name"], variety=item["variety"]) for item in plot.crop_types or []]
-    if not crops:
-        crops = [CropTypeResponseItem(name=plot.crop.name, variety=plot.crop.variety)]
     return PlotResponse(
         plot_id=plot.code,
-        crop_name=crops[0].name,
-        crop_variety=crops[0].variety,
-        crops=crops,
+        crop_name=plot.crop.name,
+        crop_variety=plot.crop.variety,
         area_hectares=plot.area_hectares,
         seeding_date=plot.seeding_date,
         status=plot.status,
         health=plot.health,
         moisture=f"{plot.moisture}%" if plot.moisture is not None else None,
         owner=plot.owner.full_name,
-        owner_phone=plot.owner_phone,
         location=Location(lat=plot.location_lat, lng=plot.location_lng),
-        boundary=plot.boundary,
-        livestock=plot.livestock or [],
     )
-
-
-async def _resolve_crop_types(db: AsyncSession, crops: list[CropTypeItem]) -> tuple[UUID, list[dict]]:
-    """Resolves each selected crop against the crops catalog. Returns (primary_crop_id, crop_types_jsonb)."""
-    resolved: list[dict] = []
-    primary_crop_id: UUID | None = None
-    for item in crops:
-        crop = await get_or_create_crop(db, item.type, item.variety)
-        if primary_crop_id is None:
-            primary_crop_id = crop.id
-        resolved.append({"name": crop.name, "variety": crop.variety})
-    assert primary_crop_id is not None
-    return primary_crop_id, resolved
 
 
 @router.get("", response_model=list[PlotResponse])
@@ -79,22 +51,17 @@ async def create_plot(
     if duplicate.scalar_one_or_none():
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Plot code already exists")
 
-    primary_crop_id, crop_types = await _resolve_crop_types(db, payload.crops)
-    owner_id = await _resolve_owner_id(db, payload.owner, current_user)
+    crop = await get_or_create_crop(db, payload.crop_type, payload.crop_variety)
     plot = Plot(
         code=payload.plot_id,
-        user_id=owner_id,
-        crop_id=primary_crop_id,
-        crop_types=crop_types,
+        user_id=current_user.id,
+        crop_id=crop.id,
         area_hectares=payload.area_hectares,
         location_lat=payload.location_lat,
         location_lng=payload.location_lng,
         seeding_date=payload.seeding_date,
         health=payload.health,
         moisture=payload.moisture,
-        boundary=payload.boundary,
-        owner_phone=payload.owner_phone,
-        livestock=[item.model_dump() for item in payload.livestock],
     )
     db.add(plot)
     await db.commit()
@@ -120,29 +87,13 @@ async def update_plot(
     if current_user.role == "farmer" and plot.user_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot update another user's plot")
 
-    if payload.crops:
-        primary_crop_id, crop_types = await _resolve_crop_types(db, payload.crops)
-        plot.crop_id = primary_crop_id
-        plot.crop_types = crop_types
-    if payload.owner is not None:
-        plot.user_id = await _resolve_owner_id(db, payload.owner, current_user)
-    if payload.owner_phone is not None:
-        plot.owner_phone = payload.owner_phone
-    for field in [
-        "area_hectares",
-        "seeding_date",
-        "status",
-        "health",
-        "location_lat",
-        "location_lng",
-        "moisture",
-        "boundary",
-    ]:
+    if payload.crop_type or payload.crop_variety:
+        crop = await get_or_create_crop(db, payload.crop_type or plot.crop.name, payload.crop_variety)
+        plot.crop_id = crop.id
+    for field in ["area_hectares", "seeding_date", "status", "health", "location_lat", "location_lng", "moisture"]:
         value = getattr(payload, field)
         if value is not None:
             setattr(plot, field, value)
-    if payload.livestock is not None:
-        plot.livestock = [item.model_dump() for item in payload.livestock]
     await db.commit()
     return PlotMutationResponse(message="Plot updated successfully", plot_id=plot.code, id=plot.id)
 
@@ -162,20 +113,6 @@ async def delete_plot(
     await db.execute(delete(Plot).where(Plot.id == plot.id))
     await db.commit()
     return {"status": "success", "message": "Plot deleted successfully"}
-
-
-async def _resolve_owner_id(db: AsyncSession, owner_name: str | None, current_user: User) -> UUID:
-    if owner_name is None:
-        return current_user.id
-    if current_user.role == "farmer":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Farmers cannot assign plot ownership"
-        )
-    result = await db.execute(select(User).where(User.full_name == owner_name))
-    owner = result.scalar_one_or_none()
-    if owner is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Owner not found")
-    return owner.id
 
 
 def _uuid_or_none(value: str) -> UUID | None:
