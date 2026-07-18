@@ -319,6 +319,8 @@ def make_plot(code: str = "PLOT-001", owner: User | None = None) -> Plot:
         seeding_date=date(2026, 7, 1),
         health="Khỏe mạnh",
         moisture=62,
+        status="growing",
+        crop_types=json.dumps([{"type": "Rice", "area_hectares": 2.5}]),
     )
     plot.owner = owner
     plot.crop = crop
@@ -351,6 +353,22 @@ class TestWeatherRoutes:
         assert response.json()["area"] == {"lat": 21.518, "lng": 103.223, "label": "Tây Bắc"}
         current_fetch.assert_awaited_once_with(21.518, 103.223)
         forecast_fetch.assert_awaited_once_with(21.518, 103.223)
+
+    def test_official_can_list_all_plots(self, client: TestClient) -> None:
+        from app.main import app
+
+        official = make_user(role="official")
+        plot = make_plot("A1", owner=make_user(role="farmer"))
+        app.dependency_overrides[get_current_user] = lambda: official
+
+        async def override_db() -> object:
+            yield FakeSession([FakeScalarResult(many=[plot])])
+
+        app.dependency_overrides[get_db] = override_db
+        response = client.get("/api/v1/plots")
+
+        assert response.status_code == 200
+        assert response.json()[0]["plot_id"] == "A1"
 
     def test_plot_scoped_weather_endpoints_are_removed(self, client: TestClient) -> None:
         from app.main import app

@@ -1,3 +1,4 @@
+import json
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -23,7 +24,20 @@ router = APIRouter(prefix="/plots", tags=["Plots"])
 
 
 def serialize_plot(plot: Plot) -> PlotResponse:
-    crops = [CropTypeResponseItem(name=item["name"], variety=item["variety"]) for item in plot.crop_types or []]
+    raw_crop_types = plot.crop_types
+    if isinstance(raw_crop_types, str):
+        try:
+            raw_crop_types = json.loads(raw_crop_types)
+        except json.JSONDecodeError:
+            raw_crop_types = []
+    crops = [
+        CropTypeResponseItem(
+            name=str(item.get("name") or item.get("type") or plot.crop.name),
+            variety=str(item.get("variety") or ""),
+        )
+        for item in (raw_crop_types or [])
+        if isinstance(item, dict)
+    ]
     if not crops:
         crops = [CropTypeResponseItem(name=plot.crop.name, variety=plot.crop.variety)]
     return PlotResponse(
@@ -218,7 +232,7 @@ async def _resolve_owner_id(
     elif owner_email is not None:
         result = await db.execute(select(User).where(User.email == owner_email))
     else:
-        result = await db.execute(select(User).where(User.username == owner_name))
+        result = await db.execute(select(User).where(or_(User.username == owner_name, User.full_name == owner_name)))
     owner = result.scalar_one_or_none()
     if owner is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Owner not found")
