@@ -164,7 +164,7 @@ def compute_final_score(
     symptom_match = best_assessment.symptom_match_score if best_assessment else 0.0
     if analysis.source == "symptom_triage_agent":
         return round(min(analysis.confidence, 0.65), 3)
-    if analysis.source != "gemini":
+    if analysis.source not in {"gemini", "local_plantvillage"}:
         return 0.0
     candidate_margin = _candidate_margin_score(best_assessment, analysis.top_candidates)
     base_score = (
