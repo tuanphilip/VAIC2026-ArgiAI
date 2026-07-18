@@ -113,3 +113,18 @@ class PriceAlert(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class WeatherAlertSubscription(Base):
+    __tablename__ = "weather_alert_subscriptions"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, server_default=func.gen_random_uuid())
+    user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), unique=True, index=True)
+    phone_number: Mapped[str] = mapped_column(String(20))
+    rain_threshold_mm: Mapped[float] = mapped_column(Float, default=50.0)
+    wind_gust_threshold_kmh: Mapped[float] = mapped_column(Float, default=50.0)
+    temperature_threshold_c: Mapped[float] = mapped_column(Float, default=38.0)
+    soil_moisture_threshold_pct: Mapped[int] = mapped_column(Integer, default=40)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
