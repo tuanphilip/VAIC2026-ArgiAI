@@ -76,7 +76,7 @@ export function ChatThread({ contact, messages, onOpenContact, onBack, showBackB
       }));
       const answer = await askAgriculturalAssistant(trimmed, [...history, { role: "user", content: trimmed }], sessionId);
       setSessionId(answer.session_id);
-      const text = answer.sections.map((section) => `**${section.title}:**\\n${section.content.join("\\n")}`).join("\\n\\n");
+      const text = answer.sections.map((section) => `**${section.title}:**\n${section.content.join("\n")}`).join("\n\n");
       setThreadMessages((current) => [...current, { id: Date.now() + 1, align: "start", text, time: "Vừa xong" }]);
     } catch (error) {
       setThreadMessages((current) => [
@@ -121,7 +121,7 @@ export function ChatThread({ contact, messages, onOpenContact, onBack, showBackB
                   <PhoneCall />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Call</TooltipContent>
+              <TooltipContent>Gọi</TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -129,7 +129,7 @@ export function ChatThread({ contact, messages, onOpenContact, onBack, showBackB
                   <Tag />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Tag</TooltipContent>
+              <TooltipContent>Gắn nhãn</TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -137,7 +137,7 @@ export function ChatThread({ contact, messages, onOpenContact, onBack, showBackB
                   <AlarmClock />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Snooze</TooltipContent>
+              <TooltipContent>Nhắc lại sau</TooltipContent>
             </Tooltip>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -149,20 +149,20 @@ export function ChatThread({ contact, messages, onOpenContact, onBack, showBackB
                 <DropdownMenuGroup>
                   <DropdownMenuItem onSelect={onOpenContact}>
                     <UserRound />
-                    View profile
+                    Xem hồ sơ
                   </DropdownMenuItem>
                   <DropdownMenuItem>
                     <Copy />
-                    Copy email
+                    Sao chép email
                   </DropdownMenuItem>
                   <DropdownMenuItem>
                     <Flag />
-                    Mark priority
+                    Đánh dấu ưu tiên
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
-                  <DropdownMenuItem variant="destructive">Block contact</DropdownMenuItem>
+                  <DropdownMenuItem variant="destructive">Chặn liên hệ</DropdownMenuItem>
                 </DropdownMenuGroup>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -177,7 +177,7 @@ export function ChatThread({ contact, messages, onOpenContact, onBack, showBackB
           <MessageScrollerViewport>
             <MessageScrollerContent className="gap-6 px-2 py-8">
               <Marker variant="separator">
-                <MarkerContent>May 6, 2026</MarkerContent>
+                <MarkerContent>Hôm nay</MarkerContent>
               </Marker>
 
               {threadMessages.map((message) => {
@@ -235,18 +235,18 @@ export function ChatThread({ contact, messages, onOpenContact, onBack, showBackB
             className="w-full justify-start gap-2 border-b px-3 **:data-[slot=tabs-trigger]:border-x-0 **:data-[slot=tabs-trigger]:px-6 group-data-horizontal/tabs:h-10"
           >
             <TabsTrigger value="reply" className="flex-none px-1">
-              Reply
+              Trò chuyện
             </TabsTrigger>
             <TabsTrigger value="note" className="flex-none px-1">
-              Internal note
+              Ghi chú
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="reply" className="m-0">
-            <MessageComposer placeholder="Type your message..." onSend={sendMessage} disabled={isSending} />
+            <MessageComposer placeholder="Hỏi trợ lý nông nghiệp..." onSend={sendMessage} disabled={isSending} />
           </TabsContent>
           <TabsContent value="note" className="m-0">
-            <MessageComposer placeholder="Write an internal note..." />
+            <MessageComposer placeholder="Thêm ghi chú nội bộ..." />
           </TabsContent>
         </Tabs>
       </div>
@@ -275,19 +275,19 @@ function MessageComposer({ placeholder, onSend, disabled = false }: { placeholde
           className="min-h-14 px-3 py-2.5 text-sm ring-0 focus-visible:ring-0 aria-invalid:ring-0 dark:aria-invalid:ring-0"
         />
         <InputGroupAddon align="block-end">
-          <InputGroupButton aria-label="Format" type="button" size="icon-sm">
+          <InputGroupButton aria-label="Định dạng" type="button" size="icon-sm">
             <Type />
           </InputGroupButton>
-          <InputGroupButton aria-label="Emoji" type="button" size="icon-sm">
+          <InputGroupButton aria-label="Biểu tượng cảm xúc" type="button" size="icon-sm">
             <Smile />
           </InputGroupButton>
-          <InputGroupButton aria-label="Attach file" type="button" size="icon-sm">
+          <InputGroupButton aria-label="Đính kèm tệp" type="button" size="icon-sm">
             <Paperclip />
           </InputGroupButton>
-          <InputGroupButton aria-label="Insert link" type="button" size="icon-sm">
+          <InputGroupButton aria-label="Chèn liên kết" type="button" size="icon-sm">
             <Link />
           </InputGroupButton>
-          <InputGroupButton aria-label="AI assist" type="button" size="icon-sm" variant="outline">
+          <InputGroupButton aria-label="Trợ lý AI" type="button" size="icon-sm" variant="outline">
             <Sparkles />
           </InputGroupButton>
           <InputGroupButton type="submit" variant="default" size="icon-sm" className="ml-auto" disabled={disabled || !value.trim()}>
