@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.core.config import get_settings
-from app.routes import auth, dashboard, diseases, health, market, plots, yield_forecasts
+from app.routes import auth, dashboard, diseases, health, market, plots, weather, yield_forecasts
 
 settings = get_settings()
 
@@ -32,6 +32,7 @@ app.include_router(health.router)
 app.include_router(auth.router, prefix=settings.api_v1_prefix)
 app.include_router(plots.router, prefix=settings.api_v1_prefix)
 app.include_router(diseases.router, prefix=settings.api_v1_prefix)
+app.include_router(weather.router, prefix=settings.api_v1_prefix)
 app.include_router(yield_forecasts.router, prefix=settings.api_v1_prefix)
 app.include_router(market.router, prefix=settings.api_v1_prefix)
 app.include_router(dashboard.router, prefix=settings.api_v1_prefix)
