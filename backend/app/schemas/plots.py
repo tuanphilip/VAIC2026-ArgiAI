@@ -16,7 +16,7 @@ class LivestockItem(BaseModel):
 
 class CropTypeItem(BaseModel):
     type: str = Field(min_length=1, max_length=100)
-    variety: str = Field(min_length=1, max_length=100)
+    variety: str = Field(default="", max_length=100)
 
 
 class CropTypeResponseItem(BaseModel):

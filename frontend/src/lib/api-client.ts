@@ -1,3 +1,4 @@
+import { formatApiDetail } from "@/lib/api-error";
 import { useAuthStore } from "@/stores/auth-store";
 
 export const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1").replace(/\/$/, "");
@@ -33,7 +34,8 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
 
   if (!res.ok) {
     const detail = await res.json().catch(() => null);
-    throw new ApiError(res.status, detail?.detail ?? `Request failed with status ${res.status}`);
+    const message = formatApiDetail(detail?.detail) || `Request failed with status ${res.status}`;
+    throw new ApiError(res.status, message);
   }
 
   if (res.status === 204) return undefined as T;

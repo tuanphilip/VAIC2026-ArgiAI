@@ -725,15 +725,18 @@ export default function Page() {
   const activeUser = useActiveUser();
   const [lands, setLands] = useState<Land[]>([]);
   const [isLoadingLands, setIsLoadingLands] = useState(true);
+  const [landsError, setLandsError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const refreshLands = async () => {
     setIsLoadingLands(true);
+    setLandsError(null);
     try {
       const plots = await listPlots();
       setLands(plots.map(apiPlotToLand));
     } catch (error) {
       console.error("[lands] Failed to load plots:", error);
+      setLandsError(describeApiError(error, "Không thể tải danh sách thửa đất. Vui lòng kiểm tra kết nối API và quyền tài khoản."));
     } finally {
       setIsLoadingLands(false);
     }
@@ -1090,6 +1093,12 @@ export default function Page() {
       <div className="w-full space-y-4">
         {isLoadingLands && (
           <div className="text-center text-xs text-muted-foreground py-2">Đang tải dữ liệu thửa đất...</div>
+        )}
+        {landsError && (
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+            <span>{landsError}</span>
+            <Button onClick={() => void refreshLands()} size="sm" variant="outline">Tải lại</Button>
+          </div>
         )}
 
         {/* Tìm kiếm & bộ lọc (chỉ cán bộ, ở tab danh sách) */}
