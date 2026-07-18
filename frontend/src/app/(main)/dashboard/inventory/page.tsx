@@ -18,24 +18,24 @@ interface InventoryItem {
 }
 
 const suppliers = [
-  { id: 1, name: "CTY Giống Cây Trồng Miền Nam", contact: "028.3844.0123", email: "info@sscseeds.com", address: "Q. Tân Bình, TP.HCM" },
-  { id: 2, name: "Phân bón Bình Điền (Đầu Trâu)", contact: "027.2387.4623", email: "contact@binhdien.vn", address: "Bình Chánh, TP.HCM" },
-  { id: 3, name: "Thuốc BVTV sinh học An Phát", contact: "090.8765.432", email: "sales@anphatbio.com", address: "Dĩ An, Bình Dương" },
+  { id: 1, name: "HTX Nông nghiệp Mường Ảng", contact: "0215.000.000", email: "htx.muongang@argiai.vn", address: "Mường Ảng, Điện Biên" },
+  { id: 2, name: "Điểm cung ứng vật tư Điện Biên", contact: "0215.000.001", email: "vattu@argiai.vn", address: "Thành phố Điện Biên Phủ, Điện Biên" },
+  { id: 3, name: "Tổ vật tư sinh học Mường Ảng", contact: "0215.000.002", email: "sinhhoc@argiai.vn", address: "Mường Ảng, Điện Biên" },
 ];
 
 const stockTransfers = [
   { id: 201, date: "16/07/2026", item: "Phân bón NPK Lâm Thao", qty: "5 bao", from: "Kho chính (A)", to: "Thửa A1 (Bón lót)" },
   { id: 202, date: "12/07/2026", item: "Đầu phun xoay van nhỏ giọt", qty: "30 cái", from: "Kho linh kiện", to: "Nhà kính B (Lắp ráp)" },
-  { id: 203, date: "09/07/2026", item: "Hạt giống Cà chua đỏ F1", qty: "2 hộp", from: "Kho mát (C)", to: "Nhà màng C (Gieo hạt)" },
+  { id: 203, date: "09/07/2026", item: "Rau cải ngọt Điện Biên", qty: "2 hộp", from: "Kho mát (C)", to: "Nhà màng C (Gieo hạt)" },
 ];
 
 export default function Page() {
   const [items, setItems] = useState<InventoryItem[]>([
-    { id: 1, name: "Hạt giống Lúa Jasmine 85", category: "Hạt giống", qty: 250, unit: "kg", status: "Đầy kho", location: "Kệ A1" },
+    { id: 1, name: "Hạt giống Lúa Seng Cù Điện Biên", category: "Hạt giống", qty: 250, unit: "kg", status: "Đầy kho", location: "Kệ A1" },
     { id: 2, name: "Phân bón hữu cơ NPK Lâm Thao", category: "Phân bón", qty: 15, unit: "bao", status: "Sắp hết", location: "Kệ B2" },
     { id: 3, name: "Thuốc trừ sâu sinh học Neem Oil", category: "Thuốc BVTV", qty: 45, unit: "lít", status: "Đầy kho", location: "Kệ C1" },
     { id: 4, name: "Đầu phun xoay van nhỏ giọt", category: "Thiết bị", qty: 120, unit: "cái", status: "Đầy kho", location: "Kệ D3" },
-    { id: 5, name: "Hạt giống Cà chua đỏ F1", category: "Hạt giống", qty: 0, unit: "hộp", status: "Hết hàng", location: "Kệ A2" },
+    { id: 5, name: "Rau cải ngọt Điện Biên", category: "Hạt giống", qty: 0, unit: "hộp", status: "Hết hàng", location: "Kệ A2" },
   ]);
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -46,9 +46,9 @@ export default function Page() {
   const [adjustQty, setAdjustQty] = useState(0);
 
   // Purchase Form state
-  const [reqItem, setReqItem] = useState("Hạt giống Cà chua đỏ F1");
+  const [reqItem, setReqItem] = useState("Rau cải ngọt Điện Biên");
   const [reqQty, setReqQty] = useState("10");
-  const [reqSupplier, setReqSupplier] = useState("CTY Giống Cây Trồng Miền Nam");
+  const [reqSupplier, setReqSupplier] = useState("HTX Nông nghiệp Mường Ảng");
   const [reqSuccess, setReqSuccess] = useState(false);
 
   const handleAdjustStock = (e: React.FormEvent) => {
@@ -250,7 +250,7 @@ export default function Page() {
                   onChange={(e) => setReqItem(e.target.value)}
                   className="w-full text-xs p-2.5 border rounded-lg dark:bg-slate-950 focus:outline-emerald-500"
                 >
-                  <option>Hạt giống Cà chua đỏ F1</option>
+                  <option>Rau cải ngọt Điện Biên</option>
                   <option>Phân bón hữu cơ NPK Lâm Thao</option>
                   <option>Thuốc trừ sâu sinh học Neem Oil</option>
                 </select>
