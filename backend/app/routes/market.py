@@ -2,7 +2,7 @@ from datetime import date
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user, require_roles
@@ -95,6 +95,45 @@ async def create_alert(
     await db.commit()
     await db.refresh(alert)
     return MarketMutationResponse(message="Price alert configured successfully", id=alert.id)
+
+
+@router.get("/alerts/matches")
+async def list_triggered_alerts(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> list[dict[str, object]]:
+    """Return active user alerts whose latest recorded price meets the target."""
+    latest_recorded_date = (
+        select(func.max(MarketPrice.recorded_date))
+        .where(MarketPrice.crop_id == PriceAlert.crop_id)
+        .correlate(PriceAlert)
+        .scalar_subquery()
+    )
+    query = (
+        select(PriceAlert, Crop, MarketPrice)
+        .join(Crop, Crop.id == PriceAlert.crop_id)
+        .join(MarketPrice, MarketPrice.crop_id == Crop.id)
+        .where(
+            PriceAlert.user_id == current_user.id,
+            PriceAlert.is_active.is_(True),
+            MarketPrice.recorded_date == latest_recorded_date,
+            MarketPrice.price_per_kg >= PriceAlert.target_price,
+        )
+        .order_by(MarketPrice.recorded_date.desc())
+    )
+    result = await db.execute(query)
+    return [
+        {
+            "alert_id": alert.id,
+            "crop_name": crop.name,
+            "crop_variety": crop.variety,
+            "target_price": alert.target_price,
+            "current_price": price.price_per_kg,
+            "recorded_date": price.recorded_date,
+            "source": price.source,
+        }
+        for alert, crop, price in result.all()
+    ]
 
 
 async def _resolve_crop(db: AsyncSession, crop_id: str | None) -> Crop | None:
