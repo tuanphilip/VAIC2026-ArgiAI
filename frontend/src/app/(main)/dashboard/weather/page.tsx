@@ -30,7 +30,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import {
+  buildDisasterAlertItems,
+  buildDisasterOverlayFeatures,
+  type DisasterAlertItem,
+  type DisasterOverlayFeature,
+  type DisasterWarningApiItem,
+} from "./_components/disaster-warnings";
+import {
   buildOpenWeatherLayerTemplates,
+  buildWeatherApiUrl,
   type FarmPlotBase,
   type OpenWeatherLayerId,
   resolveLayerUrl,
@@ -179,8 +187,12 @@ const DEFAULT_MAP_CENTER: Leaflet.LatLngTuple = [21.518, 103.223];
 export default function Page() {
   const [selectedPlotId, setSelectedPlotId] = useState<string | null>(null);
   const [selectedLayer, setSelectedLayer] = useState<WeatherLayer>("rainviewer-radar");
+  const [showDisasterLayer, setShowDisasterLayer] = useState(true);
   const [phone, setPhone] = useState("");
   const [subscribeSuccess, setSubscribeSuccess] = useState(false);
+  const [disasterWarnings, setDisasterWarnings] = useState<DisasterWarningApiItem[]>([]);
+  const [disasterStatus, setDisasterStatus] = useState<LoadStatus>("loading");
+  const [disasterMessage, setDisasterMessage] = useState("Đang tải cảnh báo thiên tai từ backend...");
   const [weatherData, setWeatherData] = useState<WeatherDataState>({
     status: "loading",
     plots: [],
@@ -300,12 +312,50 @@ export default function Page() {
     }
   }, [tileTemplates, selectedLayer]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadDisasterWarnings() {
+      try {
+        setDisasterStatus("loading");
+        const response = await fetch(buildWeatherApiUrl("/weather/disasters"));
+        if (!response.ok) {
+          throw new Error(`Không tải được cảnh báo thiên tai (${response.status}).`);
+        }
+
+        const data = (await response.json()) as DisasterWarningApiItem[];
+        if (cancelled) return;
+        setDisasterWarnings(data);
+        setDisasterStatus("ready");
+        setDisasterMessage(
+          data.length > 0
+            ? `Đang hiển thị ${data.length} cảnh báo thiên tai từ backend.`
+            : "Backend chưa ghi nhận cảnh báo thiên tai hoạt động.",
+        );
+      } catch (error) {
+        if (cancelled) return;
+        setDisasterWarnings([]);
+        setDisasterStatus("error");
+        setDisasterMessage(error instanceof Error ? error.message : "Không tải được cảnh báo thiên tai.");
+      }
+    }
+
+    void loadDisasterWarnings();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const selectedPlot = useMemo(
     () => weatherData.plots.find((plot) => plot.id === selectedPlotId) ?? weatherData.plots[0] ?? null,
     [selectedPlotId, weatherData.plots],
   );
 
   const highAlerts = weatherData.alerts.filter((alert) => alert.level === "high");
+  const disasterOverlayFeatures = useMemo(() => buildDisasterOverlayFeatures(disasterWarnings), [disasterWarnings]);
+  const disasterAlerts = useMemo(() => buildDisasterAlertItems(disasterWarnings), [disasterWarnings]);
+  const criticalDisasterCount = disasterOverlayFeatures.filter((feature) => feature.severity.uiLevel === "high").length;
   const weatherTrend =
     selectedPlot?.forecast.map((item) => ({
       day: item.day,
@@ -379,7 +429,7 @@ export default function Page() {
               <AlertTriangle className="mt-0.5 size-5 shrink-0" />
               <div>
                 <p className="font-semibold text-sm">
-                  Có {highAlerts.length} cảnh báo nguy cơ cao đang ảnh hưởng đến vùng canh tác.
+                  Có {highAlerts.length + criticalDisasterCount} cảnh báo ưu tiên cao đang ảnh hưởng đến vùng canh tác.
                 </p>
                 <p className="text-xs opacity-85">{highAlerts[0].action}</p>
               </div>
@@ -428,6 +478,11 @@ export default function Page() {
             plots={weatherData.plots}
             selectedLayer={selectedLayer}
             selectedPlot={selectedPlot}
+            disasterOverlayFeatures={disasterOverlayFeatures}
+            disasterStatus={disasterStatus}
+            disasterMessage={disasterMessage}
+            showDisasterLayer={showDisasterLayer}
+            onToggleDisasterLayer={() => setShowDisasterLayer((current) => !current)}
             onLayerChange={setSelectedLayer}
             onSelectPlot={setSelectedPlotId}
           />
@@ -440,6 +495,9 @@ export default function Page() {
         <TabsContent value="alerts" className="flex flex-col gap-5">
           <AlertsTab
             alerts={weatherData.alerts}
+            disasterAlerts={disasterAlerts}
+            disasterStatus={disasterStatus}
+            disasterMessage={disasterMessage}
             phone={phone}
             subscribeSuccess={subscribeSuccess}
             onPhoneChange={setPhone}
@@ -586,6 +644,11 @@ function MapTab({
   plots,
   selectedLayer,
   selectedPlot,
+  disasterOverlayFeatures,
+  disasterStatus,
+  disasterMessage,
+  showDisasterLayer,
+  onToggleDisasterLayer,
   onLayerChange,
   onSelectPlot,
 }: {
@@ -596,6 +659,11 @@ function MapTab({
   plots: FarmPlotWeather[];
   selectedLayer: WeatherLayer;
   selectedPlot: FarmPlotWeather | null;
+  disasterOverlayFeatures: DisasterOverlayFeature[];
+  disasterStatus: LoadStatus;
+  disasterMessage: string;
+  showDisasterLayer: boolean;
+  onToggleDisasterLayer: () => void;
   onLayerChange: (layer: WeatherLayer) => void;
   onSelectPlot: (plotId: string | null) => void;
 }) {
@@ -642,6 +710,8 @@ function MapTab({
             selectedLayer={selectedLayer}
             selectedPlotId={selectedPlot?.id ?? null}
             tileTemplates={tileTemplates}
+            disasterOverlayFeatures={disasterOverlayFeatures}
+            showDisasterLayer={showDisasterLayer}
             onSelectPlot={onSelectPlot}
           />
         </CardContent>
@@ -658,6 +728,19 @@ function MapTab({
               {mapConfigMessage}
             </div>
           )}
+          <button
+            type="button"
+            onClick={onToggleDisasterLayer}
+            className="flex w-full items-center justify-between rounded-md border p-3 text-left transition hover:bg-muted"
+          >
+            <div>
+              <p className="font-semibold text-sm">Lớp cảnh báo thiên tai</p>
+              <p className="text-muted-foreground text-xs">{disasterMessage}</p>
+            </div>
+            <Badge variant="outline" className={showDisasterLayer ? riskStyles.high : ""}>
+              {showDisasterLayer ? "Đang bật" : "Đang tắt"}
+            </Badge>
+          </button>
           <div className="rounded-md border p-4">
             <div className="flex items-start gap-3">
               <Navigation className="mt-0.5 size-5 text-emerald-600" />
@@ -675,6 +758,9 @@ function MapTab({
               </div>
             </div>
           </div>
+          {disasterStatus === "error" && (
+            <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-amber-800 text-xs">{disasterMessage}</div>
+          )}
           {plots.length === 0 ? (
             <div className="rounded-md border border-dashed p-4 text-muted-foreground text-sm">
               Chưa có thửa ruộng từ backend để đặt marker trên bản đồ.
@@ -709,6 +795,8 @@ function WeatherLeafletMap({
   selectedLayer,
   selectedPlotId,
   tileTemplates,
+  disasterOverlayFeatures,
+  showDisasterLayer,
   onSelectPlot,
 }: {
   defaultZoom: number;
@@ -716,12 +804,15 @@ function WeatherLeafletMap({
   selectedLayer: WeatherLayer;
   selectedPlotId: string | null;
   tileTemplates: Partial<Record<OpenWeatherLayerId, string>>;
+  disasterOverlayFeatures: DisasterOverlayFeature[];
+  showDisasterLayer: boolean;
   onSelectPlot: (plotId: string | null) => void;
 }) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<Leaflet.Map | null>(null);
   const markersRef = useRef<Leaflet.Marker[]>([]);
   const weatherLayerRef = useRef<Leaflet.Layer | null>(null);
+  const disasterLayersRef = useRef<Leaflet.Layer[]>([]);
 
   useEffect(() => {
     if (typeof window === "undefined" || !mapContainerRef.current) return;
@@ -866,6 +957,61 @@ function WeatherLeafletMap({
     }
   }, [plots, selectedPlotId]);
 
+
+  useEffect(() => {
+    if (!mapRef.current) return;
+    let cancelled = false;
+
+    disasterLayersRef.current.forEach((layer) => layer.remove());
+    disasterLayersRef.current = [];
+
+    if (!showDisasterLayer || disasterOverlayFeatures.length === 0) {
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    void import("leaflet").then((L) => {
+      if (cancelled || !mapRef.current) return;
+
+      disasterOverlayFeatures.forEach((feature) => {
+        const polygonGroups =
+          feature.geometry.type === "Polygon"
+            ? [feature.geometry.coordinates]
+            : feature.geometry.coordinates;
+
+        polygonGroups.forEach((polygonCoordinates) => {
+          const latLngs = polygonCoordinates.map((ring) =>
+            ring.map(([lng, lat]) => [lat, lng] as [number, number]),
+          );
+
+          const layer = L.polygon(latLngs as unknown as Leaflet.LatLngExpression[][], {
+            color: feature.severity.stroke,
+            fillColor: feature.severity.fill,
+            fillOpacity: 0.24,
+            weight: 2,
+          })
+            .bindPopup(
+              `<div style="font-family: system-ui, sans-serif; min-width: 220px;">
+                <strong>${feature.popup.title}</strong>
+                <p style="margin: 6px 0 0;">${feature.popup.description}</p>
+                <p style="margin: 4px 0;">Mức độ: ${feature.popup.severityLabel}</p>
+                <p style="margin: 4px 0;">Thời gian: ${feature.popup.windowLabel}</p>
+                <p style="margin: 4px 0;">Nguồn: ${feature.popup.source}</p>
+              </div>`,
+            )
+            .addTo(mapRef.current!);
+
+          disasterLayersRef.current.push(layer);
+        });
+      });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [disasterOverlayFeatures, showDisasterLayer]);
+
   return (
     <div className="relative h-[560px] min-h-[420px] w-full">
       <div ref={mapContainerRef} className="h-full w-full" />
@@ -955,12 +1101,18 @@ function ForecastTab({
 
 function AlertsTab({
   alerts,
+  disasterAlerts,
+  disasterStatus,
+  disasterMessage,
   phone,
   subscribeSuccess,
   onPhoneChange,
   onSubscribe,
 }: {
   alerts: WeatherAlert[];
+  disasterAlerts: DisasterAlertItem[];
+  disasterStatus: LoadStatus;
+  disasterMessage: string;
   phone: string;
   subscribeSuccess: boolean;
   onPhoneChange: (value: string) => void;
@@ -971,9 +1123,51 @@ function AlertsTab({
       <Card className="shadow-sm">
         <CardHeader>
           <CardTitle>Danh sách cảnh báo</CardTitle>
-          <CardDescription>Cảnh báo được sinh từ dữ liệu Open-Meteo theo từng thửa ruộng.</CardDescription>
+          <CardDescription>Cảnh báo thiên tai lấy từ backend và cảnh báo vi khí hậu theo từng thửa ruộng.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="font-semibold text-sm">Cảnh báo thiên tai từ backend</p>
+                <p className="text-muted-foreground text-xs">{disasterMessage}</p>
+              </div>
+              <Badge variant="outline">{disasterAlerts.length} mục</Badge>
+            </div>
+            {disasterStatus === "error" ? (
+              <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-amber-800 text-xs">{disasterMessage}</div>
+            ) : disasterAlerts.length === 0 ? (
+              <div className="rounded-md border border-dashed p-4 text-muted-foreground text-sm">Chưa có cảnh báo thiên tai hoạt động.</div>
+            ) : (
+              disasterAlerts.map((alert) => (
+                <div key={`disaster-${alert.id}`} className="rounded-md border p-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <AlertTriangle className="size-4 text-rose-500" />
+                        <p className="font-semibold">{alert.title}</p>
+                      </div>
+                      <p className="text-muted-foreground text-sm">{alert.plot}</p>
+                    </div>
+                    <Badge variant="outline" className={riskStyles[alert.level]}>
+                      {alert.levelLabel}
+                    </Badge>
+                  </div>
+                  <div className="mt-4 grid gap-3 text-sm md:grid-cols-3">
+                    <Metric label="Thời gian" value={alert.window} />
+                    <Metric label="Nguồn kích hoạt" value={alert.trigger} />
+                    <Metric label="Việc cần làm" value={alert.action} />
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          <div className="space-y-3">
+            <div>
+              <p className="font-semibold text-sm">Cảnh báo vi khí hậu theo thửa ruộng</p>
+              <p className="text-muted-foreground text-xs">Cảnh báo được sinh từ dữ liệu Open-Meteo theo từng thửa ruộng.</p>
+            </div>
           {alerts.map((alert) => (
             <div key={alert.id} className="rounded-md border p-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -995,6 +1189,7 @@ function AlertsTab({
               </div>
             </div>
           ))}
+          </div>
         </CardContent>
       </Card>
 
