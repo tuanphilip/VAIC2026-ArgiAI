@@ -3,6 +3,9 @@
 !.env.example
 !.env.*.example
 .env.deploy.local
+env.deploy.local
+.codegraph/
+.hermes/
 
 node_modules/
 .next/

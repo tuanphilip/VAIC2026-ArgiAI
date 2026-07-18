@@ -1,12 +1,31 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowDownRight, ArrowUpRight, BarChart as BarChartIcon, FileText, Plus, Save, TrendingUp, Upload } from "lucide-react";
-import { Bar, BarChart, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
+import {
+  ArrowDownRight,
+  ArrowUpRight,
+  BarChart as BarChartIcon,
+  FileText,
+  Plus,
+  TrendingUp,
+  Upload,
+} from "lucide-react";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ComposedChart,
+  Line,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 
 const initialHistory = [
   { month: "T1", "Doanh thu": 50, "Chi phí": 30, "Lợi nhuận": 20 },
@@ -34,11 +53,46 @@ interface Transaction {
 
 export default function Page() {
   const [transactions, setTransactions] = useState<Transaction[]>([
-    { id: 1, title: "Bán lô lúa hữu cơ Jasmine 85", type: "income", amount: 42000000, date: "15/07/2026", category: "Nông sản đầu ra" },
-    { id: 2, title: "Mua phân bón hữu cơ NPK Lâm Thao", type: "expense", amount: 6500000, date: "12/07/2026", category: "Vật tư đầu vào" },
-    { id: 3, title: "Bán 500kg Cà chua VietGAP", type: "income", amount: 15000000, date: "10/07/2026", category: "Nông sản đầu ra" },
-    { id: 4, title: "Thanh toán tiền điện trạm bơm & IoT", type: "expense", amount: 1200000, date: "05/07/2026", category: "Hệ thống điện nước" },
-    { id: 5, title: "Trả công lao động thu hoạch vụ mùa", type: "expense", amount: 8000000, date: "01/07/2026", category: "Nhân công" },
+    {
+      id: 1,
+      title: "Bán lô lúa hữu cơ Jasmine 85",
+      type: "income",
+      amount: 42000000,
+      date: "15/07/2026",
+      category: "Nông sản đầu ra",
+    },
+    {
+      id: 2,
+      title: "Mua phân bón hữu cơ NPK Lâm Thao",
+      type: "expense",
+      amount: 6500000,
+      date: "12/07/2026",
+      category: "Vật tư đầu vào",
+    },
+    {
+      id: 3,
+      title: "Bán 500kg Cà chua VietGAP",
+      type: "income",
+      amount: 15000000,
+      date: "10/07/2026",
+      category: "Nông sản đầu ra",
+    },
+    {
+      id: 4,
+      title: "Thanh toán tiền điện trạm bơm",
+      type: "expense",
+      amount: 1200000,
+      date: "05/07/2026",
+      category: "Hệ thống điện nước",
+    },
+    {
+      id: 5,
+      title: "Trả công lao động thu hoạch vụ mùa",
+      type: "expense",
+      amount: 8000000,
+      date: "01/07/2026",
+      category: "Nhân công",
+    },
   ]);
 
   const [showAddModal, setShowAddModal] = useState(false);
@@ -52,13 +106,9 @@ export default function Page() {
   const [taxRate, setTaxRate] = useState("1"); // 1% VAT for agriculture cooperatives
   const [estimatedTax, setEstimatedTax] = useState<number | null>(null);
 
-  const totalIncome = transactions
-    .filter((t) => t.type === "income")
-    .reduce((sum, t) => sum + t.amount, 0);
+  const totalIncome = transactions.filter((t) => t.type === "income").reduce((sum, t) => sum + t.amount, 0);
 
-  const totalExpense = transactions
-    .filter((t) => t.type === "expense")
-    .reduce((sum, t) => sum + t.amount, 0);
+  const totalExpense = transactions.filter((t) => t.type === "expense").reduce((sum, t) => sum + t.amount, 0);
 
   const netProfit = totalIncome - totalExpense;
 
@@ -95,16 +145,16 @@ export default function Page() {
   return (
     <div className="flex flex-col gap-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
+          <h1 className="font-bold text-3xl text-slate-900 tracking-tight dark:text-white">
             Sổ thu chi & Báo cáo Tài chính
           </h1>
           <p className="text-muted-foreground">
             Phân tích dòng tiền đầu vào đầu ra, chi phí sản xuất và doanh thu bán nông sản.
           </p>
         </div>
-        <Button onClick={() => setShowAddModal(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2">
+        <Button onClick={() => setShowAddModal(true)} className="gap-2 bg-emerald-600 text-white hover:bg-emerald-700">
           <Plus className="size-4" /> Ghi chép Thu/Chi mới
         </Button>
       </div>
@@ -115,10 +165,10 @@ export default function Page() {
         <Card className="shadow-sm">
           <CardContent className="flex items-center justify-between p-6">
             <div className="space-y-1">
-              <p className="text-xs font-semibold text-muted-foreground">Tổng Doanh thu</p>
-              <h3 className="text-2xl font-bold text-emerald-600">{formatCurrency(totalIncome)}</h3>
+              <p className="font-semibold text-muted-foreground text-xs">Tổng Doanh thu</p>
+              <h3 className="font-bold text-2xl text-emerald-600">{formatCurrency(totalIncome)}</h3>
             </div>
-            <div className="rounded-full bg-emerald-50 dark:bg-emerald-950/20 p-3">
+            <div className="rounded-full bg-emerald-50 p-3 dark:bg-emerald-950/20">
               <ArrowUpRight className="size-6 text-emerald-600" />
             </div>
           </CardContent>
@@ -128,10 +178,10 @@ export default function Page() {
         <Card className="shadow-sm">
           <CardContent className="flex items-center justify-between p-6">
             <div className="space-y-1">
-              <p className="text-xs font-semibold text-muted-foreground">Tổng Chi phí</p>
-              <h3 className="text-2xl font-bold text-rose-600">{formatCurrency(totalExpense)}</h3>
+              <p className="font-semibold text-muted-foreground text-xs">Tổng Chi phí</p>
+              <h3 className="font-bold text-2xl text-rose-600">{formatCurrency(totalExpense)}</h3>
             </div>
-            <div className="rounded-full bg-rose-50 dark:bg-rose-950/20 p-3">
+            <div className="rounded-full bg-rose-50 p-3 dark:bg-rose-950/20">
               <ArrowDownRight className="size-6 text-rose-600" />
             </div>
           </CardContent>
@@ -141,10 +191,10 @@ export default function Page() {
         <Card className="shadow-sm">
           <CardContent className="flex items-center justify-between p-6">
             <div className="space-y-1">
-              <p className="text-xs font-semibold text-muted-foreground">Lợi nhuận ròng</p>
-              <h3 className="text-2xl font-bold text-slate-800 dark:text-slate-100">{formatCurrency(netProfit)}</h3>
+              <p className="font-semibold text-muted-foreground text-xs">Lợi nhuận ròng</p>
+              <h3 className="font-bold text-2xl text-slate-800 dark:text-slate-100">{formatCurrency(netProfit)}</h3>
             </div>
-            <div className="rounded-full bg-slate-50 dark:bg-slate-800 p-3">
+            <div className="rounded-full bg-slate-50 p-3 dark:bg-slate-800">
               <TrendingUp className="size-6 text-emerald-600" />
             </div>
           </CardContent>
@@ -154,7 +204,7 @@ export default function Page() {
       {/* Main grids: Chart + List */}
       <div className="grid gap-6 md:grid-cols-3">
         {/* Composed Chart (2/3 width) */}
-        <Card className="md:col-span-2 shadow-sm">
+        <Card className="shadow-sm md:col-span-2">
           <CardHeader>
             <CardTitle>Biến động Tài chính 6 Tháng</CardTitle>
             <CardDescription>So sánh Doanh thu - Chi phí (tr.động) và xu hướng Lợi nhuận.</CardDescription>
@@ -175,19 +225,23 @@ export default function Page() {
         </Card>
 
         {/* Ledger Transaction list (1/3 width) */}
-        <Card className="shadow-sm flex flex-col h-full">
-          <CardHeader className="pb-3 border-b">
+        <Card className="flex h-full flex-col shadow-sm">
+          <CardHeader className="border-b pb-3">
             <CardTitle>Lịch sử Giao dịch</CardTitle>
             <CardDescription>Các khoản chi tiêu bón phân, tưới tiêu và bán thu hoạch mới nhất.</CardDescription>
           </CardHeader>
-          <CardContent className="p-6 flex-1 overflow-y-auto space-y-4">
+          <CardContent className="flex-1 space-y-4 overflow-y-auto p-6">
             {transactions.map((t) => (
-              <div key={t.id} className="flex items-center justify-between gap-3 pb-3 border-b last:border-0 last:pb-0">
+              <div key={t.id} className="flex items-center justify-between gap-3 border-b pb-3 last:border-0 last:pb-0">
                 <div className="space-y-0.5">
-                  <h4 className="font-semibold text-xs text-slate-800 dark:text-slate-200">{t.title}</h4>
-                  <span className="text-[10px] text-slate-500 block">{t.date} | {t.category}</span>
+                  <h4 className="font-semibold text-slate-800 text-xs dark:text-slate-200">{t.title}</h4>
+                  <span className="block text-[10px] text-slate-500">
+                    {t.date} | {t.category}
+                  </span>
                 </div>
-                <span className={`text-xs font-bold shrink-0 ${t.type === "income" ? "text-emerald-600" : "text-rose-600"}`}>
+                <span
+                  className={`shrink-0 font-bold text-xs ${t.type === "income" ? "text-emerald-600" : "text-rose-600"}`}
+                >
                   {t.type === "income" ? "+" : "-"}
                   {new Intl.NumberFormat("vi-VN").format(t.amount)} đ
                 </span>
@@ -210,21 +264,21 @@ export default function Page() {
           <CardContent>
             <form onSubmit={handleCalculateTax} className="space-y-4">
               <div>
-                <label className="text-xs font-semibold block mb-1">Doanh thu dự kiến (VNĐ)</label>
+                <label className="mb-1 block font-semibold text-xs">Doanh thu dự kiến (VNĐ)</label>
                 <input
                   type="number"
                   value={revenueAmt}
                   onChange={(e) => setRevenueAmt(e.target.value)}
-                  className="w-full text-xs p-2.5 border rounded-lg dark:bg-slate-950 focus:outline-emerald-500"
+                  className="w-full rounded-lg border p-2.5 text-xs focus:outline-emerald-500 dark:bg-slate-950"
                   required
                 />
               </div>
               <div>
-                <label className="text-xs font-semibold block mb-1">Mức thuế suất nông nghiệp (%)</label>
+                <label className="mb-1 block font-semibold text-xs">Mức thuế suất nông nghiệp (%)</label>
                 <select
                   value={taxRate}
                   onChange={(e) => setTaxRate(e.target.value)}
-                  className="w-full text-xs p-2.5 border rounded-lg dark:bg-slate-950 focus:outline-emerald-500"
+                  className="w-full rounded-lg border p-2.5 text-xs focus:outline-emerald-500 dark:bg-slate-950"
                 >
                   <option value="1">1% (Sản phẩm trồng trọt chưa sơ chế)</option>
                   <option value="5">5% (Sản phẩm đã sơ chế bán thương mại)</option>
@@ -233,13 +287,16 @@ export default function Page() {
               </div>
 
               {estimatedTax !== null && (
-                <div className="p-3 bg-emerald-50 text-emerald-800 rounded-lg text-xs font-bold flex justify-between">
+                <div className="flex justify-between rounded-lg bg-emerald-50 p-3 font-bold text-emerald-800 text-xs">
                   <span>Thuế dự tính:</span>
                   <span>{formatCurrency(estimatedTax)}</span>
                 </div>
               )}
 
-              <Button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium gap-1.5">
+              <Button
+                type="submit"
+                className="w-full gap-1.5 bg-emerald-600 font-medium text-white text-xs hover:bg-emerald-700"
+              >
                 Tính toán thuế
               </Button>
             </form>
@@ -255,13 +312,13 @@ export default function Page() {
             <CardDescription>Tải hóa đơn mua hạt giống, phân bón để AI trích xuất chi phí tự động.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-900/40 transition">
-              <Upload className="size-8 text-slate-400 mb-2" />
-              <span className="font-semibold text-xs block">Kéo hóa đơn vào đây</span>
-              <span className="text-[10px] text-muted-foreground mt-0.5">Hỗ trợ PDF, PNG, JPG</span>
+            <div className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-slate-200 border-dashed p-8 text-center transition hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-900/40">
+              <Upload className="mb-2 size-8 text-slate-400" />
+              <span className="block font-semibold text-xs">Kéo hóa đơn vào đây</span>
+              <span className="mt-0.5 text-[10px] text-muted-foreground">Hỗ trợ PDF, PNG, JPG</span>
             </div>
-            <div className="p-2 border rounded-lg flex items-center justify-between text-xs bg-slate-50/50 dark:bg-slate-900/30">
-              <span className="truncate font-semibold max-w-[150px]">hoadon_npk_lamthao.pdf</span>
+            <div className="flex items-center justify-between rounded-lg border bg-slate-50/50 p-2 text-xs dark:bg-slate-900/30">
+              <span className="max-w-[150px] truncate font-semibold">hoadon_npk_lamthao.pdf</span>
               <Badge className="bg-emerald-100 text-emerald-800">Đã quét</Badge>
             </div>
           </CardContent>
@@ -292,18 +349,18 @@ export default function Page() {
 
       {/* Add Transaction Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-xs flex items-center justify-center z-50 animate-in fade-in duration-200">
-          <div className="bg-background border rounded-xl shadow-lg w-full max-w-sm p-6 space-y-4">
+        <div className="fade-in fixed inset-0 z-50 flex animate-in items-center justify-center bg-slate-950/40 backdrop-blur-xs duration-200">
+          <div className="w-full max-w-sm space-y-4 rounded-xl border bg-background p-6 shadow-lg">
             <h3 className="font-bold text-lg text-slate-900 dark:text-white">Ghi chép giao dịch mới</h3>
             <form onSubmit={handleAddTransaction} className="space-y-3">
               <div>
-                <label className="text-xs font-semibold block mb-1">Tên giao dịch</label>
+                <label className="mb-1 block font-semibold text-xs">Tên giao dịch</label>
                 <input
                   type="text"
                   placeholder="VD: Bán 100kg rau cải"
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
-                  className="w-full text-sm p-2 border rounded-lg dark:bg-slate-950 focus:outline-emerald-500"
+                  className="w-full rounded-lg border p-2 text-sm focus:outline-emerald-500 dark:bg-slate-950"
                   required
                 />
               </div>
@@ -311,8 +368,8 @@ export default function Page() {
                 <button
                   type="button"
                   onClick={() => setNewType("income")}
-                  className={`text-xs p-2 border rounded-lg transition font-medium ${
-                    newType === "income" ? "bg-emerald-50 text-emerald-800 border-emerald-500" : ""
+                  className={`rounded-lg border p-2 font-medium text-xs transition ${
+                    newType === "income" ? "border-emerald-500 bg-emerald-50 text-emerald-800" : ""
                   }`}
                 >
                   Thu nhập (+)
@@ -320,30 +377,30 @@ export default function Page() {
                 <button
                   type="button"
                   onClick={() => setNewType("expense")}
-                  className={`text-xs p-2 border rounded-lg transition font-medium ${
-                    newType === "expense" ? "bg-rose-50 text-rose-800 border-rose-500" : ""
+                  className={`rounded-lg border p-2 font-medium text-xs transition ${
+                    newType === "expense" ? "border-rose-500 bg-rose-50 text-rose-800" : ""
                   }`}
                 >
                   Chi phí (-)
                 </button>
               </div>
               <div>
-                <label className="text-xs font-semibold block mb-1">Số tiền (VNĐ)</label>
+                <label className="mb-1 block font-semibold text-xs">Số tiền (VNĐ)</label>
                 <input
                   type="number"
                   placeholder="VD: 500000"
                   value={newAmount}
                   onChange={(e) => setNewAmount(e.target.value)}
-                  className="w-full text-sm p-2 border rounded-lg dark:bg-slate-950 focus:outline-emerald-500"
+                  className="w-full rounded-lg border p-2 text-sm focus:outline-emerald-500 dark:bg-slate-950"
                   required
                 />
               </div>
               <div>
-                <label className="text-xs font-semibold block mb-1">Hạng mục</label>
+                <label className="mb-1 block font-semibold text-xs">Hạng mục</label>
                 <select
                   value={newCategory}
                   onChange={(e) => setNewCategory(e.target.value)}
-                  className="w-full text-sm p-2 border rounded-lg dark:bg-slate-950 focus:outline-emerald-500"
+                  className="w-full rounded-lg border p-2 text-sm focus:outline-emerald-500 dark:bg-slate-950"
                 >
                   <option>Nông sản đầu ra</option>
                   <option>Vật tư đầu vào</option>
@@ -351,11 +408,11 @@ export default function Page() {
                   <option>Hệ thống điện nước</option>
                 </select>
               </div>
-              <div className="flex gap-2 justify-end pt-2">
+              <div className="flex justify-end gap-2 pt-2">
                 <Button type="button" variant="ghost" onClick={() => setShowAddModal(false)}>
                   Hủy
                 </Button>
-                <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                <Button type="submit" className="bg-emerald-600 text-white hover:bg-emerald-700">
                   Thêm giao dịch
                 </Button>
               </div>

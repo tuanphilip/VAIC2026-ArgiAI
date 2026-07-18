@@ -322,8 +322,10 @@ class TestDisasterWarningRoutes:
         assert response.status_code == 401
 
     @patch("app.routes.disaster_warnings.get_disaster_warnings", new_callable=AsyncMock)
+    @patch("app.routes.disaster_warnings.persist_disaster_warnings", new_callable=AsyncMock)
     def test_list_returns_warnings(
         self,
+        mock_persist: AsyncMock,
         mock_get: AsyncMock,
         client: TestClient,
     ) -> None:
@@ -342,6 +344,7 @@ class TestDisasterWarningRoutes:
                 "raw_data": "",
             }
         ]
+        mock_persist.return_value = [{**mock_get.return_value[0], "id": str(uuid4())}]
 
         async def override_user() -> User:
             return make_user(role="admin")
