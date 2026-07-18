@@ -109,8 +109,8 @@ export function ChatThread({ contact, messages, onOpenContact, onBack, showBackB
               <AvatarBadge className="bg-green-600 dark:bg-green-800" />
             </Avatar>
             <div>
-              <div className="font-medium text-sm">{contact.name}</div>
-              <div className="text-muted-foreground text-xs leading-3">{contact.role}</div>
+              <div className="font-medium text-sm">AgriAI Copilot</div>
+              <div className="text-muted-foreground text-xs leading-3">Tư vấn cây trồng • Điện Biên</div>
             </div>
           </div>
 
@@ -180,7 +180,15 @@ export function ChatThread({ contact, messages, onOpenContact, onBack, showBackB
                 <MarkerContent>Hôm nay</MarkerContent>
               </Marker>
 
-              {threadMessages.map((message) => {
+              {threadMessages.length === 0 ? (
+                <div className="mx-auto flex max-w-lg flex-1 flex-col items-center justify-center px-6 py-20 text-center">
+                  <div className="mb-4 flex size-14 items-center justify-center rounded-2xl bg-emerald-500/10 text-3xl">🌱</div>
+                  <h2 className="font-semibold text-lg">Bạn cần hỗ trợ gì hôm nay?</h2>
+                  <p className="mt-2 text-muted-foreground text-sm leading-6">
+                    Mô tả cây trồng, triệu chứng hoặc gửi ảnh. Tôi sẽ đối chiếu dữ liệu nông nghiệp và nói rõ mức độ chắc chắn.
+                  </p>
+                </div>
+              ) : threadMessages.map((message) => {
                 const isOutbound = message.align === "end";
                 const reactionAlign = isOutbound ? "start" : "end";
                 const senderName = isOutbound ? currentUser.name : contact.name;
