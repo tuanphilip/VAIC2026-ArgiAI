@@ -35,6 +35,7 @@ export interface PlotCreatePayload {
   location_lat: number;
   location_lng: number;
   health?: string;
+  owner?: string;
   owner_phone?: string;
   boundary?: [number, number][] | null;
   livestock?: { type: string; quantity: number }[];
@@ -46,6 +47,7 @@ export interface PlotUpdatePayload {
   seeding_date?: string;
   status?: "growing" | "harvested" | "disease_outbreak";
   health?: string;
+  owner?: string;
   owner_phone?: string;
   location_lat?: number;
   location_lng?: number;
