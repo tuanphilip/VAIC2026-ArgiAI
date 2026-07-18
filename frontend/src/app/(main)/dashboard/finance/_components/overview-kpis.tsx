@@ -33,7 +33,7 @@ export function OverviewKpis() {
 
         <Card className="gap-5 overflow-hidden rounded-none border-0 border-foreground/10 ring-0 xl:col-span-4 xl:border-r">
           <CardHeader>
-            <CardTitle className="font-normal">Monthly spend</CardTitle>
+            <CardTitle className="font-normal">Chi tiêu tháng</CardTitle>
           </CardHeader>
           <CardContent className="flex items-end justify-between">
             <div className="flex flex-col gap-1">

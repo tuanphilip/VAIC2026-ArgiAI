@@ -97,7 +97,7 @@ export function BalanceDistributionCard() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="font-normal">Account Allocation</CardTitle>
+        <CardTitle className="font-normal">Phân bổ tài khoản</CardTitle>
         <CardAction>
           <Select onValueChange={(value) => setCurrency(value as Currency)} value={currency}>
             <SelectTrigger className="w-36" size="sm">

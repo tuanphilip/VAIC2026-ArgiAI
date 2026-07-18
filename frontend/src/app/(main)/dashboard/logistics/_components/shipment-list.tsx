@@ -122,11 +122,11 @@ function ShipmentCard({ shipment, active, onSelectShipment }: ShipmentCardProps)
 
       <div className="flex items-center justify-between">
         <div>
-          <div className="text-muted-foreground text-xs leading-none">Cargo</div>
+          <div className="text-muted-foreground text-xs leading-none">Hàng hóa</div>
           <div className="truncate text-sm tracking-tight">{shipment.cargo}</div>
         </div>
         <div className="text-right">
-          <div className="text-muted-foreground text-xs leading-none">ETA</div>
+          <div className="text-muted-foreground text-xs leading-none">Dự kiến đến</div>
           <div className="text-sm tabular-nums tracking-tight">
             {shipment.eta}
             {shipment.etaMeta && (
@@ -143,7 +143,7 @@ export function ShipmentList({ shipments, selectedShipmentId, onSelectShipment }
   return (
     <Card className="h-full rounded-none ring-0">
       <CardHeader>
-        <CardTitle className="font-normal text-xl">Shipments</CardTitle>
+        <CardTitle className="font-normal text-xl">Lô hàng</CardTitle>
         <CardAction>
           <Button size="icon-sm" variant="ghost">
             <SlidersHorizontal />

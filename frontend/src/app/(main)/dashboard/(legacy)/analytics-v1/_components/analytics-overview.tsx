@@ -36,7 +36,7 @@ const riskViews: Array<{
   {
     value: "risk-view",
     label: "Risk view",
-    description: "Early warnings",
+    description: "Cảnh báo rủi ro",
   },
   {
     value: "momentum",

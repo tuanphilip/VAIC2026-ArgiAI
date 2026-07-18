@@ -125,7 +125,7 @@ export default function Page() {
                     : "text-slate-500 hover:text-slate-800"
                 }`}
               >
-                Cùng kỳ năm trước (YoY)
+                Cùng kỳ năm trước
               </button>
               <button
                 onClick={() => setCompareType("qoq")}
@@ -135,7 +135,7 @@ export default function Page() {
                     : "text-slate-500 hover:text-slate-800"
                 }`}
               >
-                Quý trước (QoQ)
+                Quý trước
               </button>
             </div>
           </div>
@@ -200,7 +200,7 @@ export default function Page() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <BarChart3 className="size-5 text-emerald-600" />
-              So sánh Sản lượng Thu hoạch ({compareType === "yoy" ? "YoY" : "QoQ"})
+              So sánh sản lượng thu hoạch ({compareType === "yoy" ? "cùng kỳ" : "quý trước"})
             </CardTitle>
             <CardDescription>Biểu đồ cột so sánh sản lượng nông nghiệp ước tính.</CardDescription>
           </CardHeader>
@@ -236,7 +236,7 @@ export default function Page() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Calendar className="size-5 text-rose-500" />
-              Diễn biến dịch bệnh hại ({compareType === "yoy" ? "YoY" : "QoQ"})
+              Diễn biến dịch bệnh hại ({compareType === "yoy" ? "cùng kỳ" : "quý trước"})
             </CardTitle>
             <CardDescription>Xu hướng ghi nhận ổ dịch sâu bệnh phát sinh.</CardDescription>
           </CardHeader>
