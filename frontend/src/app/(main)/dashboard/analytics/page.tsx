@@ -1,83 +1,88 @@
+import { CalendarDays, CloudSun, Database, Leaf, MapPinned, ShieldCheck } from "lucide-react";
+
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-import { AnalyticsKpiStrip } from "./_components/analytics-kpi-strip";
-import { AnalyticsToolbar } from "./_components/analytics-toolbar";
-import { RealtimeVisitors } from "./_components/realtime-visitors";
-import { TopPages } from "./_components/top-pages";
-import { TopTrafficSources } from "./_components/top-traffic-sources";
-import { TrafficQuality } from "./_components/traffic-quality";
+const crops = [
+  { name: "Lúa Seng Cù Điện Biên", period: "Vụ mùa", status: "Đang theo dõi" },
+  { name: "Cà phê Robusta Mường Ảng", period: "Niên vụ 2026", status: "Đang theo dõi" },
+  { name: "Mắc ca Điện Biên", period: "Chu kỳ sinh trưởng", status: "Đang theo dõi" },
+  { name: "Rau vụ đông cải ngọt", period: "Vụ đông", status: "Đang theo dõi" },
+];
 
-// Import this stylesheet in any page or component that renders country flag classes.
-import "@/styles/flag-icons/flags.css";
+function EmptyAnalysis({ children }: { children: string }) {
+  return (
+    <div className="flex min-h-36 items-center justify-center rounded-lg border border-dashed px-6 text-center text-muted-foreground text-sm">
+      {children}
+    </div>
+  );
+}
 
 export default function Page() {
   return (
-    <div className="flex flex-col gap-4">
-      <div className="space-y-1">
-        <h1 className="text-3xl tracking-tight">Hello, Aiy</h1>
-        <p className="text-muted-foreground text-sm">
-          Monitor traffic, engagement, and conversion performance in one view.
+    <div className="flex flex-col gap-6">
+      <div className="space-y-2">
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="text-3xl tracking-tight">Phân tích mùa vụ</h1>
+          <Badge variant="outline" className="gap-1.5">
+            <MapPinned className="size-3.5" />
+            Điện Biên, Việt Nam
+          </Badge>
+        </div>
+        <p className="max-w-3xl text-muted-foreground text-sm">
+          Theo dõi chu kỳ sinh trưởng, điều kiện thời tiết và các yếu tố ảnh hưởng đến mùa vụ. Chỉ hiển thị số liệu có nguồn; dữ liệu chưa xác minh không được trình bày như kết quả chính thức.
         </p>
       </div>
 
-      <Tabs defaultValue="overview" className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <TabsList className="gap-1">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="audience">Audience</TabsTrigger>
-            <TabsTrigger value="acquisition">Acquisition</TabsTrigger>
-            <TabsTrigger value="engagement">Engagement</TabsTrigger>
-            <TabsTrigger value="conversions">Conversions</TabsTrigger>
-          </TabsList>
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <Card>
+          <CardHeader><CardTitle className="flex items-center gap-2 font-normal text-sm"><Leaf className="size-4 text-primary" />Cây trồng đang theo dõi</CardTitle></CardHeader>
+          <CardContent><div className="text-2xl">{crops.length}</div><p className="text-muted-foreground text-xs">Nhóm cây trồng ưu tiên tại Điện Biên</p></CardContent>
+        </Card>
+        <Card>
+          <CardHeader><CardTitle className="flex items-center gap-2 font-normal text-sm"><CalendarDays className="size-4 text-primary" />Mùa vụ hiện tại</CardTitle></CardHeader>
+          <CardContent><div className="text-2xl">Chưa xác định</div><p className="text-muted-foreground text-xs">Cần chọn cây trồng và khu vực cụ thể</p></CardContent>
+        </Card>
+        <Card>
+          <CardHeader><CardTitle className="flex items-center gap-2 font-normal text-sm"><CloudSun className="size-4 text-primary" />Dữ liệu thời tiết</CardTitle></CardHeader>
+          <CardContent><div className="text-2xl">Có nguồn</div><p className="text-muted-foreground text-xs">Dự báo Open-Meteo và lịch sử NASA POWER</p></CardContent>
+        </Card>
+        <Card>
+          <CardHeader><CardTitle className="flex items-center gap-2 font-normal text-sm"><ShieldCheck className="size-4 text-primary" />Mức tin cậy</CardTitle></CardHeader>
+          <CardContent><div className="text-2xl">Theo nguồn</div><p className="text-muted-foreground text-xs">Không suy diễn năng suất hoặc sâu bệnh</p></CardContent>
+        </Card>
+      </div>
 
-          <AnalyticsToolbar />
-        </div>
+      <Tabs defaultValue="tong-quan" className="flex flex-col gap-4">
+        <TabsList className="w-full justify-start overflow-x-auto">
+          <TabsTrigger value="tong-quan">Tổng quan</TabsTrigger>
+          <TabsTrigger value="cay-trong">Cây trồng</TabsTrigger>
+          <TabsTrigger value="thoi-tiet">Thời tiết</TabsTrigger>
+          <TabsTrigger value="nang-suat">Năng suất</TabsTrigger>
+          <TabsTrigger value="rui-ro">Rủi ro mùa vụ</TabsTrigger>
+        </TabsList>
 
-        <TabsContent value="overview" className="flex flex-col gap-4">
-          <AnalyticsKpiStrip />
-
-          <div className="grid grid-cols-1 items-stretch gap-4 xl:grid-cols-12">
-            <div className="xl:col-span-7">
-              <TrafficQuality />
-            </div>
-            <div className="xl:col-span-5">
-              <RealtimeVisitors />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 items-stretch gap-4 xl:grid-cols-12">
-            <div className="xl:col-span-7">
-              <TopPages />
-            </div>
-            <div className="xl:col-span-5 xl:col-start-8">
-              <TopTrafficSources />
-            </div>
-          </div>
+        <TabsContent value="tong-quan" className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
+          <Card>
+            <CardHeader><CardTitle>Tiến độ mùa vụ</CardTitle></CardHeader>
+            <CardContent><EmptyAnalysis>Chưa có dữ liệu mùa vụ theo từng thửa ruộng để tính tiến độ. Hãy chọn thửa đất, cây trồng và ngày gieo trồng.</EmptyAnalysis></CardContent>
+          </Card>
+          <Card>
+            <CardHeader><CardTitle>Nguồn dữ liệu</CardTitle></CardHeader>
+            <CardContent className="space-y-4 text-sm">
+              <div className="flex items-start gap-3"><Database className="mt-0.5 size-4 text-primary" /><div><p className="font-medium">NASA POWER</p><p className="text-muted-foreground">Lịch sử khí tượng Điện Biên, có ngày quan trắc và nguồn.</p></div></div>
+              <Separator />
+              <div className="flex items-start gap-3"><CloudSun className="mt-0.5 size-4 text-primary" /><div><p className="font-medium">Open-Meteo</p><p className="text-muted-foreground">Dự báo thời tiết hiện tại và 7 ngày.</p></div></div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
-        <TabsContent value="audience">
-          <div className="flex h-64 items-center justify-center rounded-xl border border-border border-dashed text-muted-foreground">
-            Audience view coming soon.
-          </div>
-        </TabsContent>
-
-        <TabsContent value="acquisition">
-          <div className="flex h-64 items-center justify-center rounded-xl border border-border border-dashed text-muted-foreground">
-            Acquisition view coming soon.
-          </div>
-        </TabsContent>
-
-        <TabsContent value="engagement">
-          <div className="flex h-64 items-center justify-center rounded-xl border border-border border-dashed text-muted-foreground">
-            Engagement view coming soon.
-          </div>
-        </TabsContent>
-
-        <TabsContent value="conversions">
-          <div className="flex h-64 items-center justify-center rounded-xl border border-border border-dashed text-muted-foreground">
-            Conversions view coming soon.
-          </div>
-        </TabsContent>
+        <TabsContent value="cay-trong"><Card><CardHeader><CardTitle>Cây trồng ưu tiên</CardTitle></CardHeader><CardContent className="grid gap-3 md:grid-cols-2">{crops.map((crop) => <div className="rounded-lg border p-4" key={crop.name}><div className="flex items-center justify-between gap-3"><p className="font-medium">{crop.name}</p><Badge variant="secondary">{crop.status}</Badge></div><p className="mt-2 text-muted-foreground text-sm">{crop.period}</p></div>)}</CardContent></Card></TabsContent>
+        <TabsContent value="thoi-tiet"><Card><CardHeader><CardTitle>Điều kiện thời tiết theo mùa vụ</CardTitle></CardHeader><CardContent><EmptyAnalysis>Chưa có thửa ruộng và cây trồng được chọn để đối chiếu dữ liệu thời tiết.</EmptyAnalysis></CardContent></Card></TabsContent>
+        <TabsContent value="nang-suat"><Card><CardHeader><CardTitle>Năng suất và sản lượng</CardTitle></CardHeader><CardContent><EmptyAnalysis>Chưa có số liệu năng suất đã xác minh từ hộ dân, hợp tác xã hoặc cơ quan chuyên môn. Không tự tạo số liệu.</EmptyAnalysis></CardContent></Card></TabsContent>
+        <TabsContent value="rui-ro"><Card><CardHeader><CardTitle>Rủi ro mùa vụ</CardTitle></CardHeader><CardContent><EmptyAnalysis>Chưa có dữ liệu quan trắc hoặc đánh giá chuyên môn đủ điều kiện để phát hành cảnh báo rủi ro.</EmptyAnalysis></CardContent></Card></TabsContent>
       </Tabs>
     </div>
   );
