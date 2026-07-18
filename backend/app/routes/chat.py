@@ -1,6 +1,9 @@
+import asyncio
+import json
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -85,4 +88,28 @@ async def answer(
         quick_replies=result.quick_replies,
         citations=[ChatCitationResponse(evidence_id=item.evidence_id, title=item.title, source_url=item.source_url) for item in result.citations],
         confidence=result.confidence,
+    )
+
+
+@router.post("/answer/stream")
+async def answer_stream(
+    payload: ChatRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> StreamingResponse:
+    response = await answer(payload, current_user, db)
+
+    async def events():
+        yield f"data: {json.dumps({'type': 'meta', 'response': response.model_dump(mode='json')}, ensure_ascii=False)}\n\n"
+        for section in response.sections:
+            text = f"{section.title}\n" + "\n".join(section.content) + "\n\n"
+            for index in range(0, len(text), 24):
+                yield f"data: {json.dumps({'type': 'token', 'text': text[index:index + 24]}, ensure_ascii=False)}\n\n"
+                await asyncio.sleep(0.01)
+        yield "data: {\"type\":\"done\"}\n\n"
+
+    return StreamingResponse(
+        events(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "Connection": "keep-alive", "X-Accel-Buffering": "no"},
     )
