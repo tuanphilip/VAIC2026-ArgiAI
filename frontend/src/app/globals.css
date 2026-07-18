@@ -381,18 +381,18 @@ These serve as the fallback; there is no separate default.css file. */
     color: oklch(0.76 0.13 145);
   }
 
-  [data-sidebar="menu-button"]:hover,
+  [data-sidebar="menu-button"]:not(.sidebar-brand-button):hover,
   [data-sidebar="menu-button"][data-active="true"] {
     background: linear-gradient(180deg, oklch(0.73 0.14 145), oklch(0.53 0.17 145));
     color: white !important;
   }
 
-  [data-sidebar="menu-button"]:hover svg,
+  [data-sidebar="menu-button"]:not(.sidebar-brand-button):hover svg,
   [data-sidebar="menu-button"][data-active="true"] svg {
     color: white !important;
   }
 
-  [data-sidebar="menu-button"]:hover span,
+  [data-sidebar="menu-button"]:not(.sidebar-brand-button):hover span,
   [data-sidebar="menu-button"][data-active="true"] span {
     color: white !important;
   }
