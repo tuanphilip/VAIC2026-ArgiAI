@@ -24,7 +24,9 @@ class AuthUser(BaseModel):
     full_name: str
     role: str
     citizen_id: str | None = None
-    email: EmailStr | None = None
+    # Legacy/demo records may contain reserved domains such as .local.
+    # Response serialization must not turn a successful login into HTTP 500.
+    email: str | None = None
     phone_number: str | None = None
 
 
