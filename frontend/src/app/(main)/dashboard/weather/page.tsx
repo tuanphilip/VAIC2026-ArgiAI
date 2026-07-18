@@ -1,23 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-import { AlertTriangle, CloudRain, Droplets, ExternalLink, RefreshCw, Thermometer, Wind } from "lucide-react";
+import { CloudRain, Droplets, ExternalLink, RefreshCw, Thermometer, Wind } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import {
-  buildDisasterAlertItems,
-  type DisasterAlertItem,
-  type DisasterWarningApiItem,
-} from "./_components/disaster-warnings";
-import {
   buildWindyEmbedUrl,
-  fetchDisasterWarnings,
   fetchMapConfig,
   fetchWeatherLocations,
   fetchWeatherOverview,
@@ -36,7 +29,7 @@ export default function WeatherPage() {
   const [location, setLocation] = useState(DEFAULT_LOCATION);
   const [weather, setWeather] = useState<WeatherOverviewResponse | null>(null);
   const [mapConfig, setMapConfig] = useState<WeatherMapConfigResponse | null>(null);
-  const [warnings, setWarnings] = useState<DisasterWarningApiItem[]>([]);
+
   const [status, setStatus] = useState<LoadStatus>("loading");
   const [message, setMessage] = useState("Đang tải thời tiết địa phương...");
   const locationRef = useRef(location);
@@ -56,13 +49,6 @@ export default function WeatherPage() {
     }
   }, []);
 
-  const loadWarnings = useCallback(async () => {
-    try {
-      setWarnings(await fetchDisasterWarnings());
-    } catch {
-      setWarnings([]);
-    }
-  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -72,18 +58,14 @@ export default function WeatherPage() {
         setLocations(availableLocations.length ? availableLocations : [DEFAULT_LOCATION]);
       })
       .catch(() => undefined);
-    void loadWarnings();
     void loadWeather(DEFAULT_LOCATION);
     const weatherRefresh = window.setInterval(() => void loadWeather(locationRef.current), 10 * 60 * 1000);
-    const warningRefresh = window.setInterval(() => void loadWarnings(), 5 * 60 * 1000);
     return () => {
       cancelled = true;
       window.clearInterval(weatherRefresh);
-      window.clearInterval(warningRefresh);
     };
-  }, [loadWarnings, loadWeather]);
+  }, [loadWeather]);
 
-  const alerts = useMemo(() => buildDisasterAlertItems(warnings), [warnings]);
   const windyUrl = buildWindyEmbedUrl(location, mapConfig?.zoom ?? 7);
 
   const handleLocationChange = (id: string) => {
@@ -101,7 +83,7 @@ export default function WeatherPage() {
           <TabsList>
             <TabsTrigger value="map">Bản đồ</TabsTrigger>
             <TabsTrigger value="local">Dự báo</TabsTrigger>
-            <TabsTrigger value="alerts">Cảnh báo</TabsTrigger>
+
           </TabsList>
 
           <TabsContent className="mt-3 min-w-0 space-y-3" value="map">
@@ -133,10 +115,7 @@ export default function WeatherPage() {
             <DailyForecast daily={weather?.daily ?? []} />
           </TabsContent>
 
-          <TabsContent className="mt-3 min-w-0" value="alerts">
-            <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50/60 p-4 text-amber-900 text-sm dark:bg-amber-950/20 dark:text-amber-200">Cảnh báo được tổng hợp từ dữ liệu thời tiết và nguồn cảnh báo đã cấu hình. Hãy kiểm tra thời gian cập nhật trước khi ra quyết định sản xuất.</div>
-            <div className="grid gap-4 lg:grid-cols-2">{alerts.length === 0 ? <Card><CardContent className="p-8 text-center text-muted-foreground text-sm">Chưa có cảnh báo thiên tai hoạt động.</CardContent></Card> : alerts.map((alert) => <WeatherAlertCard alert={alert} key={alert.id} />)}</div>
-          </TabsContent>
+
         </Tabs>
       </div>
     </div>
@@ -162,9 +141,6 @@ function DailyForecast({ daily }: { daily: WeatherDaily[] }) {
   return <Card><CardHeader><CardTitle>Dự báo 7 ngày</CardTitle><CardDescription>Nhiệt độ, lượng mưa và gió cực đại theo ngày.</CardDescription></CardHeader><CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">{daily.map((item) => <div className="rounded-lg border p-4" key={item.date}><p className="font-semibold text-sm">{formatDate(item.date)}</p><p className="mt-2 font-bold text-xl">{value(item.temperature_max_c)}° <span className="font-normal text-muted-foreground text-sm">/ {value(item.temperature_min_c)}°</span></p><p className="mt-2 text-sky-600 text-xs">Mưa {value(item.precipitation_mm, "0")} mm</p><p className="text-muted-foreground text-xs">Xác suất {value(item.precipitation_probability_pct)}%</p><p className="mt-1 text-muted-foreground text-xs">{item.weather_label ?? "—"}</p></div>)}</CardContent></Card>;
 }
 
-function WeatherAlertCard({ alert }: { alert: DisasterAlertItem }) {
-  return <Card className="border-amber-200"><CardContent className="space-y-3 p-5"><div className="flex items-start gap-3"><AlertTriangle className="mt-0.5 size-5 text-amber-600" /><div><p className="font-semibold">{alert.title}</p><Badge variant="outline">{alert.levelLabel}</Badge></div></div><p className="text-muted-foreground text-sm">{alert.trigger}</p><p className="text-sm">{alert.action}</p><p className="text-muted-foreground text-xs">{alert.window} · {alert.plot}</p></CardContent></Card>;
-}
 
 function value(input: number | null | undefined, fallback = "—") { return input == null ? fallback : String(input); }
 function formatHour(valueToFormat: string) { return new Intl.DateTimeFormat("vi-VN", { hour: "2-digit", minute: "2-digit" }).format(new Date(valueToFormat)); }
