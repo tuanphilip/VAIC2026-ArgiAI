@@ -87,7 +87,7 @@ export function ChatThread({ contact, messages, onOpenContact, onBack, showBackB
   }
 
   return (
-    <div className={cn("relative flex h-full flex-col", className)}>
+    <div className={cn("relative flex h-full min-h-0 flex-col bg-background", className)}>
       {showHistory && (
         <aside className="absolute inset-y-0 left-0 z-20 flex w-72 flex-col border-r bg-background shadow-xl">
           <div className="flex items-center justify-between border-b px-4 py-4">
@@ -109,7 +109,7 @@ export function ChatThread({ contact, messages, onOpenContact, onBack, showBackB
           </div>
         </aside>
       )}
-      <div className="border-b px-5 py-4">
+      <div className="shrink-0 border-b px-5 py-3">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             {showBackButton && (
@@ -145,9 +145,9 @@ export function ChatThread({ contact, messages, onOpenContact, onBack, showBackB
       <MessageScrollerProvider autoScroll>
         <MessageScroller className="min-h-0 flex-1">
           <MessageScrollerViewport>
-            <MessageScrollerContent className="gap-5 px-5 py-8">
+            <MessageScrollerContent className="gap-5 px-5 py-6">
               {threadMessages.length === 0 ? (
-                <div className="mx-auto flex max-w-lg flex-1 flex-col items-center justify-center px-6 py-20 text-center">
+                <div className="mx-auto flex max-w-lg flex-1 flex-col items-center justify-center px-6 py-12 text-center">
                   <div className="mb-4 flex size-14 items-center justify-center rounded-2xl bg-emerald-500/10 text-3xl">🌱</div>
                   <h2 className="font-semibold text-lg">Bạn cần hỗ trợ gì hôm nay?</h2>
                   <p className="mt-2 text-muted-foreground text-sm leading-6">
