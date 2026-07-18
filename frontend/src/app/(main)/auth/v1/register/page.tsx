@@ -1,7 +1,6 @@
-import Image from "next/image";
 import Link from "next/link";
 
-import { APP_CONFIG } from "@/config/app-config";
+import { Command } from "lucide-react";
 
 import { RegisterForm } from "../../_components/register-form";
 import { GoogleButton } from "../../_components/social-auth/google-button";
@@ -33,13 +32,7 @@ export default function RegisterV1() {
       <div className="hidden bg-primary lg:block lg:w-1/3">
         <div className="flex h-full flex-col items-center justify-center p-12 text-center">
           <div className="space-y-6">
-            <Image
-              src="/logo.png"
-              alt={APP_CONFIG.name}
-              width={48}
-              height={48}
-              className="mx-auto size-12"
-            />
+            <Command className="mx-auto size-12 text-primary-foreground" />
             <div className="space-y-2">
               <h1 className="font-light text-5xl text-primary-foreground">Welcome!</h1>
               <p className="text-primary-foreground/80 text-xl">You&apos;re in the right place.</p>

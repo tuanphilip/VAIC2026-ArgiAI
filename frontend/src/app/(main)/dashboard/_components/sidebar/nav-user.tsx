@@ -1,7 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-
 import { CircleUser, CreditCard, EllipsisVertical, LogOut, MessageSquareDot } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -16,7 +14,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 import { getInitials } from "@/lib/utils";
-import { useAuthStore } from "@/stores/auth-store";
 
 export function NavUser({
   user,
@@ -28,8 +25,6 @@ export function NavUser({
   };
 }) {
   const { isMobile } = useSidebar();
-  const logout = useAuthStore((s) => s.logout);
-  const router = useRouter();
 
   return (
     <SidebarMenu>
@@ -85,14 +80,9 @@ export function NavUser({
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => {
-                logout();
-                router.replace("/auth/v1/login");
-              }}
-            >
+            <DropdownMenuItem>
               <LogOut />
-              Đăng xuất
+              Log out
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

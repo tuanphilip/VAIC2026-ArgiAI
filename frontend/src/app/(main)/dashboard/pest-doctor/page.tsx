@@ -6,7 +6,7 @@ import { Bug, Calendar, CheckCircle, Info, Loader2, Save, Sparkles, Upload, Aler
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useActiveUser } from "@/stores/auth-store";
+import { useUserStore } from "@/stores/user-store";
 
 // Example images for testing (Farmer View)
 const sampleImages = [
@@ -30,7 +30,7 @@ const initialOfficialLogs = [
 ];
 
 export default function Page() {
-  const activeUser = useActiveUser();
+  const { activeUser } = useUserStore();
 
   // Farmer States
   const [selectedSample, setSelectedSample] = useState<typeof sampleImages[number] | null>(null);
