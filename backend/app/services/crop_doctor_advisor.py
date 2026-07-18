@@ -111,7 +111,8 @@ async def generate_advisory(
     url = f"{settings.llm_base_url.rstrip('/')}/chat/completions"
 
     try:
-        async with httpx.AsyncClient(timeout=45.0) as client:
+        timeout = httpx.Timeout(20.0, connect=5.0)
+        async with httpx.AsyncClient(timeout=timeout) as client:
             response = await client.post(
                 url,
                 headers={
@@ -316,9 +317,11 @@ def _load_json_object(raw: str) -> dict[str, Any]:
 
 def _safe_error_message(exc: Exception) -> str:
     if isinstance(exc, httpx.HTTPStatusError):
-        detail = exc.response.text[:300].replace("\n", " ")
+        detail = exc.response.text[:300].replace("\n", " ") or "provider returned an empty error body"
         return f"HTTP {exc.response.status_code}: {detail}"
-    return str(exc).replace("\n", " ")[:300]
+    if isinstance(exc, httpx.TimeoutException):
+        return "provider timeout after 20 seconds"
+    return str(exc).replace("\n", " ")[:300] or exc.__class__.__name__
 
 
 def _diagnosis_name(
