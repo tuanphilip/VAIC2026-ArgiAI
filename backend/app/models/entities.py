@@ -2,6 +2,7 @@ from datetime import date, datetime
 from uuid import UUID
 
 from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, String, Text, func
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.session import Base
@@ -49,6 +50,10 @@ class Plot(Base):
     status: Mapped[str] = mapped_column(String(20), default="growing")
     health: Mapped[str] = mapped_column(String(100), default="Khỏe mạnh")
     moisture: Mapped[int | None] = mapped_column(Integer)
+    boundary: Mapped[list[list[float]] | None] = mapped_column(JSONB(none_as_null=True))
+    livestock: Mapped[list[dict]] = mapped_column(JSONB, default=list, server_default="[]")
+    crop_types: Mapped[list[dict]] = mapped_column(JSONB, default=list, server_default="[]")
+    owner_phone: Mapped[str | None] = mapped_column(String(20))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
