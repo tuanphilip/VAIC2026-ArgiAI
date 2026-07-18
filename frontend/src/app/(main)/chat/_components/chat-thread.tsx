@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-import { ArrowLeft, Paperclip, Send } from "lucide-react";
+import { ArrowLeft, History, Paperclip, Send, X } from "lucide-react";
 
 import { Avatar, AvatarBadge, AvatarFallback } from "@/components/ui/avatar";
 import { Bubble, BubbleContent, BubbleGroup, BubbleReactions } from "@/components/ui/bubble";
@@ -31,16 +31,35 @@ interface ChatThreadProps {
   className?: string;
 }
 
+type HistoryItem = { id: number; title: string; time: string; messages: ChatMessage[] };
+
 export function ChatThread({ contact, messages, onOpenContact, onBack, showBackButton, className }: ChatThreadProps) {
   const [threadMessages, setThreadMessages] = useState(messages);
   const [sessionId, setSessionId] = useState<string>();
   const [isSending, setIsSending] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [historyItems, setHistoryItems] = useState<HistoryItem[]>([]);
+
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem("agriai-chat-history");
+      if (saved) setHistoryItems(JSON.parse(saved));
+    } catch {
+      // ignore malformed local history
+    }
+  }, []);
 
   async function sendMessage(text: string) {
     const trimmed = text.trim();
     if (!trimmed || isSending) return;
-    const userMessage: ChatMessage = { id: Date.now(), align: "end", text: trimmed, time: "Vừa xong" };
+    const historyId = Date.now();
+    const userMessage: ChatMessage = { id: historyId, align: "end", text: trimmed, time: "Vừa xong" };
     setThreadMessages((current) => [...current, userMessage]);
+    setHistoryItems((current) => {
+      const next = [{ id: historyId, title: trimmed, time: "Vừa xong", messages: [...threadMessages, userMessage] } as HistoryItem, ...current.filter((item) => item.title !== trimmed)].slice(0, 12);
+      window.localStorage.setItem("agriai-chat-history", JSON.stringify(next));
+      return next;
+    });
     setIsSending(true);
     try {
       const history: ChatTurn[] = threadMessages.slice(-10).map((item) => ({
@@ -50,7 +69,13 @@ export function ChatThread({ contact, messages, onOpenContact, onBack, showBackB
       const answer = await askAgriculturalAssistant(trimmed, [...history, { role: "user", content: trimmed }], sessionId);
       setSessionId(answer.session_id);
       const text = answer.sections.map((section) => `**${section.title}:**\n${section.content.join("\n")}`).join("\n\n");
-      setThreadMessages((current) => [...current, { id: Date.now() + 1, align: "start", text, time: "Vừa xong" }]);
+      const assistantMessage: ChatMessage = { id: Date.now() + 1, align: "start", text, time: "Vừa xong" };
+      setThreadMessages((current) => [...current, assistantMessage]);
+      setHistoryItems((current) => {
+        const next = current.map((item) => item.id === historyId ? { ...item, messages: [...item.messages, assistantMessage] } : item);
+        window.localStorage.setItem("agriai-chat-history", JSON.stringify(next));
+        return next;
+      });
     } catch (error) {
       setThreadMessages((current) => [
         ...current,
@@ -62,7 +87,28 @@ export function ChatThread({ contact, messages, onOpenContact, onBack, showBackB
   }
 
   return (
-    <div className={cn("flex h-full flex-col", className)}>
+    <div className={cn("relative flex h-full flex-col", className)}>
+      {showHistory && (
+        <aside className="absolute inset-y-0 left-0 z-20 flex w-72 flex-col border-r bg-background shadow-xl">
+          <div className="flex items-center justify-between border-b px-4 py-4">
+            <div>
+              <h2 className="font-semibold text-sm">Lịch sử hội thoại</h2>
+              <p className="mt-0.5 text-muted-foreground text-xs">Lưu trên thiết bị này</p>
+            </div>
+            <Button variant="ghost" size="icon-sm" aria-label="Đóng lịch sử" onClick={() => setShowHistory(false)}><X /></Button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-2">
+            {historyItems.length === 0 ? (
+              <p className="px-3 py-8 text-center text-muted-foreground text-xs leading-5">Chưa có hội thoại nào.<br />Hãy bắt đầu bằng một câu hỏi.</p>
+            ) : historyItems.map((item) => (
+              <button key={item.id} type="button" onClick={() => { if (item.messages.length) setThreadMessages(item.messages); setShowHistory(false); }} className="w-full rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-muted">
+                <p className="line-clamp-2 font-medium text-xs leading-5">{item.title}</p>
+                <p className="mt-1 text-muted-foreground text-[11px]">{item.time}</p>
+              </button>
+            ))}
+          </div>
+        </aside>
+      )}
       <div className="border-b px-5 py-4">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -87,7 +133,12 @@ export function ChatThread({ contact, messages, onOpenContact, onBack, showBackB
             </div>
           </div>
 
-          <div className="hidden rounded-full bg-emerald-500/10 px-3 py-1 text-emerald-700 text-xs dark:text-emerald-300 sm:block">Đang sẵn sàng</div>
+          <div className="flex items-center gap-2">
+            <div className="hidden rounded-full bg-emerald-500/10 px-3 py-1 text-emerald-700 text-xs dark:text-emerald-300 sm:block">Đang sẵn sàng</div>
+            <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground" onClick={() => setShowHistory((value) => !value)} aria-label="Mở lịch sử hội thoại">
+              <History className="size-4" /> <span className="hidden sm:inline">Lịch sử</span>
+            </Button>
+          </div>
         </div>
       </div>
 
