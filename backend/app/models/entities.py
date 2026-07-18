@@ -128,3 +128,19 @@ class WeatherAlertSubscription(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class DisasterWarning(Base):
+    __tablename__ = "disaster_warnings"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, server_default=func.gen_random_uuid())
+    type: Mapped[str] = mapped_column(String(50), index=True)  # flood / storm / drought / heatwave
+    severity: Mapped[str] = mapped_column(String(20))  # low / medium / high / critical
+    title: Mapped[str] = mapped_column(String(255))
+    description: Mapped[str] = mapped_column(Text)
+    affected_region: Mapped[str] = mapped_column(Text)  # JSON or GeoJSON geometry
+    start_date: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    end_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    source: Mapped[str] = mapped_column(String(100))
+    raw_data: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON blob
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

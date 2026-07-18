@@ -28,6 +28,8 @@ class Settings(BaseSettings):
     supabase_storage_bucket: str = "disease-images"
 
     openweather_api_key: str = ""
+    gfms_api_key: str = ""
+    vndms_api_url: str | None = None
     weather_cache_background_enabled: bool = True
     weather_cache_refresh_interval_seconds: int = 1800
     weather_cache_sqlite_path: str | None = None
