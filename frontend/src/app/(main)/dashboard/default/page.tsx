@@ -29,7 +29,7 @@ import { Area, CartesianGrid, ComposedChart, Line, Bar, BarChart, ResponsiveCont
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useActiveUser } from "@/stores/auth-store";
+import { useUserStore } from "@/stores/user-store";
 
 // Mock data for Farmer Soil charts
 const soilHistory = [
@@ -65,7 +65,7 @@ const initialEmergencyDiseases = [
 ];
 
 export default function Page() {
-  const activeUser = useActiveUser();
+  const { activeUser } = useUserStore();
   const [moisture, setMoisture] = useState(48);
   const [isWatering, setIsWatering] = useState(false);
   const [emergencyDiseases, setEmergencyDiseases] = useState(initialEmergencyDiseases);

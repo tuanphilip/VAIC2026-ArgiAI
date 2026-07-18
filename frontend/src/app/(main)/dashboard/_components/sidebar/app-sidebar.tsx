@@ -1,9 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 
-import { CircleHelp, ClipboardList, Database, File, Search, Settings } from "lucide-react";
+import { CircleHelp, ClipboardList, Command, Database, File, Search, Settings } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 
 import {
@@ -18,7 +17,7 @@ import {
 import { APP_CONFIG } from "@/config/app-config";
 import { sidebarItems } from "@/navigation/sidebar/sidebar-items";
 import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
-import { useActiveUser } from "@/stores/auth-store";
+import { useUserStore } from "@/stores/user-store";
 
 import { NavMain } from "./nav-main";
 import { NavUser } from "./nav-user";
@@ -69,7 +68,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       isSynced: s.isSynced,
     })),
   );
-  const activeUser = useActiveUser();
+  const { activeUser } = useUserStore();
 
   const variant = isSynced ? sidebarVariant : props.variant;
   const collapsible = isSynced ? sidebarCollapsible : props.collapsible;
@@ -90,19 +89,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton
-              asChild
-              size="lg"
-              className="sidebar-brand-button hover:bg-transparent hover:text-sidebar-foreground active:bg-transparent active:text-sidebar-foreground"
-            >
+            <SidebarMenuButton asChild>
               <Link prefetch={false} href="/dashboard/default">
-                <Image
-                  src="/logo.png"
-                  alt={APP_CONFIG.name}
-                  width={28}
-                  height={28}
-                  className="size-7 shrink-0 object-contain"
-                />
+                <Command />
                 <span className="font-semibold text-base">{APP_CONFIG.name}</span>
               </Link>
             </SidebarMenuButton>

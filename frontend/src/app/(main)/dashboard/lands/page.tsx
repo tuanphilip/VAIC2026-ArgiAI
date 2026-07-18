@@ -31,20 +31,8 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
-import { useActiveUser } from "@/stores/auth-store";
-import { ApiError } from "@/lib/api-client";
+import { useUserStore } from "@/stores/user-store";
 import { createPlot, deletePlot, listPlots, updatePlot, type PlotResponse } from "@/lib/plots-api";
-
-const API_ERROR_MESSAGES: Record<string, string> = {
-  "Owner not found": "Không tìm thấy tài khoản chủ sở hữu với tên này. Chủ sở hữu phải là một tài khoản đã đăng ký (tên phải khớp chính xác họ tên tài khoản đó).",
-  "Farmers cannot assign plot ownership": "Tài khoản nông dân không được phép đổi chủ sở hữu thửa đất.",
-  "Plot code already exists": "Mã thửa đất này đã tồn tại, vui lòng chọn mã khác.",
-};
-
-function describeApiError(error: unknown, fallback: string): string {
-  if (!(error instanceof ApiError)) return fallback;
-  return API_ERROR_MESSAGES[error.message] ?? error.message;
-}
 
 interface CropEntry {
   type: string;
@@ -712,7 +700,7 @@ function LandMapOverlay({ land }: { land: Land }) {
 }
 
 export default function Page() {
-  const activeUser = useActiveUser();
+  const { activeUser } = useUserStore();
   const [lands, setLands] = useState<Land[]>([]);
   const [isLoadingLands, setIsLoadingLands] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -775,9 +763,10 @@ export default function Page() {
   const markersRef = useRef<any[]>([]);
   const polygonsRef = useRef<any[]>([]);
 
-  // Backend GET /plots đã tự lọc theo current_user (farmer chỉ nhận về thửa đất của chính mình),
-  // nên ở đây không cần lọc lại theo tên chủ sở hữu nữa.
-  const displayedLands = lands;
+  // Filter displayed lands based on user role (Farmer only sees their own lands, Cán bộ sees all)
+  const displayedLands = activeUser.role === "farmer"
+    ? lands.filter((l) => l.owner.includes("Nguyễn Văn A"))
+    : lands;
 
   // Áp dụng tìm kiếm/lọc (chỉ cán bộ có UI để đổi các state này, nông dân luôn ở giá trị mặc định)
   const searchFilteredLands = displayedLands.filter((land) => {
@@ -952,8 +941,6 @@ export default function Page() {
         seeding_date: editSeedingDate,
         status: editStatus,
         health: editHealth,
-        // Chỉ cán bộ được phép đổi chủ sở hữu — backend từ chối (403) nếu farmer gửi owner.
-        ...(activeUser.role === "official" ? { owner: editOwner } : {}),
         owner_phone: editOwnerPhone,
         location_lat: resolved.center[0],
         location_lng: resolved.center[1],
@@ -965,7 +952,7 @@ export default function Page() {
       setSelectedId(null); // Close panel on success
     } catch (error) {
       console.error("[lands] Failed to update plot:", error);
-      alert(describeApiError(error, "Không thể lưu thay đổi thửa đất. Vui lòng thử lại."));
+      alert("Không thể lưu thay đổi thửa đất. Vui lòng thử lại.");
     }
   };
 
@@ -987,8 +974,6 @@ export default function Page() {
         location_lat: resolved.center[0],
         location_lng: resolved.center[1],
         health: newHealth,
-        // Sheet đăng ký mới chỉ cán bộ mở được nên luôn được phép chỉ định chủ sở hữu.
-        owner: newOwner,
         owner_phone: newOwnerPhone,
         boundary: resolved.boundary,
         livestock: newLivestock,
@@ -998,7 +983,7 @@ export default function Page() {
       setIsAdding(false);
     } catch (error) {
       console.error("[lands] Failed to create plot:", error);
-      alert(describeApiError(error, "Không thể đăng ký thửa đất. Vui lòng kiểm tra lại thông tin và thử lại."));
+      alert("Không thể đăng ký thửa đất. Vui lòng kiểm tra lại thông tin và thử lại.");
     }
   };
 
