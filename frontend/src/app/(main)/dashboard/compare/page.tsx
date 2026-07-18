@@ -1,336 +1,80 @@
 "use client";
 
-import { useState } from "react";
-import { BarChart3, Calendar, Download, FileSpreadsheet, RefreshCw, Sprout, TrendingDown, TrendingUp } from "lucide-react";
-import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { useEffect, useState } from "react";
+import { Download, RefreshCw, TrendingDown, TrendingUp } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { apiFetch } from "@/lib/api-client";
 
-// Mock comparison data for different configurations
-const dataYoY = [
-  { period: "Q1 2025 vs Q1 2026", "Diện tích 2025 (ha)": 800, "Diện tích 2026 (ha)": 850, "Sản lượng 2025 (tấn)": 5800, "Sản lượng 2026 (tấn)": 6200 },
-  { period: "Q2 2025 vs Q2 2026", "Diện tích 2025 (ha)": 920, "Diện tích 2026 (ha)": 980, "Sản lượng 2025 (tấn)": 6900, "Sản lượng 2026 (tấn)": 7400 },
-  { period: "Q3 2025 vs Q3 2026", "Diện tích 2025 (ha)": 1100, "Diện tích 2026 (ha)": 1250, "Sản lượng 2025 (tấn)": 7500, "Sản lượng 2026 (tấn)": 8100 },
-  { period: "Q4 2025 vs Q4 2026", "Diện tích 2025 (ha)": 850, "Diện tích 2026 (ha)": 900, "Sản lượng 2025 (tấn)": 6100, "Sản lượng 2026 (tấn)": 6500 },
-];
+type CompareMetric = {
+  current_period_ha?: number | null;
+  previous_period_ha?: number | null;
+  current_period_tons?: number | null;
+  previous_period_tons?: number | null;
+  current_period_cases?: number | null;
+  previous_period_cases?: number | null;
+  percentage_change: number;
+};
 
-const dataQoQ = [
-  { period: "Q4 2025 vs Q1 2026", "Diện tích cũ (ha)": 850, "Diện tích mới (ha)": 900, "Sản lượng cũ (tấn)": 6100, "Sản lượng mới (tấn)": 6500 },
-  { period: "Q1 2026 vs Q2 2026", "Diện tích cũ (ha)": 900, "Diện tích mới (ha)": 980, "Sản lượng cũ (tấn)": 6500, "Sản lượng mới (tấn)": 7400 },
-  { period: "Q2 2026 vs Q3 2026", "Diện tích cũ (ha)": 980, "Diện tích mới (ha)": 1250, "Sản lượng cũ (tấn)": 7400, "Sản lượng mới (tấn)": 8100 },
-];
+type CompareResponse = {
+  compare_type: "yoy" | "qoq";
+  metrics: {
+    cultivated_area: CompareMetric;
+    total_yield_tons: CompareMetric;
+    disease_incidence_cases: CompareMetric;
+  };
+  details_by_crop: Array<{ crop_name: string; area_ha: number; yield_tons: number; disease_cases: number }>;
+};
 
-const diseaseHistoryYoY = [
-  { month: "T1", "2025": 12, "2026": 8 },
-  { month: "T2", "2025": 18, "2026": 10 },
-  { month: "T3", "2025": 25, "2026": 15 },
-  { month: "T4", "2025": 30, "2026": 22 },
-  { month: "T5", "2025": 45, "2026": 32 },
-  { month: "T6", "2025": 65, "2026": 42 },
-];
-
-const diseaseHistoryQoQ = [
-  { month: "Tháng 1 (Q3)", "Kỳ trước (Q2)": 30, "Kỳ này (Q3)": 42 },
-  { month: "Tháng 2 (Q3)", "Kỳ trước (Q2)": 42, "Kỳ này (Q3)": 38 },
-  { month: "Tháng 3 (Q3)", "Kỳ trước (Q2)": 65, "Kỳ này (Q3)": 45 },
-];
+const number = new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 2 });
 
 export default function Page() {
-  const [cropFilter, setCropFilter] = useState("all");
   const [compareType, setCompareType] = useState<"yoy" | "qoq">("yoy");
-  const [regionFilter, setRegionFilter] = useState("all");
+  const [data, setData] = useState<CompareResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const [isExporting, setIsExporting] = useState(false);
+  async function load() {
+    setLoading(true);
+    setError(null);
+    try {
+      setData(await apiFetch<CompareResponse>(`/dashboard/compare?compare_type=${compareType}`));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Không tải được báo cáo so sánh.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
-  const handleExport = () => {
-    setIsExporting(true);
-    setTimeout(() => {
-      setIsExporting(false);
-      alert("Đã xuất báo cáo so sánh định kỳ dưới dạng Excel thành công!");
-    }, 1500);
-  };
+  useEffect(() => { void load(); }, [compareType]);
+
+  function exportCsv() {
+    if (!data) return;
+    const rows = [["Cây trồng", "Diện tích (ha)", "Sản lượng (tấn)", "Ca bệnh"], ...data.details_by_crop.map((item) => [item.crop_name, item.area_ha, item.yield_tons, item.disease_cases])];
+    const csv = rows.map((row) => row.join(",")).join("\n");
+    const url = URL.createObjectURL(new Blob([`\ufeff${csv}`], { type: "text/csv;charset=utf-8" }));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `argiai-compare-${data.compare_type}.csv`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
+
+  const cards = data ? [
+    ["Diện tích canh tác", data.metrics.cultivated_area.current_period_ha, data.metrics.cultivated_area.previous_period_ha, "ha"],
+    ["Sản lượng dự báo", data.metrics.total_yield_tons.current_period_tons, data.metrics.total_yield_tons.previous_period_tons, "tấn"],
+    ["Ca bệnh", data.metrics.disease_incidence_cases.current_period_cases, data.metrics.disease_incidence_cases.previous_period_cases, "ca"],
+  ] as const : [];
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
-            Báo cáo So sánh Chu kỳ
-          </h1>
-          <p className="text-muted-foreground">
-            Báo cáo phân tích so sánh diện tích gieo trồng, sản lượng dự kiến và dịch bệnh của cán bộ quản lý.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" className="gap-2" onClick={() => window.location.reload()}>
-            <RefreshCw className="size-4" /> Làm mới
-          </Button>
-          <Button
-            onClick={handleExport}
-            disabled={isExporting}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2"
-          >
-            {isExporting ? "Đang xuất..." : <><FileSpreadsheet className="size-4" /> Xuất Excel</>}
-          </Button>
-        </div>
-      </div>
-
-      {/* Filter Bar */}
-      <Card className="shadow-sm">
-        <CardContent className="p-4 flex flex-wrap gap-4 items-center justify-between">
-          <div className="flex flex-wrap gap-4 items-center">
-            {/* Crop Select */}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-bold text-muted-foreground uppercase">Loại cây trồng</label>
-              <select
-                value={cropFilter}
-                onChange={(e) => setCropFilter(e.target.value)}
-                className="text-xs p-2 border rounded-lg dark:bg-slate-950 focus:outline-emerald-500 w-[180px]"
-              >
-                <option value="all">Tất cả đặc sản</option>
-                <option value="rice">Gạo Điện Biên (Seng Cù)</option>
-                <option value="coffee">Cà phê Mường Ảng (Catimor)</option>
-                <option value="vegetables">Rau vụ đông</option>
-              </select>
-            </div>
-
-            {/* Region Select */}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-bold text-muted-foreground uppercase">Huyện/Khu vực</label>
-              <select
-                value={regionFilter}
-                onChange={(e) => setRegionFilter(e.target.value)}
-                className="text-xs p-2 border rounded-lg dark:bg-slate-950 focus:outline-emerald-500 w-[180px]"
-              >
-                <option value="all">Toàn tỉnh Điện Biên</option>
-                <option value="muong_ang">Huyện Mường Ảng</option>
-                <option value="dien_bien_phu">TP. Điện Biên Phủ</option>
-                <option value="tuan_giao">Huyện Tuần Giáo</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Comparison Mode Switch */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-bold text-muted-foreground uppercase">Chế độ so sánh</label>
-            <div className="flex p-1 bg-slate-100 dark:bg-slate-900 rounded-lg border">
-              <button
-                onClick={() => setCompareType("yoy")}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition ${
-                  compareType === "yoy"
-                    ? "bg-white dark:bg-slate-950 shadow-sm text-emerald-700 dark:text-emerald-400"
-                    : "text-slate-500 hover:text-slate-800"
-                }`}
-              >
-                Cùng kỳ năm trước (YoY)
-              </button>
-              <button
-                onClick={() => setCompareType("qoq")}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition ${
-                  compareType === "qoq"
-                    ? "bg-white dark:bg-slate-950 shadow-sm text-emerald-700 dark:text-emerald-400"
-                    : "text-slate-500 hover:text-slate-800"
-                }`}
-              >
-                Quý trước (QoQ)
-              </button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* KPI Stats Grid */}
-      <div className="grid gap-4 md:grid-cols-3">
-        {/* KPI 1: Area */}
-        <Card className="agri-metric-card shadow-sm">
-          <CardContent className="p-6">
-            <span className="text-xs font-semibold text-slate-500 block mb-1">Diện tích Gieo trồng</span>
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-extrabold">1,250.5 ha</span>
-              <span className="text-xs text-emerald-600 font-bold flex items-center gap-0.5">
-                <TrendingUp className="size-3.5" /> +5.9%
-              </span>
-            </div>
-            <p className="text-[10px] text-muted-foreground mt-2">
-              {compareType === "yoy" ? "So với cùng kỳ năm 2025 (1,180.2 ha)" : "So với Quý trước (1,180.2 ha)"}
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* KPI 2: Yield */}
-        <Card className="agri-metric-card shadow-sm">
-          <CardContent className="p-6">
-            <span className="text-xs font-semibold text-slate-500 block mb-1">Sản lượng Dự báo</span>
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-extrabold">8,100.0 tấn</span>
-              <span className="text-xs text-emerald-600 font-bold flex items-center gap-0.5">
-                <TrendingUp className="size-3.5" /> +8.0%
-              </span>
-            </div>
-            <p className="text-[10px] text-muted-foreground mt-2">
-              {compareType === "yoy" ? "So với cùng kỳ năm 2025 (7,500.0 tấn)" : "So với Quý trước (7,500.0 tấn)"}
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* KPI 3: Diseases */}
-        <Card className="agri-metric-card shadow-sm">
-          <CardContent className="p-6">
-            <span className="text-xs font-semibold text-slate-500 block mb-1">Số ca nhiễm bệnh hại</span>
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-extrabold text-rose-500">42 ca</span>
-              <span className="text-xs text-emerald-600 font-bold flex items-center gap-0.5">
-                <TrendingDown className="size-3.5" /> -35.4%
-              </span>
-            </div>
-            <p className="text-[10px] text-muted-foreground mt-2">
-              {compareType === "yoy" ? "So với cùng kỳ năm 2025 (65 ca)" : "So với Quý trước (65 ca)"}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Main Charts Area */}
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Yield and Area Bar Chart */}
-        <Card className="shadow-sm">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="size-5 text-emerald-600" />
-              So sánh Sản lượng Thu hoạch ({compareType === "yoy" ? "YoY" : "QoQ"})
-            </CardTitle>
-            <CardDescription>Biểu đồ cột so sánh sản lượng nông nghiệp ước tính.</CardDescription>
-          </CardHeader>
-          <CardContent className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={(compareType === "yoy" ? dataYoY : dataQoQ) as any[]}
-                margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="period" tickLine={false} style={{ fontSize: 10 }} />
-                <YAxis tickLine={false} style={{ fontSize: 10 }} />
-                <Tooltip />
-                <Legend style={{ fontSize: 10 }} />
-                {compareType === "yoy" ? (
-                  <>
-                    <Bar dataKey="Sản lượng 2025 (tấn)" fill="#94a3b8" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="Sản lượng 2026 (tấn)" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                  </>
-                ) : (
-                  <>
-                    <Bar dataKey="Sản lượng cũ (tấn)" fill="#94a3b8" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="Sản lượng mới (tấn)" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                  </>
-                )}
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        {/* Disease Incidence Line Chart */}
-        <Card className="shadow-sm">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="size-5 text-rose-500" />
-              Diễn biến dịch bệnh hại ({compareType === "yoy" ? "YoY" : "QoQ"})
-            </CardTitle>
-            <CardDescription>Xu hướng ghi nhận ổ dịch sâu bệnh phát sinh.</CardDescription>
-          </CardHeader>
-          <CardContent className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart
-                data={(compareType === "yoy" ? diseaseHistoryYoY : diseaseHistoryQoQ) as any[]}
-                margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="month" tickLine={false} style={{ fontSize: 10 }} />
-                <YAxis tickLine={false} style={{ fontSize: 10 }} />
-                <Tooltip />
-                <Legend style={{ fontSize: 10 }} />
-                {compareType === "yoy" ? (
-                  <>
-                    <Line type="monotone" dataKey="2025" stroke="#94a3b8" strokeWidth={2} dot={{ r: 4 }} />
-                    <Line type="monotone" dataKey="2026" stroke="#f43f5e" strokeWidth={2} dot={{ r: 4 }} />
-                  </>
-                ) : (
-                  <>
-                    <Line type="monotone" dataKey="Kỳ trước (Q2)" stroke="#94a3b8" strokeWidth={2} dot={{ r: 4 }} />
-                    <Line type="monotone" dataKey="Kỳ này (Q3)" stroke="#f43f5e" strokeWidth={2} dot={{ r: 4 }} />
-                  </>
-                )}
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Detailed Data Table */}
-      <Card className="shadow-sm">
-        <CardHeader>
-          <CardTitle>Báo cáo Bảng chi tiết theo loại cây trồng</CardTitle>
-          <CardDescription>Số liệu chi tiết phân bổ cho các thương hiệu nông sản Điện Biên.</CardDescription>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead className="bg-slate-50 dark:bg-slate-900/40 text-xs text-slate-500 font-semibold border-b">
-                <tr>
-                  <th className="p-4">Tên Nông sản đặc sản</th>
-                  <th className="p-4">Huyện trọng điểm</th>
-                  <th className="p-4 text-right">Diện tích kỳ trước</th>
-                  <th className="p-4 text-right">Diện tích kỳ này</th>
-                  <th className="p-4 text-right">Sản lượng kỳ trước</th>
-                  <th className="p-4 text-right">Sản lượng kỳ này</th>
-                  <th className="p-4 text-right">Biến động sản lượng (%)</th>
-                  <th className="p-4 text-center">Ổ dịch bệnh hại</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                <tr className="hover:bg-slate-50/50 dark:hover:bg-slate-900/10 transition">
-                  <td className="p-4 font-semibold">Cà phê Mường Ảng (Catimor)</td>
-                  <td className="p-4 text-xs">Mường Ảng</td>
-                  <td className="p-4 text-right font-medium">420.0 ha</td>
-                  <td className="p-4 text-right font-medium text-emerald-600">450.0 ha</td>
-                  <td className="p-4 text-right">1,650.0 tấn</td>
-                  <td className="p-4 text-right text-emerald-600 font-bold">1,800.0 tấn</td>
-                  <td className="p-4 text-right text-emerald-600 font-semibold">+9.09%</td>
-                  <td className="p-4 text-center">
-                    <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">12 ca (Giải quyết xong)</Badge>
-                  </td>
-                </tr>
-                <tr className="hover:bg-slate-50/50 dark:hover:bg-slate-900/10 transition">
-                  <td className="p-4 font-semibold">Gạo Điện Biên (Seng Cù)</td>
-                  <td className="p-4 text-xs">Điện Biên Đông</td>
-                  <td className="p-4 text-right font-medium">760.2 ha</td>
-                  <td className="p-4 text-right font-medium text-emerald-600">800.5 ha</td>
-                  <td className="p-4 text-right">5,850.0 tấn</td>
-                  <td className="p-4 text-right text-emerald-600 font-bold">6,300.0 tấn</td>
-                  <td className="p-4 text-right text-emerald-600 font-semibold">+7.69%</td>
-                  <td className="p-4 text-center">
-                    <Badge className="bg-rose-100 text-rose-800 border-rose-200">30 ca (2 ca đang hoạt động)</Badge>
-                  </td>
-                </tr>
-                <tr className="hover:bg-slate-50/50 dark:hover:bg-slate-900/10 transition">
-                  <td className="p-4 font-semibold">Rau vụ đông đặc hữu</td>
-                  <td className="p-4 text-xs">TP. Điện Biên Phủ</td>
-                  <td className="p-4 text-right font-medium">100.0 ha</td>
-                  <td className="p-4 text-right font-medium text-emerald-600">110.0 ha</td>
-                  <td className="p-4 text-right">300.0 tấn</td>
-                  <td className="p-4 text-right text-emerald-600 font-bold">320.0 tấn</td>
-                  <td className="p-4 text-right text-emerald-600 font-semibold">+6.67%</td>
-                  <td className="p-4 text-center">
-                    <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">0 ca (An toàn)</Badge>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center"><div><h1 className="text-3xl font-bold tracking-tight">Báo cáo so sánh chu kỳ</h1><p className="text-muted-foreground">Tính từ ngày ghi nhận trong database. Không có lịch sử thì không tự bịa số.</p></div><div className="flex gap-2"><Button variant="outline" onClick={() => void load()} disabled={loading} className="gap-2"><RefreshCw className="size-4" />Làm mới</Button><Button onClick={exportCsv} disabled={!data} className="gap-2"><Download className="size-4" />Xuất CSV</Button></div></div>
+      <div className="flex gap-2"><Button variant={compareType === "yoy" ? "default" : "outline"} onClick={() => setCompareType("yoy")}>Cùng kỳ năm trước</Button><Button variant={compareType === "qoq" ? "default" : "outline"} onClick={() => setCompareType("qoq")}>Quý trước</Button></div>
+      {error && <div className="rounded-md border border-rose-300 bg-rose-50 p-3 text-sm text-rose-800">{error}</div>}
+      <div className="grid gap-4 md:grid-cols-3">{cards.map(([label, current, previous, unit]) => { const change = previous === null || previous === undefined ? null : ((current ?? 0) - previous) / (previous || 1) * 100; return <Card key={label}><CardContent className="p-5"><p className="text-sm text-muted-foreground">{label}</p><p className="mt-2 text-3xl font-bold">{current === null || current === undefined ? "—" : `${number.format(current)} ${unit}`}</p><div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">{change === null ? <Badge variant="outline">chưa có kỳ trước</Badge> : <>{change >= 0 ? <TrendingUp className="size-4 text-emerald-600" /> : <TrendingDown className="size-4 text-rose-600" />}{change.toFixed(2)}% so với kỳ trước</>}</div></CardContent></Card>; })}</div>
+      <Card><CardHeader><CardTitle>Chi tiết theo cây trồng</CardTitle></CardHeader><CardContent className="p-0"><div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="border-b bg-muted/40 text-xs text-muted-foreground"><tr><th className="p-4">Cây trồng</th><th className="p-4">Diện tích (ha)</th><th className="p-4">Sản lượng (tấn)</th><th className="p-4">Ca bệnh</th></tr></thead><tbody className="divide-y">{data?.details_by_crop.map((item) => <tr key={item.crop_name}><td className="p-4 font-semibold">{item.crop_name}</td><td className="p-4">{number.format(item.area_ha)}</td><td className="p-4">{number.format(item.yield_tons)}</td><td className="p-4">{item.disease_cases}</td></tr>)}{!loading && data?.details_by_crop.length === 0 && <tr><td colSpan={4} className="p-6 text-center text-muted-foreground">Chưa có dữ liệu trong kỳ đang chọn.</td></tr>}</tbody></table></div></CardContent></Card>
     </div>
   );
 }
