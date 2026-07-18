@@ -29,18 +29,21 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-type RiskLevel = "low" | "medium" | "high";
-type WeatherLayer = "rainviewer-radar" | "openweather-rain" | "openweather-wind" | "openweather-temperature";
-type LoadStatus = "loading" | "ready" | "error";
+import {
+  buildOpenWeatherLayerTemplates,
+  buildWeatherApiUrl,
+  type FarmPlotBase,
+  normalizeWeatherPlot,
+  type OpenWeatherLayerId,
+  readWeatherApiError,
+  resolveLayerUrl,
+  type WeatherApiPlot,
+  type WeatherMapConfigResponse,
+} from "./_components/weather-api";
 
-interface FarmPlotBase {
-  id: string;
-  name: string;
-  crop: string;
-  owner: string;
-  lat: number;
-  lng: number;
-}
+type RiskLevel = "low" | "medium" | "high";
+type WeatherLayer = "rainviewer-radar" | OpenWeatherLayerId;
+type LoadStatus = "loading" | "ready" | "error";
 
 interface FarmPlotWeather extends FarmPlotBase {
   temperature: number;
@@ -105,6 +108,13 @@ interface WeatherDataState {
   message?: string;
 }
 
+interface WeatherMapState {
+  status: LoadStatus;
+  defaultZoom: number;
+  tileTemplates: Partial<Record<OpenWeatherLayerId, string>>;
+  message?: string;
+}
+
 interface OpenMeteoResponse {
   current?: {
     temperature_2m?: number;
@@ -146,8 +156,6 @@ interface RainViewerResponse {
   };
 }
 
-const openWeatherApiKey = process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY;
-
 const riskStyles: Record<RiskLevel, string> = {
   low: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300",
   medium: "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300",
@@ -173,38 +181,7 @@ const mapLayerLabels: Record<WeatherLayer, string> = {
   "openweather-temperature": "Nhiệt OpenWeather",
 };
 
-const openWeatherLayerNames: Record<Exclude<WeatherLayer, "rainviewer-radar">, string> = {
-  "openweather-rain": "precipitation_new",
-  "openweather-wind": "wind_new",
-  "openweather-temperature": "temp_new",
-};
-
-const farmPlots: FarmPlotBase[] = [
-  {
-    id: "A1",
-    name: "Lô A1 - Mường Thanh",
-    crop: "Lúa Seng Cù",
-    owner: "Nguyễn Văn A",
-    lat: 21.52,
-    lng: 103.22,
-  },
-  {
-    id: "B1",
-    name: "Lô B1 - Mường Ảng",
-    crop: "Cà phê Catimor",
-    owner: "Lê Văn C",
-    lat: 21.51,
-    lng: 103.225,
-  },
-  {
-    id: "C1",
-    name: "Lô C1 - Tuần Giáo",
-    crop: "Rau VietGAP",
-    owner: "Phạm Thị D",
-    lat: 21.53,
-    lng: 103.215,
-  },
-];
+const DEFAULT_MAP_CENTER: Leaflet.LatLngTuple = [21.518, 103.223];
 
 const fallbackForecast: ForecastDay[] = [
   {
@@ -329,52 +306,97 @@ const fallbackForecast: ForecastDay[] = [
 ];
 
 export default function Page() {
-  const [selectedPlotId, setSelectedPlotId] = useState(farmPlots[0].id);
+  const [selectedPlotId, setSelectedPlotId] = useState<string | null>(null);
   const [selectedLayer, setSelectedLayer] = useState<WeatherLayer>("rainviewer-radar");
   const [phone, setPhone] = useState("");
   const [subscribeSuccess, setSubscribeSuccess] = useState(false);
-  const [weatherData, setWeatherData] = useState<WeatherDataState>(() => {
-    const plots = buildFallbackPlots();
-    return {
-      status: "loading",
-      plots,
-      alerts: buildAlerts(plots),
-      actions: buildActions(plots),
-      message: "Đang tải dữ liệu thật từ Open-Meteo...",
-    };
+  const [weatherData, setWeatherData] = useState<WeatherDataState>({
+    status: "loading",
+    plots: [],
+    alerts: [],
+    actions: [],
+    message: "Đang tải danh sách thửa ruộng từ backend...",
+  });
+  const [mapConfig, setMapConfig] = useState<WeatherMapState>({
+    status: "loading",
+    defaultZoom: 7,
+    tileTemplates: {},
+    message: "Đang tải cấu hình lớp bản đồ thời tiết...",
   });
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadWeather() {
-      setWeatherData((current) => ({
-        ...current,
+      setWeatherData({
         status: "loading",
-        message: "Đang tải dữ liệu thật từ Open-Meteo...",
-      }));
+        plots: [],
+        alerts: [],
+        actions: [],
+        message: "Đang tải danh sách thửa ruộng từ backend...",
+      });
 
       try {
-        const plots = await Promise.all(farmPlots.map((plot) => fetchPlotWeather(plot)));
+        const plotsResponse = await fetch(buildWeatherApiUrl("/weather/plots"));
+        if (!plotsResponse.ok) {
+          throw new Error(
+            await readWeatherApiError(plotsResponse, `Không thể tải danh sách thửa ruộng (${plotsResponse.status}).`),
+          );
+        }
+
+        const basePlots = ((await plotsResponse.json()) as WeatherApiPlot[]).map(normalizeWeatherPlot);
         if (cancelled) return;
-        setWeatherData({
-          status: "ready",
-          plots,
-          alerts: buildAlerts(plots),
-          actions: buildActions(plots),
-          updatedAt: new Date().toLocaleString("vi-VN"),
-          message: "Dữ liệu đang lấy trực tiếp từ Open-Meteo.",
-        });
+
+        if (basePlots.length === 0) {
+          setWeatherData({
+            status: "ready",
+            plots: [],
+            alerts: [],
+            actions: [],
+            updatedAt: new Date().toLocaleString("vi-VN"),
+            message: "Backend chưa trả về thửa ruộng nào để hiển thị.",
+          });
+          return;
+        }
+
+        try {
+          const plots = await Promise.all(basePlots.map((plot) => fetchPlotWeather(plot)));
+          if (cancelled) return;
+          setWeatherData({
+            status: "ready",
+            plots,
+            alerts: buildAlerts(plots),
+            actions: buildActions(plots),
+            updatedAt: new Date().toLocaleString("vi-VN"),
+            message: "Đang hiển thị thửa ruộng thật từ backend và dữ liệu thời tiết từ Open-Meteo.",
+          });
+        } catch (error) {
+          if (cancelled) return;
+          const fallbackPlots = buildFallbackPlots(basePlots);
+          setWeatherData({
+            status: "error",
+            plots: fallbackPlots,
+            alerts: buildAlerts(fallbackPlots),
+            actions: buildActions(fallbackPlots),
+            updatedAt: new Date().toLocaleString("vi-VN"),
+            message:
+              error instanceof Error
+                ? `${error.message} Đang dùng dữ liệu thời tiết dự phòng cho các thửa từ backend.`
+                : "Không thể tải thời tiết thật, đang dùng dữ liệu dự phòng cho các thửa từ backend.",
+          });
+        }
       } catch (error) {
         if (cancelled) return;
-        const plots = buildFallbackPlots();
         setWeatherData({
           status: "error",
-          plots,
-          alerts: buildAlerts(plots),
-          actions: buildActions(plots),
+          plots: [],
+          alerts: [],
+          actions: [],
           updatedAt: new Date().toLocaleString("vi-VN"),
-          message: error instanceof Error ? error.message : "Không thể tải Open-Meteo, đang dùng dữ liệu dự phòng.",
+          message:
+            error instanceof Error
+              ? error.message
+              : "Không thể kết nối backend để lấy thửa ruộng và cấu hình thời tiết.",
         });
       }
     }
@@ -386,18 +408,91 @@ export default function Page() {
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadMapConfig() {
+      setMapConfig({
+        status: "loading",
+        defaultZoom: 7,
+        tileTemplates: {},
+        message: "Đang tải cấu hình lớp bản đồ thời tiết...",
+      });
+
+      try {
+        const response = await fetch(buildWeatherApiUrl("/weather/map-config"));
+        if (!response.ok) {
+          throw new Error(await readWeatherApiError(response, `Không thể tải cấu hình bản đồ (${response.status}).`));
+        }
+
+        const config = (await response.json()) as WeatherMapConfigResponse;
+        if (cancelled) return;
+
+        setMapConfig({
+          status: "ready",
+          defaultZoom: config.default_zoom,
+          tileTemplates: buildOpenWeatherLayerTemplates(config),
+          message: "Đã tải cấu hình lớp OpenWeatherMap từ backend.",
+        });
+      } catch (error) {
+        if (cancelled) return;
+
+        setMapConfig({
+          status: "error",
+          defaultZoom: 7,
+          tileTemplates: {},
+          message:
+            error instanceof Error
+              ? `${error.message} Radar RainViewer vẫn khả dụng.`
+              : "Không thể tải cấu hình lớp OpenWeatherMap từ backend. Radar RainViewer vẫn khả dụng.",
+        });
+      }
+    }
+
+    void loadMapConfig();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    setSelectedPlotId((current) => {
+      if (weatherData.plots.length === 0) {
+        return null;
+      }
+
+      if (current && weatherData.plots.some((plot) => plot.id === current)) {
+        return current;
+      }
+
+      return weatherData.plots[0]?.id ?? null;
+    });
+  }, [weatherData.plots]);
+
+  useEffect(() => {
+    if (selectedLayer === "rainviewer-radar") {
+      return;
+    }
+
+    if (!mapConfig.tileTemplates[selectedLayer]) {
+      setSelectedLayer("rainviewer-radar");
+    }
+  }, [mapConfig.tileTemplates, selectedLayer]);
+
   const selectedPlot = useMemo(
-    () => weatherData.plots.find((plot) => plot.id === selectedPlotId) ?? weatherData.plots[0],
+    () => weatherData.plots.find((plot) => plot.id === selectedPlotId) ?? weatherData.plots[0] ?? null,
     [selectedPlotId, weatherData.plots],
   );
 
   const highAlerts = weatherData.alerts.filter((alert) => alert.level === "high");
-  const weatherTrend = selectedPlot.forecast.map((item) => ({
-    day: item.day,
-    "Nhiệt độ cao nhất": item.tempMax,
-    "Lượng mưa": item.rain,
-    "Độ ẩm đất": item.soilMoisture,
-  }));
+  const weatherTrend =
+    selectedPlot?.forecast.map((item) => ({
+      day: item.day,
+      "Nhiệt độ cao nhất": item.tempMax,
+      "Lượng mưa": item.rain,
+      "Độ ẩm đất": item.soilMoisture,
+    })) ?? [];
 
   const handleSubscribe = (event: React.FormEvent) => {
     event.preventDefault();
@@ -426,15 +521,20 @@ export default function Page() {
             </label>
             <select
               id="plot-select"
-              value={selectedPlotId}
-              onChange={(event) => setSelectedPlotId(event.target.value)}
+              value={selectedPlotId ?? ""}
+              onChange={(event) => setSelectedPlotId(event.target.value || null)}
+              disabled={weatherData.plots.length === 0}
               className="h-10 rounded-md border bg-background px-3 text-sm outline-none ring-emerald-500 transition focus:ring-2"
             >
-              {weatherData.plots.map((plot) => (
-                <option key={plot.id} value={plot.id}>
-                  {plot.name} - {plot.crop}
-                </option>
-              ))}
+              {weatherData.plots.length === 0 ? (
+                <option value="">Chưa có dữ liệu thửa ruộng</option>
+              ) : (
+                weatherData.plots.map((plot) => (
+                  <option key={plot.id} value={plot.id}>
+                    {plot.name} - {plot.crop}
+                  </option>
+                ))
+              )}
             </select>
           </div>
         </div>
@@ -496,11 +596,13 @@ export default function Page() {
         </TabsList>
 
         <TabsContent value="overview" className="flex flex-col gap-5">
-          <OverviewTab selectedPlot={selectedPlot} weatherTrend={weatherTrend} />
+          {selectedPlot ? <OverviewTab selectedPlot={selectedPlot} weatherTrend={weatherTrend} /> : <NoPlotState />}
         </TabsContent>
 
         <TabsContent value="map" className="flex flex-col gap-5">
           <MapTab
+            defaultZoom={mapConfig.defaultZoom}
+            mapConfig={mapConfig}
             plots={weatherData.plots}
             selectedLayer={selectedLayer}
             selectedPlot={selectedPlot}
@@ -510,7 +612,7 @@ export default function Page() {
         </TabsContent>
 
         <TabsContent value="forecast" className="flex flex-col gap-5">
-          <ForecastTab selectedPlot={selectedPlot} weatherTrend={weatherTrend} />
+          {selectedPlot ? <ForecastTab selectedPlot={selectedPlot} weatherTrend={weatherTrend} /> : <NoPlotState />}
         </TabsContent>
 
         <TabsContent value="alerts" className="flex flex-col gap-5">
@@ -655,17 +757,21 @@ function OverviewTab({
 }
 
 function MapTab({
+  defaultZoom,
+  mapConfig,
   plots,
   selectedLayer,
   selectedPlot,
   onLayerChange,
   onSelectPlot,
 }: {
+  defaultZoom: number;
+  mapConfig: WeatherMapState;
   plots: FarmPlotWeather[];
   selectedLayer: WeatherLayer;
-  selectedPlot: FarmPlotWeather;
+  selectedPlot: FarmPlotWeather | null;
   onLayerChange: (layer: WeatherLayer) => void;
-  onSelectPlot: (plotId: string) => void;
+  onSelectPlot: (plotId: string | null) => void;
 }) {
   return (
     <div className="grid gap-5 xl:grid-cols-[1fr_360px]">
@@ -681,7 +787,7 @@ function MapTab({
             <div className="flex flex-wrap gap-2">
               {(Object.keys(mapLayerLabels) as WeatherLayer[]).map((layer) => {
                 const needsOpenWeather = layer !== "rainviewer-radar";
-                const disabled = needsOpenWeather && !openWeatherApiKey;
+                const disabled = needsOpenWeather && !mapConfig.tileTemplates[layer];
                 return (
                   <Button
                     key={layer}
@@ -690,7 +796,9 @@ function MapTab({
                     size="sm"
                     className="gap-2"
                     disabled={disabled}
-                    title={disabled ? "Thêm NEXT_PUBLIC_OPENWEATHER_API_KEY để bật lớp này" : mapLayerLabels[layer]}
+                    title={
+                      disabled ? (mapConfig.message ?? "Lớp OpenWeatherMap chưa sẵn sàng.") : mapLayerLabels[layer]
+                    }
                     onClick={() => onLayerChange(layer)}
                   >
                     <Layers className="size-3.5" />
@@ -703,9 +811,11 @@ function MapTab({
         </CardHeader>
         <CardContent className="p-0">
           <WeatherLeafletMap
+            defaultZoom={defaultZoom}
             plots={plots}
             selectedLayer={selectedLayer}
-            selectedPlotId={selectedPlot.id}
+            selectedPlotId={selectedPlot?.id ?? null}
+            tileTemplates={mapConfig.tileTemplates}
             onSelectPlot={onSelectPlot}
           />
         </CardContent>
@@ -717,39 +827,50 @@ function MapTab({
           <CardDescription>{mapLayerLabels[selectedLayer]} đang được hiển thị.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {!openWeatherApiKey && (
+          {mapConfig.status !== "ready" && (
             <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-amber-800 text-xs">
-              Các lớp OpenWeather bị tắt vì chưa có `NEXT_PUBLIC_OPENWEATHER_API_KEY`. Radar RainViewer vẫn hoạt động
-              không cần key.
+              {mapConfig.message}
             </div>
           )}
           <div className="rounded-md border p-4">
             <div className="flex items-start gap-3">
               <Navigation className="mt-0.5 size-5 text-emerald-600" />
               <div>
-                <p className="font-semibold text-sm">{selectedPlot.name}</p>
-                <p className="text-muted-foreground text-xs">
-                  {selectedPlot.lat.toFixed(3)}, {selectedPlot.lng.toFixed(3)}
-                </p>
+                <p className="font-semibold text-sm">{selectedPlot?.name ?? "Chưa có thửa ruộng khả dụng"}</p>
+                {selectedPlot ? (
+                  <p className="text-muted-foreground text-xs">
+                    {selectedPlot.lat.toFixed(3)}, {selectedPlot.lng.toFixed(3)}
+                  </p>
+                ) : (
+                  <p className="text-muted-foreground text-xs">
+                    Bản đồ vẫn giữ radar RainViewer để theo dõi khu vực chung.
+                  </p>
+                )}
               </div>
             </div>
           </div>
-          {plots.map((plot) => (
-            <button
-              key={plot.id}
-              type="button"
-              onClick={() => onSelectPlot(plot.id)}
-              className="flex w-full items-center justify-between rounded-md border p-3 text-left transition hover:bg-muted"
-            >
-              <div>
-                <p className="font-semibold text-sm">{plot.name}</p>
-                <p className="text-muted-foreground text-xs">{plot.crop}</p>
-              </div>
-              <Badge variant="outline" className={riskStyles[plot.risk]}>
-                {riskLabels[plot.risk]}
-              </Badge>
-            </button>
-          ))}
+          {plots.length === 0 ? (
+            <div className="rounded-md border border-dashed p-4 text-muted-foreground text-sm">
+              Chưa có thửa ruộng từ backend để đặt marker trên bản đồ.
+            </div>
+          ) : (
+            plots.map((plot) => (
+              <button
+                key={plot.id}
+                type="button"
+                onClick={() => onSelectPlot(plot.id)}
+                className="flex w-full items-center justify-between rounded-md border p-3 text-left transition hover:bg-muted"
+              >
+                <div>
+                  <p className="font-semibold text-sm">{plot.name}</p>
+                  <p className="text-muted-foreground text-xs">{plot.crop}</p>
+                </div>
+                <Badge variant="outline" className={riskStyles[plot.risk]}>
+                  {riskLabels[plot.risk]}
+                </Badge>
+              </button>
+            ))
+          )}
         </CardContent>
       </Card>
     </div>
@@ -757,15 +878,19 @@ function MapTab({
 }
 
 function WeatherLeafletMap({
+  defaultZoom,
   plots,
   selectedLayer,
   selectedPlotId,
+  tileTemplates,
   onSelectPlot,
 }: {
+  defaultZoom: number;
   plots: FarmPlotWeather[];
   selectedLayer: WeatherLayer;
-  selectedPlotId: string;
-  onSelectPlot: (plotId: string) => void;
+  selectedPlotId: string | null;
+  tileTemplates: Partial<Record<OpenWeatherLayerId, string>>;
+  onSelectPlot: (plotId: string | null) => void;
 }) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<Leaflet.Map | null>(null);
@@ -797,10 +922,14 @@ function WeatherLeafletMap({
       });
 
       if (!mapRef.current) {
+        const initialPlot = plots[0];
         mapRef.current = L.map(mapContainerRef.current, {
           zoomControl: true,
           scrollWheelZoom: true,
-        }).setView([21.518, 103.223], 13);
+        }).setView(
+          initialPlot ? [initialPlot.lat, initialPlot.lng] : DEFAULT_MAP_CENTER,
+          initialPlot ? 13 : defaultZoom,
+        );
 
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
           attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
@@ -849,7 +978,7 @@ function WeatherLeafletMap({
     return () => {
       cancelled = true;
     };
-  }, [plots, onSelectPlot]);
+  }, [defaultZoom, plots, onSelectPlot]);
 
   useEffect(() => {
     if (!mapRef.current) return;
@@ -882,10 +1011,10 @@ function WeatherLeafletMap({
         return;
       }
 
-      if (openWeatherApiKey) {
-        const layerName = openWeatherLayerNames[selectedLayer];
+      const layerTemplate = tileTemplates[selectedLayer];
+      if (layerTemplate) {
         weatherLayerRef.current = L.tileLayer(
-          `https://tile.openweathermap.org/map/${layerName}/{z}/{x}/{y}.png?appid=${openWeatherApiKey}`,
+          resolveLayerUrl(layerTemplate, typeof window !== "undefined" ? window.location.origin : undefined),
           {
             opacity: 0.55,
             attribution: 'Weather maps by <a href="https://openweathermap.org/">OpenWeather</a>',
@@ -901,7 +1030,7 @@ function WeatherLeafletMap({
     return () => {
       cancelled = true;
     };
-  }, [selectedLayer]);
+  }, [selectedLayer, tileTemplates]);
 
   useEffect(() => {
     if (!mapRef.current) return;
@@ -1269,8 +1398,8 @@ function buildForecastDays(data: OpenMeteoResponse): ForecastDay[] {
   });
 }
 
-function buildFallbackPlots(): FarmPlotWeather[] {
-  return farmPlots.map((plot, index) => {
+function buildFallbackPlots(basePlots: FarmPlotBase[]): FarmPlotWeather[] {
+  return basePlots.map((plot, index) => {
     const forecast = fallbackForecast.map((item) => ({ ...item }));
     const firstForecast = forecast[0];
     const soilMoisture = Math.max(38, firstForecast.soilMoisture - index * 6);
@@ -1603,6 +1732,17 @@ function riskPriority(level: RiskLevel) {
 
 function roundNumber(value: number) {
   return Math.round(value * 10) / 10;
+}
+
+function NoPlotState() {
+  return (
+    <Card className="shadow-sm">
+      <CardContent className="p-6 text-muted-foreground text-sm">
+        Chưa có dữ liệu thửa ruộng từ backend. Vui lòng kiểm tra trạng thái API `/api/v1/weather/plots` rồi tải lại
+        trang.
+      </CardContent>
+    </Card>
+  );
 }
 
 function Metric({ label, value }: { label: string; value: string }) {
