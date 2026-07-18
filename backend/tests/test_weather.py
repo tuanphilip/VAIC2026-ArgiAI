@@ -1,11 +1,18 @@
-"""Tests for the weather service module."""
+"""Tests for the weather service module and weather routes."""
 
 import time
+from collections.abc import Iterator
+from datetime import date
 from unittest.mock import AsyncMock, MagicMock, patch
+from uuid import uuid4
 
 import httpx
 import pytest
+from fastapi.testclient import TestClient
 
+from app.core.dependencies import get_current_user
+from app.database.session import get_db
+from app.models import Crop, Plot, User
 from app.services.weather import (
     _cache_clear,
     _cache_get,
@@ -15,6 +22,31 @@ from app.services.weather import (
     fetch_forecast,
     fetch_tile,
 )
+
+
+class FakeScalarResult:
+    def __init__(self, one: object | None = None, many: list[object] | None = None) -> None:
+        self._one = one
+        self._many = many or []
+
+    def scalar_one_or_none(self) -> object | None:
+        return self._one
+
+    def scalars(self) -> "FakeScalarResult":
+        return self
+
+    def all(self) -> list[object]:
+        return self._many
+
+
+class FakeSession:
+    def __init__(self, responses: list[FakeScalarResult]) -> None:
+        self._responses = responses
+
+    async def execute(self, _query: object) -> FakeScalarResult:
+        if not self._responses:
+            raise AssertionError("Unexpected database query")
+        return self._responses.pop(0)
 
 
 # ── Cache unit tests ──────────────────────────────────────────────────────────
@@ -34,9 +66,7 @@ class TestCachePrimitives:
         assert _cache_get("nonexistent") is None
 
     def test_expiry(self) -> None:
-        _cache_set("k2", "value", ttl=0)  # already expired
-        # Give the scheduler a tiny window; monotonic may return the same value
-        # so we sleep a negligible amount
+        _cache_set("k2", "value", ttl=0)
         time.sleep(0.001)
         assert _cache_get("k2") is None
 
@@ -82,7 +112,6 @@ class TestFetchCurrentWeather:
         result = await fetch_current_weather(21.02, 105.8)
 
         assert result == self.SAMPLE_RESPONSE
-        # Verify the API was called with the right params
         call_kwargs = mock_get.call_args[1]
         assert call_kwargs["params"]["latitude"] == 21.02
         assert call_kwargs["params"]["longitude"] == 105.8
@@ -98,7 +127,6 @@ class TestFetchCurrentWeather:
         await fetch_current_weather(21.02, 105.8)
         await fetch_current_weather(21.02, 105.8)
 
-        # Only one HTTP call should have been made (second from cache)
         assert mock_get.call_count == 1
 
     @pytest.mark.asyncio
@@ -190,18 +218,15 @@ class TestFetchTile:
     @pytest.mark.asyncio
     @patch.object(httpx.AsyncClient, "get", new_callable=AsyncMock)
     async def test_returns_raw_bytes(self, mock_get: AsyncMock) -> None:
-        """Should return raw PNG bytes when API key is configured."""
         mock_resp = MagicMock(spec=httpx.Response)
-        mock_resp.content = b"\x89PNG\r\n\x1a\n"  # PNG magic bytes
+        mock_resp.content = b"\x89PNG\r\n\x1a\n"
         mock_get.return_value = mock_resp
 
-        # Patch settings to provide an API key
         with patch("app.services.weather.get_settings") as mock_settings:
             mock_settings.return_value.openweather_api_key = "test-key-123"
             result = await fetch_tile("temp_new", 5, 10, 15)
 
         assert result == b"\x89PNG\r\n\x1a\n"
-        # Verify the tile URL was constructed correctly
         call_args = mock_get.call_args
         assert "temp_new/5/10/15.png" in str(call_args[0][0])
         assert call_args[1]["params"]["appid"] == "test-key-123"
@@ -230,34 +255,146 @@ class TestFetchTile:
                 await fetch_tile("wind_new", 1, 0, 0)
 
 
-# ── Route-level tests (integration-lite with TestClient) ──────────────────────
+# ── Route-level tests ─────────────────────────────────────────────────────────
 
 
 @pytest.fixture
-def client() -> object:
-    """Return a FastAPI TestClient for route tests."""
+def client() -> Iterator[TestClient]:
     from app.main import app
-    from fastapi.testclient import TestClient
 
-    return TestClient(app)
+    app.dependency_overrides.clear()
+    with TestClient(app) as test_client:
+        yield test_client
+    app.dependency_overrides.clear()
+
+
+def make_user(role: str = "farmer") -> User:
+    return User(
+        id=uuid4(),
+        username=f"user-{role}",
+        password_hash="hashed",
+        full_name="Demo User",
+        role=role,
+    )
+
+
+def make_plot(code: str = "PLOT-001", owner: User | None = None) -> Plot:
+    owner = owner or make_user()
+    crop = Crop(id=uuid4(), name="Rice", variety="ST25", growth_duration_days=120)
+    plot = Plot(
+        id=uuid4(),
+        code=code,
+        user_id=owner.id,
+        crop_id=crop.id,
+        area_hectares=2.5,
+        location_lat=21.0285,
+        location_lng=105.8542,
+        seeding_date=date(2026, 7, 1),
+        health="Khỏe mạnh",
+        moisture=62,
+    )
+    plot.owner = owner
+    plot.crop = crop
+    return plot
 
 
 class TestWeatherRoutes:
-    """Verify endpoint routing, validation, and error handling."""
+    def test_routes_require_authentication(self, client: TestClient) -> None:
+        response = client.get("/api/v1/weather/plots")
+        assert response.status_code == 401
+        assert response.json()["detail"] == "Missing bearer token"
 
-    def test_current_missing_params(self, client: object) -> None:
-        client = client  # type: ignore[assignment]
-        resp = client.get("/api/v1/weather/current")  # type: ignore[arg-type]
-        assert resp.status_code == 422
+    def test_weather_plots_return_database_records(self, client: TestClient) -> None:
+        from app.main import app
 
-    def test_current_invalid_lat(self, client: object) -> None:
-        client = client  # type: ignore[assignment]
-        resp = client.get("/api/v1/weather/current?lat=999&lon=105")  # type: ignore[arg-type]
-        assert resp.status_code == 422
+        current_user = make_user(role="farmer")
+        owned_plot = make_plot("A1", owner=current_user)
+        fake_session = FakeSession([FakeScalarResult(many=[owned_plot])])
 
-    @pytest.mark.asyncio
-    async def test_tile_invalid_layer(self, client: object) -> None:
-        client = client  # type: ignore[assignment]
-        resp = client.get("/api/v1/weather/tiles/invalid_layer/5/10/15.png")  # type: ignore[arg-type]
-        assert resp.status_code == 422
-        assert "Invalid tile layer" in resp.text
+        async def override_db() -> object:
+            yield fake_session
+
+        async def override_user() -> User:
+            return current_user
+
+        app.dependency_overrides[get_db] = override_db
+        app.dependency_overrides[get_current_user] = override_user
+
+        response = client.get("/api/v1/weather/plots")
+
+        assert response.status_code == 200
+        assert response.json() == [
+            {
+                "plot_code": "A1",
+                "crop_name": "Rice",
+                "crop_variety": "ST25",
+                "owner": "Demo User",
+                "location": {"lat": 21.0285, "lng": 105.8542},
+            }
+        ]
+
+    def test_current_weather_uses_plot_coordinates(self, client: TestClient) -> None:
+        from app.main import app
+
+        current_user = make_user(role="farmer")
+        plot = make_plot("A1", owner=current_user)
+        fake_session = FakeSession([FakeScalarResult(one=plot)])
+
+        async def override_db() -> object:
+            yield fake_session
+
+        async def override_user() -> User:
+            return current_user
+
+        app.dependency_overrides[get_db] = override_db
+        app.dependency_overrides[get_current_user] = override_user
+
+        with patch("app.routes.weather.fetch_current_weather", new_callable=AsyncMock) as mock_fetch:
+            mock_fetch.return_value = {"current_weather": {"temperature": 30.5}}
+
+            response = client.get("/api/v1/weather/current/A1")
+
+        assert response.status_code == 200
+        assert response.json() == {
+            "plot_code": "A1",
+            "location": {"lat": 21.0285, "lng": 105.8542},
+            "data": {"current_weather": {"temperature": 30.5}},
+        }
+        mock_fetch.assert_awaited_once_with(21.0285, 105.8542)
+
+    def test_forecast_returns_404_for_unknown_plot(self, client: TestClient) -> None:
+        from app.main import app
+
+        async def override_db() -> object:
+            yield FakeSession([FakeScalarResult(one=None)])
+
+        async def override_user() -> User:
+            return make_user(role="admin")
+
+        app.dependency_overrides[get_db] = override_db
+        app.dependency_overrides[get_current_user] = override_user
+
+        response = client.get("/api/v1/weather/forecast/UNKNOWN")
+
+        assert response.status_code == 404
+        assert response.json()["detail"] == "Plot not found"
+
+    def test_map_config_returns_weather_layers(self, client: TestClient) -> None:
+        from app.main import app
+
+        async def override_user() -> User:
+            return make_user(role="admin")
+
+        app.dependency_overrides[get_current_user] = override_user
+
+        response = client.get("/api/v1/weather/map-config")
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["default_zoom"] == 7
+        assert [layer["id"] for layer in body["tile_layers"]] == [
+            "openweather-rain",
+            "openweather-wind",
+            "openweather-temperature",
+        ]
+        assert body["tile_layers"][0]["url_template"] == "/api/v1/weather/tiles/precipitation_new/{z}/{x}/{y}.png"
