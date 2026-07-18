@@ -69,6 +69,25 @@ async def list_plots(
     return [serialize_plot(plot) for plot in result.scalars().all()]
 
 
+@router.get("/{plot_id}", response_model=PlotResponse)
+async def get_plot(
+    plot_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> PlotResponse:
+    result = await db.execute(
+        select(Plot)
+        .options(selectinload(Plot.crop), selectinload(Plot.owner))
+        .where((Plot.code == plot_id) | (Plot.id == _uuid_or_none(plot_id)))
+    )
+    plot = result.scalar_one_or_none()
+    if plot is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Plot not found")
+    if current_user.role == "farmer" and plot.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot view another user's plot")
+    return serialize_plot(plot)
+
+
 @router.post("", response_model=PlotMutationResponse, status_code=status.HTTP_201_CREATED)
 async def create_plot(
     payload: PlotCreateRequest,

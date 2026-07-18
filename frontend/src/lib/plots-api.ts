@@ -84,6 +84,10 @@ export function listPlots(): Promise<PlotResponse[]> {
   return apiFetch<PlotResponse[]>("/plots");
 }
 
+export function getPlot(plotId: string): Promise<PlotResponse> {
+  return apiFetch<PlotResponse>(`/plots/${plotId}`);
+}
+
 export function createPlot(payload: PlotCreatePayload): Promise<{ plot_id: string }> {
   return apiFetch("/plots", { method: "POST", body: JSON.stringify(payload) });
 }
