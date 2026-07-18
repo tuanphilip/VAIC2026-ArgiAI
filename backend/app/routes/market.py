@@ -14,11 +14,51 @@ from app.schemas.market import (
     MarketPriceCreateRequest,
     MarketPricePoint,
     MarketPricesResponse,
+    MarketSummaryItem,
+    MarketSummaryResponse,
 )
 from app.services.crops import find_crop, get_or_create_crop
 from app.services.market_analysis import build_market_recommendation
 
 router = APIRouter(prefix="/market", tags=["Market"])
+
+
+@router.get("/summary", response_model=MarketSummaryResponse)
+async def market_summary(
+    days: int = Query(default=7, ge=2, le=30),
+    db: AsyncSession = Depends(get_db),
+) -> MarketSummaryResponse:
+    result = await db.execute(
+        select(MarketPrice, Crop)
+        .join(Crop, Crop.id == MarketPrice.crop_id)
+        .order_by(MarketPrice.recorded_date.desc(), MarketPrice.created_at.desc())
+        .limit(1000)
+    )
+    grouped: dict[str, tuple[str, list[MarketPricePoint]]] = {}
+    for price, crop in result.all():
+        key = str(crop.id)
+        if key not in grouped:
+            grouped[key] = (f"{crop.name} {crop.variety}".strip(), [])
+        grouped[key][1].append(MarketPricePoint(id=price.id, date=price.recorded_date, price=price.price_per_kg, source=price.source))
+
+    items: list[MarketSummaryItem] = []
+    for crop_name, history_desc in grouped.values():
+        history = list(reversed(history_desc[:days]))
+        latest = history[-1].price
+        previous = history[-2].price if len(history) > 1 else None
+        change = ((latest - previous) / previous * 100) if previous else None
+        items.append(
+            MarketSummaryItem(
+                crop_name=crop_name,
+                latest_price=latest,
+                previous_price=previous,
+                change_percent=round(change, 2) if change is not None else None,
+                week_min=min(point.price for point in history),
+                week_max=max(point.price for point in history),
+                history=history,
+            )
+        )
+    return MarketSummaryResponse(items=items)
 
 
 @router.get("/prices", response_model=MarketPricesResponse)

@@ -18,6 +18,22 @@ class MarketPricesResponse(BaseModel):
     recommendation: str
 
 
+class MarketSummaryItem(BaseModel):
+    crop_name: str
+    unit: str = "kg"
+    latest_price: float
+    previous_price: float | None = None
+    change_percent: float | None = None
+    week_min: float
+    week_max: float
+    history: list[MarketPricePoint]
+
+
+class MarketSummaryResponse(BaseModel):
+    currency: str = "VND/kg"
+    items: list[MarketSummaryItem]
+
+
 class MarketPriceCreateRequest(BaseModel):
     crop_name: str = Field(min_length=1, max_length=150)
     crop_variety: str | None = Field(default=None, max_length=100)

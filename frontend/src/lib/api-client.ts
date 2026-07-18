@@ -1,61 +1,48 @@
 import { getLocalStorageValue, setLocalStorageValue } from "@/lib/local-storage.client";
 
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1").replace(/\/$/, "");
-
-/**
- * Backend requires a real JWT for every /plots call, but the app has no login flow wired up
- * yet (see src/app/(main)/auth/_components/login-form.tsx). Until that exists, we log in as a
- * fixed dev/demo account so authenticated endpoints are reachable during development.
- */
-const DEV_CREDENTIALS = {
-  username: "dev_official",
-  password: "DevPassword123!",
-  full_name: "Cán bộ Demo",
-  role: "official",
-};
-
-const TOKEN_STORAGE_KEY = "argiai_dev_access_token";
+const TOKEN_STORAGE_KEY = "argiai_access_token";
 
 let tokenPromise: Promise<string> | null = null;
 
-async function loginDevUser(): Promise<string> {
-  const loginRes = await fetch(`${API_BASE_URL}/auth/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username: DEV_CREDENTIALS.username, password: DEV_CREDENTIALS.password }),
-  });
-  if (loginRes.ok) {
-    const data = await loginRes.json();
-    return data.access_token as string;
-  }
+export class ApiError extends Error {
+  status: number;
 
-  const registerRes = await fetch(`${API_BASE_URL}/auth/register`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(DEV_CREDENTIALS),
-  });
-  if (!registerRes.ok && registerRes.status !== 409) {
-    throw new Error(`Failed to provision dev user: ${registerRes.status}`);
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
   }
-
-  const retryRes = await fetch(`${API_BASE_URL}/auth/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username: DEV_CREDENTIALS.username, password: DEV_CREDENTIALS.password }),
-  });
-  if (!retryRes.ok) {
-    throw new Error(`Failed to log in dev user: ${retryRes.status}`);
-  }
-  const data = await retryRes.json();
-  return data.access_token as string;
 }
 
-async function getDevToken(): Promise<string> {
+async function loginWithConfiguredDemoUser(): Promise<string> {
+  const username = process.env.NEXT_PUBLIC_DEMO_USERNAME;
+  const password = process.env.NEXT_PUBLIC_DEMO_PASSWORD;
+  if (!username || !password) {
+    throw new ApiError(401, "Chưa đăng nhập. Vui lòng đăng nhập để tải dữ liệu từ API.");
+  }
+
+  const response = await fetch(`${API_BASE_URL}/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password }),
+  });
+  if (!response.ok) {
+    throw new ApiError(response.status, "Đăng nhập thất bại. Kiểm tra tài khoản hoặc cấu hình API.");
+  }
+  const data = (await response.json()) as { access_token?: string };
+  if (!data.access_token) {
+    throw new ApiError(502, "API đăng nhập không trả về access token hợp lệ.");
+  }
+  return data.access_token;
+}
+
+async function getAccessToken(): Promise<string> {
   const cached = getLocalStorageValue(TOKEN_STORAGE_KEY);
   if (cached) return cached;
 
   if (!tokenPromise) {
-    tokenPromise = loginDevUser()
+    tokenPromise = loginWithConfiguredDemoUser()
       .then((token) => {
         setLocalStorageValue(TOKEN_STORAGE_KEY, token);
         return token;
@@ -67,17 +54,9 @@ async function getDevToken(): Promise<string> {
   return tokenPromise;
 }
 
-export class ApiError extends Error {
-  status: number;
-  constructor(status: number, message: string) {
-    super(message);
-    this.status = status;
-  }
-}
-
 export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const token = await getDevToken();
-  const res = await fetch(`${API_BASE_URL}${path}`, {
+  const token = await getAccessToken();
+  const response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",
@@ -86,16 +65,23 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
     },
   });
 
-  if (res.status === 401) {
+  if (response.status === 401) {
     setLocalStorageValue(TOKEN_STORAGE_KEY, "");
-    throw new ApiError(401, "Unauthorized");
+    throw new ApiError(401, "Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.");
   }
 
-  if (!res.ok) {
-    const detail = await res.json().catch(() => null);
-    throw new ApiError(res.status, detail?.detail ?? `Request failed with status ${res.status}`);
+  if (!response.ok) {
+    const detail = (await response.json().catch(() => null)) as { detail?: unknown } | null;
+    const message = Array.isArray(detail?.detail)
+      ? detail.detail
+          .map((item: { loc?: unknown[]; msg?: string }) => `${item.loc?.join(".") ?? "request"}: ${item.msg ?? "invalid value"}`)
+          .join("; ")
+      : typeof detail?.detail === "string"
+        ? detail.detail
+        : `Request failed with status ${response.status}`;
+    throw new ApiError(response.status, message);
   }
 
-  if (res.status === 204) return undefined as T;
-  return res.json() as Promise<T>;
+  if (response.status === 204) return undefined as T;
+  return response.json() as Promise<T>;
 }
