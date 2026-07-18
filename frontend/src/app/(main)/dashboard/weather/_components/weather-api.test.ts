@@ -4,6 +4,7 @@ import {
   buildOpenWeatherLayerTemplates,
   buildWeatherApiUrl,
   normalizeWeatherPlot,
+  resolveLayerUrl,
 } from "./weather-api";
 
 describe("buildWeatherApiUrl", () => {
@@ -75,5 +76,19 @@ describe("buildOpenWeatherLayerTemplates", () => {
       "openweather-rain": "/api/v1/weather/tiles/precipitation_new/{z}/{x}/{y}.png",
       "openweather-wind": "/api/v1/weather/tiles/wind_new/{z}/{x}/{y}.png",
     });
+  });
+});
+
+describe("resolveLayerUrl", () => {
+  it("keeps absolute tile urls unchanged", () => {
+    expect(resolveLayerUrl("https://api.example.com/tiles/{z}/{x}/{y}.png", "https://frontend.example.com")).toBe(
+      "https://api.example.com/tiles/{z}/{x}/{y}.png",
+    );
+  });
+
+  it("converts relative backend tile urls into absolute urls when an origin is available", () => {
+    expect(resolveLayerUrl("/api/v1/weather/tiles/temp_new/{z}/{x}/{y}.png", "https://frontend.example.com")).toBe(
+      "https://frontend.example.com/api/v1/weather/tiles/temp_new/{z}/{x}/{y}.png",
+    );
   });
 });
