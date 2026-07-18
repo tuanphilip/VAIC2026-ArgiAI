@@ -11,7 +11,7 @@ export function Chat({ conversations }: ChatProps) {
   const activeConversation = conversations[0];
 
   return (
-    <div className="mx-auto flex h-[calc(100svh-var(--header-height))] min-h-0 w-full max-w-5xl flex-col overflow-hidden border-x bg-background shadow-sm">
+    <div className="flex h-[calc(100svh-var(--header-height))] min-h-0 w-full flex-col overflow-hidden bg-background">
         <ChatThread
           contact={activeConversation.contact}
           messages={[]}
