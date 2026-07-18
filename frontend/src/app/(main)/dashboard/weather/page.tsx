@@ -29,15 +29,19 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
+import { useWeatherData } from "./_components/useWeatherData";
+import {
+  deleteWeatherAlertSubscription,
+  fetchWeatherAlertSubscription,
+  subscribeWeatherAlerts,
+  type WeatherAlertSubscriptionData,
+} from "./_components/weather-alert-subscription";
 import {
   buildOpenWeatherLayerTemplates,
   type FarmPlotBase,
   type OpenWeatherLayerId,
   resolveLayerUrl,
-  type WeatherApiPlot,
-  type WeatherMapConfigResponse,
 } from "./_components/weather-api";
-import { useWeatherData } from "./_components/useWeatherData";
 
 type RiskLevel = "low" | "medium" | "high";
 type WeatherLayer = "rainviewer-radar" | OpenWeatherLayerId;
@@ -174,13 +178,16 @@ const mapLayerLabels: Record<WeatherLayer, string> = {
 
 const DEFAULT_MAP_CENTER: Leaflet.LatLngTuple = [21.518, 103.223];
 
-
-
 export default function Page() {
   const [selectedPlotId, setSelectedPlotId] = useState<string | null>(null);
   const [selectedLayer, setSelectedLayer] = useState<WeatherLayer>("rainviewer-radar");
   const [phone, setPhone] = useState("");
-  const [subscribeSuccess, setSubscribeSuccess] = useState(false);
+  const [subscription, setSubscription] = useState<WeatherAlertSubscriptionData | null>(null);
+  const [subscriptionLoading, setSubscriptionLoading] = useState(true);
+  const [subscriptionSubmitting, setSubscriptionSubmitting] = useState(false);
+  const [subscriptionDeleting, setSubscriptionDeleting] = useState(false);
+  const [subscriptionError, setSubscriptionError] = useState<string | null>(null);
+  const [subscriptionMessage, setSubscriptionMessage] = useState<string | null>(null);
   const [weatherData, setWeatherData] = useState<WeatherDataState>({
     status: "loading",
     plots: [],
@@ -192,12 +199,7 @@ export default function Page() {
   const [defaultZoom, setDefaultZoom] = useState(7);
 
   // Use the service-layer hook for fetching from backend
-  const {
-    plots: basePlots,
-    mapConfig,
-    isLoading: isServiceLoading,
-    error: serviceError,
-  } = useWeatherData();
+  const { plots: basePlots, mapConfig, isLoading: isServiceLoading, error: serviceError } = useWeatherData();
 
   // When base plots arrive, enrich them with Open-Meteo weather data
   useEffect(() => {
@@ -314,14 +316,76 @@ export default function Page() {
       "Độ ẩm đất": item.soilMoisture,
     })) ?? [];
 
-  const handleSubscribe = (event: React.FormEvent) => {
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadSubscription() {
+      setSubscriptionLoading(true);
+      setSubscriptionError(null);
+
+      try {
+        const currentSubscription = await fetchWeatherAlertSubscription();
+        if (cancelled) return;
+        setSubscription(currentSubscription);
+        setPhone(currentSubscription?.phone_number ?? "");
+      } catch (error) {
+        if (cancelled) return;
+        setSubscriptionError(error instanceof Error ? error.message : "Không thể tải đăng ký SMS hiện tại từ backend.");
+      } finally {
+        if (!cancelled) {
+          setSubscriptionLoading(false);
+        }
+      }
+    }
+
+    void loadSubscription();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleSubscribe = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!phone.trim()) return;
-    setSubscribeSuccess(true);
-    setTimeout(() => {
-      setSubscribeSuccess(false);
+    const normalizedPhone = phone.trim();
+
+    if (!normalizedPhone) {
+      setSubscriptionError("Vui lòng nhập số điện thoại để nhận cảnh báo SMS.");
+      setSubscriptionMessage(null);
+      return;
+    }
+
+    setSubscriptionSubmitting(true);
+    setSubscriptionError(null);
+    setSubscriptionMessage(null);
+
+    try {
+      const response = await subscribeWeatherAlerts(normalizedPhone);
+      setSubscription(response.data);
+      setPhone(response.data.phone_number);
+      setSubscriptionMessage("Đã lưu đăng ký nhận cảnh báo thời tiết qua SMS.");
+    } catch (error) {
+      setSubscriptionError(error instanceof Error ? error.message : "Không thể lưu đăng ký cảnh báo SMS.");
+    } finally {
+      setSubscriptionSubmitting(false);
+    }
+  };
+
+  const handleUnsubscribe = async () => {
+    setSubscriptionDeleting(true);
+    setSubscriptionError(null);
+    setSubscriptionMessage(null);
+
+    try {
+      await deleteWeatherAlertSubscription();
+      setSubscription(null);
       setPhone("");
-    }, 2200);
+      setSubscriptionMessage("Đã hủy đăng ký nhận cảnh báo SMS.");
+    } catch (error) {
+      setSubscriptionError(error instanceof Error ? error.message : "Không thể hủy đăng ký cảnh báo SMS.");
+    } finally {
+      setSubscriptionDeleting(false);
+    }
   };
 
   return (
@@ -424,7 +488,9 @@ export default function Page() {
             defaultZoom={defaultZoom}
             tileTemplates={tileTemplates}
             mapConfigStatus={mapConfig ? "ready" : "error"}
-            mapConfigMessage={!mapConfig ? "Không thể tải cấu hình lớp OpenWeatherMap từ backend. Radar RainViewer vẫn khả dụng." : ""}
+            mapConfigMessage={
+              !mapConfig ? "Không thể tải cấu hình lớp OpenWeatherMap từ backend. Radar RainViewer vẫn khả dụng." : ""
+            }
             plots={weatherData.plots}
             selectedLayer={selectedLayer}
             selectedPlot={selectedPlot}
@@ -441,9 +507,15 @@ export default function Page() {
           <AlertsTab
             alerts={weatherData.alerts}
             phone={phone}
-            subscribeSuccess={subscribeSuccess}
+            subscription={subscription}
+            isLoading={subscriptionLoading}
+            isSubmitting={subscriptionSubmitting}
+            isDeleting={subscriptionDeleting}
+            error={subscriptionError}
+            message={subscriptionMessage}
             onPhoneChange={setPhone}
             onSubscribe={handleSubscribe}
+            onUnsubscribe={handleUnsubscribe}
           />
         </TabsContent>
 
@@ -622,9 +694,7 @@ function MapTab({
                     size="sm"
                     className="gap-2"
                     disabled={disabled}
-                    title={
-                      disabled ? (mapConfigMessage || "Lớp OpenWeatherMap chưa sẵn sàng.") : mapLayerLabels[layer]
-                    }
+                    title={disabled ? mapConfigMessage || "Lớp OpenWeatherMap chưa sẵn sàng." : mapLayerLabels[layer]}
                     onClick={() => onLayerChange(layer)}
                   >
                     <Layers className="size-3.5" />
@@ -956,16 +1026,30 @@ function ForecastTab({
 function AlertsTab({
   alerts,
   phone,
-  subscribeSuccess,
+  subscription,
+  isLoading,
+  isSubmitting,
+  isDeleting,
+  error,
+  message,
   onPhoneChange,
   onSubscribe,
+  onUnsubscribe,
 }: {
   alerts: WeatherAlert[];
   phone: string;
-  subscribeSuccess: boolean;
+  subscription: WeatherAlertSubscriptionData | null;
+  isLoading: boolean;
+  isSubmitting: boolean;
+  isDeleting: boolean;
+  error: string | null;
+  message: string | null;
   onPhoneChange: (value: string) => void;
   onSubscribe: (event: React.FormEvent) => void;
+  onUnsubscribe: () => void;
 }) {
+  const hasSubscription = Boolean(subscription?.is_active);
+
   return (
     <div className="grid gap-5 xl:grid-cols-[1fr_360px]">
       <Card className="shadow-sm">
@@ -1015,21 +1099,52 @@ function AlertsTab({
                 value={phone}
                 onChange={(event) => onPhoneChange(event.target.value)}
                 placeholder="VD: 0987654321"
+                disabled={isLoading || isSubmitting || isDeleting}
                 className="h-10 w-full rounded-md border bg-background px-3 text-sm outline-none ring-emerald-500 transition focus:ring-2"
               />
             </div>
             <div className="rounded-md border bg-muted/40 p-3 text-muted-foreground text-xs">
               Ngưỡng mặc định: mưa trên 50 mm/ngày, gió giật trên 50 km/h, nhiệt độ trên 38°C hoặc độ ẩm đất dưới 40%.
             </div>
-            {subscribeSuccess && (
-              <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 font-semibold text-emerald-700 text-xs">
-                Đã đăng ký nhận cảnh báo thời tiết.
+            {isLoading && (
+              <div className="flex items-center gap-2 rounded-md border bg-muted/40 p-3 text-muted-foreground text-xs">
+                <Loader2 className="size-4 animate-spin" />
+                Đang tải đăng ký SMS hiện tại...
               </div>
             )}
-            <Button type="submit" className="w-full gap-2">
-              <Bell className="size-4" />
-              Đăng ký cảnh báo
-            </Button>
+            {error && (
+              <div className="rounded-md border border-rose-200 bg-rose-50 p-3 font-semibold text-rose-700 text-xs">
+                {error}
+              </div>
+            )}
+            {message && (
+              <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 font-semibold text-emerald-700 text-xs">
+                {message}
+              </div>
+            )}
+            {hasSubscription && !isLoading && (
+              <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-emerald-700 text-xs">
+                Đang nhận cảnh báo cho số {subscription?.phone_number}.
+              </div>
+            )}
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button type="submit" className="w-full gap-2" disabled={isLoading || isSubmitting || isDeleting}>
+                {isSubmitting ? <Loader2 className="size-4 animate-spin" /> : <Bell className="size-4" />}
+                {hasSubscription ? "Cập nhật cảnh báo" : "Đăng ký cảnh báo"}
+              </Button>
+              {hasSubscription && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full gap-2"
+                  onClick={onUnsubscribe}
+                  disabled={isLoading || isSubmitting || isDeleting}
+                >
+                  {isDeleting ? <Loader2 className="size-4 animate-spin" /> : <Bell className="size-4" />}
+                  Hủy đăng ký
+                </Button>
+              )}
+            </div>
           </form>
         </CardContent>
       </Card>
