@@ -28,6 +28,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { apiFetch } from "@/lib/api-client";
 
 import {
   buildDisasterAlertItems,
@@ -211,6 +212,12 @@ export default function Page() {
     error: serviceError,
   } = useWeatherData();
 
+  useEffect(() => {
+    void apiFetch<{ data: { phone_number: string } }>("/weather/alerts/subscription")
+      .then((response) => setPhone(response.data.phone_number))
+      .catch(() => undefined);
+  }, []);
+
   // When base plots arrive, enrich them with Open-Meteo weather data
   useEffect(() => {
     let cancelled = false;
@@ -364,14 +371,19 @@ export default function Page() {
       "Độ ẩm đất": item.soilMoisture,
     })) ?? [];
 
-  const handleSubscribe = (event: React.FormEvent) => {
+  const handleSubscribe = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!phone.trim()) return;
-    setSubscribeSuccess(true);
-    setTimeout(() => {
+    try {
+      await apiFetch("/weather/alerts/subscribe", {
+        method: "POST",
+        body: JSON.stringify({ phone_number: phone.trim() }),
+      });
+      setSubscribeSuccess(true);
+    } catch (error) {
       setSubscribeSuccess(false);
-      setPhone("");
-    }, 2200);
+      setDisasterMessage(error instanceof Error ? error.message : "Không lưu được đăng ký cảnh báo thời tiết.");
+    }
   };
 
   return (

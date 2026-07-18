@@ -2,16 +2,64 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user, require_roles
 from app.database.session import get_db
-from app.models import DiseaseLog, Plot, User
-from app.schemas.diseases import DiseaseDetectionData, DiseaseDetectionResponse, DiseaseStatusUpdateRequest, DiseaseStatusUpdateResponse
+from app.models import Crop, DiseaseLog, Plot, User
+from app.schemas.diseases import (
+    DiseaseDetectionData,
+    DiseaseDetectionResponse,
+    DiseaseLogItem,
+    DiseaseLogListResponse,
+    DiseaseStatusUpdateRequest,
+    DiseaseStatusUpdateResponse,
+)
 from app.services.disease_detector import analyze_image, save_upload
 
 router = APIRouter(prefix="/diseases", tags=["Diseases"])
+
+
+@router.get("/logs", response_model=DiseaseLogListResponse)
+async def list_disease_logs(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> DiseaseLogListResponse:
+    query = (
+        select(DiseaseLog, User.full_name, Plot.code, Crop.name, Crop.variety)
+        .join(User, DiseaseLog.reporter_id == User.id)
+        .join(Plot, DiseaseLog.plot_id == Plot.id, isouter=True)
+        .join(Crop, Plot.crop_id == Crop.id, isouter=True)
+        .order_by(DiseaseLog.created_at.desc())
+    )
+    if current_user.role == "farmer":
+        query = query.where(or_(DiseaseLog.reporter_id == current_user.id, Plot.user_id == current_user.id))
+    rows = (await db.execute(query)).all()
+    items = [
+        DiseaseLogItem(
+            id=log.id,
+            reporter=reporter,
+            plot_id=plot_code,
+            crop=f"{crop_name} {variety}".strip() if crop_name else None,
+            detected_disease=log.detected_disease,
+            confidence=log.confidence,
+            severity=log.severity,
+            treatment_measures=log.treatment_measures,
+            image_url=log.image_url,
+            status=log.status,
+            official_notes=log.official_notes,
+            created_at=log.created_at,
+            resolved_at=log.resolved_at,
+        )
+        for log, reporter, plot_code, crop_name, variety in rows
+    ]
+    return DiseaseLogListResponse(
+        items=items,
+        total=len(items),
+        active=sum(item.status == "active" for item in items),
+        resolved=sum(item.status == "resolved" for item in items),
+    )
 
 
 @router.post("/detect", response_model=DiseaseDetectionResponse)
@@ -27,6 +75,8 @@ async def detect_disease(
         plot = result.scalar_one_or_none()
         if plot is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Plot not found")
+        if current_user.role == "farmer" and plot.user_id != current_user.id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot diagnose another user's plot")
 
     detected_disease, confidence, severity, treatment = await analyze_image(image)
     image_url = await save_upload(image)
@@ -53,6 +103,7 @@ async def detect_disease(
             severity=log.severity,
             treatment_measures=log.treatment_measures,
             image_url=log.image_url,
+            review_required=True,
         )
     )
 
