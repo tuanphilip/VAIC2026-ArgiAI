@@ -35,7 +35,18 @@ export async function streamAgriculturalAssistant(
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
     body: JSON.stringify({ message, history: history.slice(-10), session_id: sessionId }),
   });
-  if (!response.ok || !response.body) throw new Error("Không mở được luồng trả lời của trợ lý.");
+  if (!response.ok || !response.body) {
+    if (response.status === 404 || response.status === 405) {
+      const fallback = await askAgriculturalAssistant(message, history, sessionId);
+      const text = fallback.sections.map((section) => `${section.title}\n${section.content.join("\n")}`).join("\n\n");
+      for (const chunk of text.match(/.{1,24}(?:\s+|$)/g) ?? [text]) {
+        onToken(chunk);
+        await new Promise((resolve) => window.setTimeout(resolve, 12));
+      }
+      return fallback;
+    }
+    throw new Error("Không mở được luồng trả lời của trợ lý.");
+  }
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
