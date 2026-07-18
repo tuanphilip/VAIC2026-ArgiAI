@@ -27,29 +27,29 @@ import { SidebarSupportCard } from "./sidebar-support-card";
 const _data = {
   navSecondary: [
     {
-      title: "Settings",
+      title: "Cài đặt",
       url: "#",
       icon: Settings,
     },
     {
-      title: "Get Help",
+      title: "Trợ giúp",
       url: "#",
       icon: CircleHelp,
     },
     {
-      title: "Search",
+      title: "Tìm kiếm",
       url: "#",
       icon: Search,
     },
   ],
   documents: [
     {
-      name: "Data Library",
+      name: "Kho dữ liệu",
       url: "#",
       icon: Database,
     },
     {
-      name: "Reports",
+      name: "Báo cáo",
       url: "#",
       icon: ClipboardList,
     },

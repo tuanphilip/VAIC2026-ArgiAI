@@ -350,7 +350,7 @@ class TestWeatherRoutes:
 
         assert response.status_code == 200
         assert response.json()["scope"] == "regional"
-        assert response.json()["area"] == {"lat": 21.518, "lng": 103.223, "label": "Tây Bắc"}
+        assert response.json()["area"] == {"lat": 21.518, "lng": 103.223, "label": "Điện Biên"}
         current_fetch.assert_awaited_once_with(21.518, 103.223)
         forecast_fetch.assert_awaited_once_with(21.518, 103.223)
 
