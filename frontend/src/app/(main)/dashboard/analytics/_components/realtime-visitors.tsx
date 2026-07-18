@@ -122,8 +122,8 @@ export function RealtimeVisitors() {
         </ChartContainer>
         <div className="grid grid-cols-2">
           <div className="flex items-center gap-3 border-border/50 border-r border-b pt-1 pr-5 pb-4">
-            <span aria-hidden="true" className="flag:US shrink-0 rounded-xs text-lg ring-1 ring-foreground/10" />
-            <span className="min-w-0 flex-1 truncate text-sm">United States</span>
+            <span aria-hidden="true" className="flag:VN shrink-0 rounded-xs text-lg ring-1 ring-foreground/10" />
+            <span className="min-w-0 flex-1 truncate text-sm">Việt Nam</span>
             <span className="text-sm tabular-nums">14</span>
           </div>
           <div className="flex items-center gap-3 border-border/50 border-b pt-1 pb-4 pl-5">

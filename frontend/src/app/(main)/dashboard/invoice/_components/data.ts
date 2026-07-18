@@ -128,8 +128,8 @@ export const invoiceClients: InvoiceToDetails[] = [
     id: "bright-enterprises",
     name: "Bright Enterprises",
     email: "billing@brightenterprises.com",
-    addressLines: ["450 Park Avenue South", "New York, NY 10016", "United States"],
-    taxId: "US-EIN-84-2938475",
+    addressLines: ["Số 12 đường Võ Nguyên Giáp", "Thành phố Điện Biên Phủ", "Việt Nam"],
+    taxId: "MST-Điện-Biên-001",
   },
   defaultInvoiceValues.to,
   {

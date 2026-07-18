@@ -6,6 +6,7 @@ from sqlalchemy import delete, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.geography import is_vietnam_coordinate
 from app.core.dependencies import get_current_user
 from app.database.session import get_db
 from app.models import Plot, User
@@ -116,6 +117,8 @@ async def create_plot(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> PlotMutationResponse:
+    if not is_vietnam_coordinate(payload.location_lat, payload.location_lng):
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Thửa đất phải nằm trong lãnh thổ Việt Nam.")
     duplicate = await db.execute(select(Plot).where(Plot.code == payload.plot_id))
     if duplicate.scalar_one_or_none():
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Plot code already exists")
@@ -163,6 +166,12 @@ async def update_plot(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Plot not found")
     if current_user.role == "farmer" and plot.user_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot update another user's plot")
+
+    if {"location_lat", "location_lng"} & payload.model_fields_set:
+        next_lat = payload.location_lat if payload.location_lat is not None else plot.location_lat
+        next_lng = payload.location_lng if payload.location_lng is not None else plot.location_lng
+        if not is_vietnam_coordinate(next_lat, next_lng):
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Thửa đất phải nằm trong lãnh thổ Việt Nam.")
 
     if payload.crops:
         primary_crop_id, crop_types = await _resolve_crop_types(db, payload.crops)

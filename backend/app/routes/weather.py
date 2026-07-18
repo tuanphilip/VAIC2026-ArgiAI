@@ -13,6 +13,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
+from app.core.geography import is_vietnam_coordinate
 from app.core.config import get_settings
 from app.core.dependencies import get_current_user
 from app.database.session import get_db
@@ -51,7 +52,7 @@ MAP_LAYERS = (
 )
 
 
-AGRICULTURAL_WEATHER_CENTER = {"lat": 21.518, "lng": 103.223, "label": "Tây Bắc"}
+AGRICULTURAL_WEATHER_CENTER = {"lat": 21.518, "lng": 103.223, "label": "Điện Biên"}
 
 
 @router.get("/locations")
@@ -60,7 +61,7 @@ async def get_weather_locations(
     current_user: User = Depends(get_current_user),
 ) -> list[dict[str, Any]]:
     """Return selectable regional and known plot locations visible to the user."""
-    query = select(Plot.region, Plot.location_lat, Plot.location_lng).where(Plot.region.is_not(None))
+    query = select(Plot.region, Plot.location_lat, Plot.location_lng).where(Plot.region.ilike("%Điện Biên%"))
     if current_user.role == "farmer":
         query = query.where(Plot.user_id == current_user.id)
     rows = (await db.execute(query)).all()
@@ -83,6 +84,8 @@ async def get_windy_embed_config(
     current_user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
     del current_user
+    if not is_vietnam_coordinate(lat, lon):
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Chỉ hỗ trợ tọa độ trong lãnh thổ Việt Nam.")
     return {"lat": lat, "lon": lon, "zoom": zoom, "provider": "windy-embed"}
 
 
@@ -94,6 +97,8 @@ async def get_weather_overview(
     current_user: User = Depends(get_current_user),
 ) -> WeatherOverviewResponse:
     del current_user
+    if not is_vietnam_coordinate(lat, lon):
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Chỉ hỗ trợ tọa độ trong lãnh thổ Việt Nam.")
     try:
         current, forecast = await asyncio.gather(
             fetch_current_weather(lat, lon),

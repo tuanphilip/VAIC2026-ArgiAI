@@ -141,7 +141,7 @@ export function ChatConversationList({ conversations, onSelectConversation, clas
                                 </div>
 
                                 <div className="flex items-center gap-1">
-                                  {conversation.group === "Pinned" && (
+                                  {conversation.group === "Đã ghim" && (
                                     <div className="grid size-5 place-items-center">
                                       <Pin className="size-3 fill-current opacity-70" />
                                     </div>
