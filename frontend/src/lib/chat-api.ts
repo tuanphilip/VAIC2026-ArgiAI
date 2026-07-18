@@ -6,6 +6,7 @@ export interface ChatTurn {
 }
 
 export interface AgriculturalChatResponse {
+  session_id: string;
   intent: string;
   sections: Array<{ title: string; content: string[] }>;
   quick_replies: string[];
@@ -13,9 +14,9 @@ export interface AgriculturalChatResponse {
   confidence: number;
 }
 
-export function askAgriculturalAssistant(message: string, history: ChatTurn[]) {
+export function askAgriculturalAssistant(message: string, history: ChatTurn[], sessionId?: string) {
   return apiFetch<AgriculturalChatResponse>("/chat/answer", {
     method: "POST",
-    body: JSON.stringify({ message, history: history.slice(-10) }),
+    body: JSON.stringify({ message, history: history.slice(-10), session_id: sessionId }),
   });
 }

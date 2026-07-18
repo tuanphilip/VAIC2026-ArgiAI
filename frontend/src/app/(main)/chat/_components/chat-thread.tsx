@@ -60,6 +60,7 @@ interface ChatThreadProps {
 
 export function ChatThread({ contact, messages, onOpenContact, onBack, showBackButton, className }: ChatThreadProps) {
   const [threadMessages, setThreadMessages] = useState(messages);
+  const [sessionId, setSessionId] = useState<string>();
   const [isSending, setIsSending] = useState(false);
 
   async function sendMessage(text: string) {
@@ -73,7 +74,8 @@ export function ChatThread({ contact, messages, onOpenContact, onBack, showBackB
         role: item.align === "end" ? "user" : "assistant",
         content: item.text,
       }));
-      const answer = await askAgriculturalAssistant(trimmed, [...history, { role: "user", content: trimmed }]);
+      const answer = await askAgriculturalAssistant(trimmed, [...history, { role: "user", content: trimmed }], sessionId);
+      setSessionId(answer.session_id);
       const text = answer.sections.map((section) => `**${section.title}:**\\n${section.content.join("\\n")}`).join("\\n\\n");
       setThreadMessages((current) => [...current, { id: Date.now() + 1, align: "start", text, time: "Vừa xong" }]);
     } catch (error) {

@@ -89,7 +89,7 @@ export function NavMain({ items }: NavMainProps) {
       return item.subItems.some((sub) => path.startsWith(sub.url));
     }
 
-    return path === item.url;
+    return path === item.url || path.startsWith(`${item.url}/`);
   };
 
   const isSubItemActive = (url: string) => {
