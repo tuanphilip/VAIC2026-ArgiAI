@@ -1,32 +1,39 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+import { apiFetch } from "@/lib/api-client";
 
 import {
-  buildOpenWeatherLayerTemplates,
-  buildWeatherApiUrl,
+  buildWindyEmbedUrl,
+  fetchDisasterWarnings,
   fetchWeatherOverview,
-  resolveLayerUrl,
+  type WeatherLocation,
 } from "./weather-api";
 
+vi.mock("@/lib/api-client", () => ({
+  apiFetch: vi.fn(),
+}));
+
+const location: WeatherLocation = { id: "dien-bien", label: "Điện Biên", lat: 21.518, lon: 103.223, source: "default" };
+
 describe("weather api contract", () => {
-  it("uses the regional overview endpoint instead of plot data", async () => {
-    expect(buildWeatherApiUrl("/weather/overview")).toBe("/api/v1/weather/overview");
-    const response = new Response(JSON.stringify({ scope: "regional" }), { status: 200 });
-    const originalFetch = globalThis.fetch;
-    globalThis.fetch = async () => response;
-    await expect(fetchWeatherOverview()).resolves.toEqual({ scope: "regional" });
-    globalThis.fetch = originalFetch;
+  it("builds a Windy embed URL for the selected location", () => {
+    const url = buildWindyEmbedUrl(location, 8);
+    expect(url).toContain("https://embed.windy.com/embed2.html?");
+    expect(url).toContain("lat=21.518");
+    expect(url).toContain("lon=103.223");
+    expect(url).toContain("zoom=8");
+    expect(url).toContain("overlay=wind");
   });
 
-  it("maps configured weather layers without parcel metadata", () => {
-    expect(buildOpenWeatherLayerTemplates({
-      default_zoom: 7,
-      tile_layers: [{ id: "openweather-rain", label: "Mưa", source_layer: "rain", url_template: "/weather/tiles/rain/{z}/{x}/{y}.png" }],
-    })).toEqual({ "openweather-rain": "/weather/tiles/rain/{z}/{x}/{y}.png" });
+  it("uses the authenticated normalized overview endpoint", async () => {
+    vi.mocked(apiFetch).mockResolvedValueOnce({ source: "open-meteo" });
+    await expect(fetchWeatherOverview(location)).resolves.toEqual({ source: "open-meteo" });
+    expect(apiFetch).toHaveBeenCalledWith(expect.stringContaining("/weather/overview?"));
   });
 
-  it("resolves relative layer urls against the frontend origin", () => {
-    expect(resolveLayerUrl("/api/v1/weather/tiles/rain/{z}/{x}/{y}.png", "https://frontend.example.com")).toBe(
-      "https://frontend.example.com/api/v1/weather/tiles/rain/{z}/{x}/{y}.png",
-    );
+  it("uses the authenticated disaster endpoint", async () => {
+    vi.mocked(apiFetch).mockResolvedValueOnce([]);
+    await expect(fetchDisasterWarnings()).resolves.toEqual([]);
+    expect(apiFetch).toHaveBeenCalledWith("/weather/disasters");
   });
 });

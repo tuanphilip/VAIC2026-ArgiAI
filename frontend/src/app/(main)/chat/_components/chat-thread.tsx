@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import {
   AlarmClock,
   ArrowLeft,
@@ -43,6 +45,7 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn, getInitials } from "@/lib/utils";
+import { askAgriculturalAssistant, type ChatTurn } from "@/lib/chat-api";
 
 import { type Message as ChatMessage, type Contact, currentUser } from "./data";
 
@@ -56,6 +59,33 @@ interface ChatThreadProps {
 }
 
 export function ChatThread({ contact, messages, onOpenContact, onBack, showBackButton, className }: ChatThreadProps) {
+  const [threadMessages, setThreadMessages] = useState(messages);
+  const [isSending, setIsSending] = useState(false);
+
+  async function sendMessage(text: string) {
+    const trimmed = text.trim();
+    if (!trimmed || isSending) return;
+    const userMessage: ChatMessage = { id: Date.now(), align: "end", text: trimmed, time: "Vừa xong" };
+    setThreadMessages((current) => [...current, userMessage]);
+    setIsSending(true);
+    try {
+      const history: ChatTurn[] = threadMessages.slice(-10).map((item) => ({
+        role: item.align === "end" ? "user" : "assistant",
+        content: item.text,
+      }));
+      const answer = await askAgriculturalAssistant(trimmed, [...history, { role: "user", content: trimmed }]);
+      const text = answer.sections.map((section) => `**${section.title}:**\\n${section.content.join("\\n")}`).join("\\n\\n");
+      setThreadMessages((current) => [...current, { id: Date.now() + 1, align: "start", text, time: "Vừa xong" }]);
+    } catch (error) {
+      setThreadMessages((current) => [
+        ...current,
+        { id: Date.now() + 1, align: "start", text: error instanceof Error ? error.message : "Không gọi được trợ lý nông nghiệp.", time: "Vừa xong" },
+      ]);
+    } finally {
+      setIsSending(false);
+    }
+  }
+
   return (
     <div className={cn("flex h-full flex-col py-3", className)}>
       <div className="flex flex-col gap-3">
@@ -148,7 +178,7 @@ export function ChatThread({ contact, messages, onOpenContact, onBack, showBackB
                 <MarkerContent>May 6, 2026</MarkerContent>
               </Marker>
 
-              {messages.map((message) => {
+              {threadMessages.map((message) => {
                 const isOutbound = message.align === "end";
                 const reactionAlign = isOutbound ? "start" : "end";
                 const senderName = isOutbound ? currentUser.name : contact.name;
@@ -211,7 +241,7 @@ export function ChatThread({ contact, messages, onOpenContact, onBack, showBackB
           </TabsList>
 
           <TabsContent value="reply" className="m-0">
-            <MessageComposer placeholder="Type your message..." />
+            <MessageComposer placeholder="Type your message..." onSend={sendMessage} disabled={isSending} />
           </TabsContent>
           <TabsContent value="note" className="m-0">
             <MessageComposer placeholder="Write an internal note..." />
@@ -222,17 +252,24 @@ export function ChatThread({ contact, messages, onOpenContact, onBack, showBackB
   );
 }
 
-function MessageComposer({ placeholder }: { placeholder: string }) {
+function MessageComposer({ placeholder, onSend, disabled = false }: { placeholder: string; onSend?: (text: string) => void; disabled?: boolean }) {
+  const [value, setValue] = useState("");
+
   return (
     <form
       className="w-full"
       onSubmit={(event) => {
         event.preventDefault();
+        onSend?.(value);
+        if (onSend) setValue("");
       }}
     >
       <InputGroup className="border-0 bg-transparent shadow-none has-[[data-slot=input-group-control]:focus-visible]:border-0 has-[[data-slot][aria-invalid=true]]:border-0 has-[[data-slot=input-group-control]:focus-visible]:ring-0 has-[[data-slot][aria-invalid=true]]:ring-0 dark:bg-transparent dark:has-[[data-slot][aria-invalid=true]]:ring-0">
         <InputGroupTextarea
           placeholder={placeholder}
+          value={value}
+          onChange={(event) => setValue(event.target.value)}
+          disabled={disabled}
           className="min-h-14 px-3 py-2.5 text-sm ring-0 focus-visible:ring-0 aria-invalid:ring-0 dark:aria-invalid:ring-0"
         />
         <InputGroupAddon align="block-end">
@@ -251,7 +288,7 @@ function MessageComposer({ placeholder }: { placeholder: string }) {
           <InputGroupButton aria-label="AI assist" type="button" size="icon-sm" variant="outline">
             <Sparkles />
           </InputGroupButton>
-          <InputGroupButton type="submit" variant="default" size="icon-sm" className="ml-auto">
+          <InputGroupButton type="submit" variant="default" size="icon-sm" className="ml-auto" disabled={disabled || !value.trim()}>
             <Send />
             <span className="sr-only">Send</span>
           </InputGroupButton>

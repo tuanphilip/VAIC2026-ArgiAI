@@ -1,65 +1,106 @@
-export type OpenWeatherLayerId = "openweather-rain" | "openweather-wind" | "openweather-temperature";
+import { apiFetch } from "@/lib/api-client";
+import type { DisasterWarningApiItem } from "./disaster-warnings";
 
-export interface WeatherTileLayer {
+export interface WeatherLocation {
   id: string;
   label: string;
-  source_layer: string;
-  url_template: string;
+  lat: number;
+  lon: number;
+  source: string;
 }
 
-export interface WeatherMapConfigResponse {
-  default_zoom: number;
-  tile_layers: WeatherTileLayer[];
+export interface WeatherCurrent {
+  temperature_c: number | null;
+  feels_like_c: number | null;
+  humidity_pct: number | null;
+  precipitation_mm: number | null;
+  wind_speed_kmh: number | null;
+  wind_direction_deg: number | null;
+  weather_code: number | null;
+  weather_label: string | null;
+}
+
+export interface WeatherHourly extends WeatherCurrent {
+  time: string;
+  precipitation_probability_pct: number | null;
+}
+
+export interface WeatherDaily {
+  date: string;
+  temperature_max_c: number | null;
+  temperature_min_c: number | null;
+  precipitation_mm: number | null;
+  precipitation_probability_pct: number | null;
+  wind_speed_max_kmh: number | null;
+  weather_code: number | null;
+  weather_label: string | null;
 }
 
 export interface WeatherOverviewResponse {
-  scope: "regional";
-  area: { lat: number; lng: number; label: string };
-  current: Record<string, unknown>;
-  forecast: Record<string, unknown>;
+  location: WeatherLocation;
+  observed_at: string | null;
+  current: WeatherCurrent;
+  hourly: WeatherHourly[];
+  daily: WeatherDaily[];
+  source: string;
+  model: string | null;
+  fetched_at: string;
 }
 
-const DEFAULT_API_BASE_URL = "/api/v1";
-const OPEN_WEATHER_LAYER_IDS = new Set<OpenWeatherLayerId>([
-  "openweather-rain",
-  "openweather-wind",
-  "openweather-temperature",
-]);
-
-export function buildWeatherApiUrl(
-  path: string,
-  baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? DEFAULT_API_BASE_URL,
-) {
-  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  const normalizedBaseUrl = baseUrl.replace(/\/+$/, "") || DEFAULT_API_BASE_URL;
-  if (/^https?:\/\//.test(normalizedBaseUrl)) {
-    return new URL(normalizedPath.replace(/^\//, ""), `${normalizedBaseUrl}/`).toString();
-  }
-  return `${normalizedBaseUrl}${normalizedPath}`;
+export interface WeatherMapConfigResponse {
+  lat: number;
+  lon: number;
+  zoom: number;
+  provider: "windy-embed";
 }
 
-export function buildOpenWeatherLayerTemplates(config: WeatherMapConfigResponse) {
-  return config.tile_layers.reduce<Partial<Record<OpenWeatherLayerId, string>>>((collection, layer) => {
-    if (OPEN_WEATHER_LAYER_IDS.has(layer.id as OpenWeatherLayerId)) {
-      collection[layer.id as OpenWeatherLayerId] = layer.url_template;
-    }
-    return collection;
-  }, {});
+const DEFAULT_LOCATION: WeatherLocation = {
+  id: "dien-bien",
+  label: "Điện Biên",
+  lat: 21.518,
+  lon: 103.223,
+  source: "default",
+};
+
+export function buildWindyEmbedUrl(location: WeatherLocation, zoom = 7) {
+  const params = new URLSearchParams({
+    lat: String(location.lat),
+    lon: String(location.lon),
+    detailLat: String(location.lat),
+    detailLon: String(location.lon),
+    zoom: String(zoom),
+    level: "surface",
+    overlay: "wind",
+    product: "ecmwf",
+    menu: "",
+    message: "true",
+    marker: "true",
+    calendar: "now",
+    pressure: "true",
+    type: "map",
+    location: "coordinates",
+    detail: "true",
+    metricWind: "km/h",
+    metricTemp: "°C",
+    radarRange: "-1",
+  });
+  return `https://embed.windy.com/embed2.html?${params.toString()}`;
 }
 
-export function resolveLayerUrl(urlTemplate: string, origin?: string) {
-  if (/^https?:\/\//.test(urlTemplate) || !origin) return urlTemplate;
-  return `${origin.replace(/\/+$/, "")}/${urlTemplate.replace(/^\//, "")}`;
+export function fetchWeatherLocations(): Promise<WeatherLocation[]> {
+  return apiFetch<WeatherLocation[]>("/weather/locations");
 }
 
-export async function fetchWeatherOverview(baseUrl?: string): Promise<WeatherOverviewResponse> {
-  const response = await fetch(buildWeatherApiUrl("/weather/overview", baseUrl));
-  if (!response.ok) throw new Error(`Không tải được thời tiết khu vực (${response.status}).`);
-  return response.json() as Promise<WeatherOverviewResponse>;
+export function fetchWeatherOverview(location = DEFAULT_LOCATION): Promise<WeatherOverviewResponse> {
+  const params = new URLSearchParams({ lat: String(location.lat), lon: String(location.lon), label: location.label });
+  return apiFetch<WeatherOverviewResponse>(`/weather/overview?${params.toString()}`);
 }
 
-export async function fetchMapConfig(baseUrl?: string): Promise<WeatherMapConfigResponse> {
-  const response = await fetch(buildWeatherApiUrl("/weather/map-config", baseUrl));
-  if (!response.ok) throw new Error(`Không tải được cấu hình bản đồ (${response.status}).`);
-  return response.json() as Promise<WeatherMapConfigResponse>;
+export function fetchMapConfig(location = DEFAULT_LOCATION): Promise<WeatherMapConfigResponse> {
+  const params = new URLSearchParams({ lat: String(location.lat), lon: String(location.lon) });
+  return apiFetch<WeatherMapConfigResponse>(`/weather/windy-embed-config?${params.toString()}`);
+}
+
+export function fetchDisasterWarnings(): Promise<DisasterWarningApiItem[]> {
+  return apiFetch<DisasterWarningApiItem[]>("/weather/disasters");
 }

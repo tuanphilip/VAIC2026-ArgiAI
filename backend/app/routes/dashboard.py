@@ -7,9 +7,108 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.dependencies import require_roles
 from app.database.session import get_db
 from app.models import Crop, DiseaseLog, Plot, User, YieldForecast
-from app.schemas.dashboard import CropCompareDetail, DashboardCompareResponse, PeriodMetric
+from app.schemas.dashboard import (
+    CropCompareDetail,
+    DashboardCompareResponse,
+    DashboardCropStat,
+    DashboardRegionStat,
+    DashboardStatusStat,
+    DashboardSummaryResponse,
+    PeriodMetric,
+)
 
 router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
+
+
+@router.get("/summary", response_model=DashboardSummaryResponse)
+async def dashboard_summary(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles("farmer", "official", "admin")),
+) -> DashboardSummaryResponse:
+    """Return real, role-scoped dashboard metrics from the database."""
+    plot_filters = []
+    scope = "all"
+    if current_user.role == "farmer":
+        plot_filters.append(Plot.user_id == current_user.id)
+        scope = "own"
+
+    if current_user.role == "farmer":
+        residents_count = 1
+    else:
+        residents_count = int(
+            (await db.execute(select(func.count(User.id)).where(User.role == "farmer"))).scalar_one()
+        )
+
+    totals = await db.execute(
+        select(
+            func.count(Plot.id),
+            func.coalesce(func.sum(Plot.area_hectares), 0.0),
+            func.count(Plot.id).filter(Plot.status != "harvested"),
+            func.count(func.distinct(Plot.crop_id)),
+            func.count(func.distinct(Plot.region)).filter(Plot.region.is_not(None)),
+            func.avg(Plot.moisture),
+        ).where(*plot_filters)
+    )
+    plot_count, total_area, active_plot_count, crop_count, region_count, average_moisture = totals.one()
+
+    disease_query = (
+        select(func.count(DiseaseLog.id))
+        .join(Plot, DiseaseLog.plot_id == Plot.id)
+        .where(DiseaseLog.status == "active", *plot_filters)
+    )
+    active_disease_count = int((await db.execute(disease_query)).scalar_one())
+
+    region_rows = await db.execute(
+        select(
+            func.coalesce(Plot.region, "Chưa phân loại"),
+            func.count(Plot.id),
+            func.coalesce(func.sum(Plot.area_hectares), 0.0),
+        )
+        .where(*plot_filters)
+        .group_by(func.coalesce(Plot.region, "Chưa phân loại"))
+        .order_by(func.sum(Plot.area_hectares).desc())
+    )
+    crop_rows = await db.execute(
+        select(
+            Crop.name,
+            Crop.variety,
+            func.count(Plot.id),
+            func.coalesce(func.sum(Plot.area_hectares), 0.0),
+        )
+        .join(Plot, Plot.crop_id == Crop.id)
+        .where(*plot_filters)
+        .group_by(Crop.name, Crop.variety)
+        .order_by(func.sum(Plot.area_hectares).desc())
+    )
+    status_rows = await db.execute(
+        select(Plot.status, func.count(Plot.id))
+        .where(*plot_filters)
+        .group_by(Plot.status)
+        .order_by(func.count(Plot.id).desc())
+    )
+
+    return DashboardSummaryResponse(
+        scope=scope,
+        residents_count=int(residents_count),
+        plot_count=int(plot_count or 0),
+        active_plot_count=int(active_plot_count or 0),
+        total_area_hectares=round(float(total_area or 0), 2),
+        crop_count=int(crop_count or 0),
+        region_count=int(region_count or 0),
+        active_disease_count=active_disease_count,
+        average_moisture=round(float(average_moisture), 1) if average_moisture is not None else None,
+        regions=[
+            DashboardRegionStat(region=region, plot_count=int(count), area_hectares=round(float(area), 2))
+            for region, count, area in region_rows.all()
+        ],
+        crops=[
+            DashboardCropStat(
+                crop_name=f"{name} {variety}", plot_count=int(count), area_hectares=round(float(area), 2)
+            )
+            for name, variety, count, area in crop_rows.all()
+        ],
+        statuses=[DashboardStatusStat(status=status, plot_count=int(count)) for status, count in status_rows.all()],
+    )
 
 
 @router.get("/compare", response_model=DashboardCompareResponse)

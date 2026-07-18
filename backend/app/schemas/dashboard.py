@@ -22,3 +22,35 @@ class DashboardCompareResponse(BaseModel):
     compare_type: str
     metrics: dict[str, PeriodMetric]
     details_by_crop: list[CropCompareDetail]
+
+
+class DashboardRegionStat(BaseModel):
+    region: str
+    plot_count: int
+    area_hectares: float
+
+
+class DashboardCropStat(BaseModel):
+    crop_name: str
+    plot_count: int
+    area_hectares: float
+
+
+class DashboardStatusStat(BaseModel):
+    status: str
+    plot_count: int
+
+
+class DashboardSummaryResponse(BaseModel):
+    scope: str
+    residents_count: int
+    plot_count: int
+    active_plot_count: int
+    total_area_hectares: float
+    crop_count: int
+    region_count: int
+    active_disease_count: int
+    average_moisture: float | None
+    regions: list[DashboardRegionStat]
+    crops: list[DashboardCropStat]
+    statuses: list[DashboardStatusStat]
