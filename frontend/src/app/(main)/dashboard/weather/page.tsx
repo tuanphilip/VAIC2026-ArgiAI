@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AlertTriangle, CloudRain, Droplets, ExternalLink, RefreshCw, Thermometer, Wind } from "lucide-react";
 
@@ -39,6 +39,7 @@ export default function WeatherPage() {
   const [warnings, setWarnings] = useState<DisasterWarningApiItem[]>([]);
   const [status, setStatus] = useState<LoadStatus>("loading");
   const [message, setMessage] = useState("Đang tải thời tiết địa phương...");
+  const locationRef = useRef(location);
 
   const loadWeather = useCallback(async (selectedLocation: WeatherLocation) => {
     setStatus("loading");
@@ -73,9 +74,11 @@ export default function WeatherPage() {
       .catch(() => undefined);
     void loadWarnings();
     void loadWeather(DEFAULT_LOCATION);
+    const weatherRefresh = window.setInterval(() => void loadWeather(locationRef.current), 10 * 60 * 1000);
     const warningRefresh = window.setInterval(() => void loadWarnings(), 5 * 60 * 1000);
     return () => {
       cancelled = true;
+      window.clearInterval(weatherRefresh);
       window.clearInterval(warningRefresh);
     };
   }, [loadWarnings, loadWeather]);
@@ -87,6 +90,7 @@ export default function WeatherPage() {
     const selected = locations.find((item) => item.id === id);
     if (!selected) return;
     setLocation(selected);
+    locationRef.current = selected;
     void loadWeather(selected);
   };
 
