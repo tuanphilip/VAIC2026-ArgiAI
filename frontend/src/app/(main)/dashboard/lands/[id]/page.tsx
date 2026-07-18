@@ -3,21 +3,12 @@
 import * as React from "react";
 import Link from "next/link";
 import { ArrowLeft, Calendar, FileText, Leaf, ShieldAlert, Sprout } from "lucide-react";
-import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
-// Mock sensor readings
-const sensorLogs = [
-  { time: "00:00", moisture: 55, temp: 24 },
-  { time: "04:00", moisture: 54, temp: 22 },
-  { time: "08:00", moisture: 58, temp: 26 },
-  { time: "12:00", moisture: 52, temp: 31 },
-  { time: "16:00", moisture: 50, temp: 29 },
-  { time: "20:00", moisture: 56, temp: 25 },
-];
 
 export default function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = React.use(params);
@@ -106,28 +97,8 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
         </CardContent>
       </Card>
 
-      {/* Main grids: Charts vs Logs */}
-      <div className="grid gap-6 md:grid-cols-3">
-        {/* Sensor charts */}
-        <Card className="md:col-span-2 shadow-sm">
-          <CardHeader>
-            <CardTitle>Biến thiên thông số 24h qua</CardTitle>
-            <CardDescription>Số liệu cập nhật tự động từ trạm cảm biến lắp đặt tại Thửa {id}.</CardDescription>
-          </CardHeader>
-          <CardContent className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={sensorLogs} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="time" tickLine={false} />
-                <YAxis tickLine={false} />
-                <Tooltip />
-                <Line type="monotone" dataKey="moisture" stroke="hsl(var(--primary))" name="Độ ẩm đất (%)" strokeWidth={2} dot={{ r: 4 }} />
-                <Line type="monotone" dataKey="temp" stroke="#f97316" name="Nhiệt độ (°C)" strokeWidth={2} dot={{ r: 4 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
+      {/* Main activity log */}
+      <div className="grid gap-6">
         {/* Timeline Log */}
         <Card className="shadow-sm">
           <CardHeader>

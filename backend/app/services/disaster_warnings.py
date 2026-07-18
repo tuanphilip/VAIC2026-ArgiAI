@@ -8,6 +8,7 @@ Data sources
 """
 
 import json
+import logging
 import time
 from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
@@ -20,7 +21,9 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config import get_settings
 from app.database.session import AsyncSessionLocal
-from app.models import Plot
+from app.models import DisasterWarning, Plot
+
+logger = logging.getLogger(__name__)
 
 # ── In-memory cache (shared with weather.py but uses same helpers) ─────────
 
@@ -486,7 +489,11 @@ async def _fetch_gfms_flood_data() -> list[dict[str, Any]]:
             )
             resp.raise_for_status()
             data = resp.json()
-    except (httpx.HTTPError, json.JSONDecodeError, Exception):
+    except (httpx.HTTPError, json.JSONDecodeError) as exc:
+        logger.warning("GFMS request failed: %s", exc)
+        return []
+    except Exception:
+        logger.exception("Unexpected GFMS integration failure")
         return []
 
     # Normalise GFMS response to our warning schema
@@ -530,7 +537,11 @@ async def _fetch_vndms_data() -> list[dict[str, Any]]:
             resp = await client.get(str(settings.vndms_api_url))
             resp.raise_for_status()
             data = resp.json()
-    except (httpx.HTTPError, json.JSONDecodeError, Exception):
+    except (httpx.HTTPError, json.JSONDecodeError) as exc:
+        logger.warning("VNDMS request failed: %s", exc)
+        return []
+    except Exception:
+        logger.exception("Unexpected VNDMS integration failure")
         return []
 
     warnings: list[dict[str, Any]] = []
@@ -607,7 +618,8 @@ async def _build_warnings(
         try:
             forecast = await _fetch_forecast(lat, lon)
         except Exception:
-            continue  # skip locations whose forecast fails
+            logger.exception("Forecast analysis failed for plot location %.4f, %.4f", lat, lon)
+            continue
 
         all_warnings.extend(_detect_flood_storm_from_forecast(forecast, lat, lon))
         all_warnings.extend(_detect_heatwave_from_forecast(forecast, lat, lon))
@@ -652,3 +664,46 @@ def _deduplicate_warnings(warnings: list[dict[str, Any]]) -> list[dict[str, Any]
                 seen[dedup_key] = w
 
     return list(seen.values())
+
+
+async def persist_disaster_warnings(
+    session: AsyncSession,
+    warnings: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Persist normalized warnings and attach stable IDs for detail routes."""
+    persisted_items: list[dict[str, Any]] = []
+    for payload in warnings:
+        start_date = datetime.fromisoformat(payload["start_date"])
+        query = select(DisasterWarning).where(
+            DisasterWarning.type == payload["type"],
+            DisasterWarning.source == payload["source"],
+            DisasterWarning.start_date == start_date,
+            DisasterWarning.affected_region == payload["affected_region"],
+        )
+        warning = (await session.execute(query)).scalar_one_or_none()
+        end_date = datetime.fromisoformat(payload["end_date"]) if payload.get("end_date") else None
+        if warning is None:
+            warning = DisasterWarning(
+                type=payload["type"],
+                severity=payload["severity"],
+                title=payload["title"],
+                description=payload["description"],
+                affected_region=payload["affected_region"],
+                start_date=start_date,
+                end_date=end_date,
+                source=payload["source"],
+                raw_data=payload.get("raw_data"),
+            )
+            session.add(warning)
+        else:
+            warning.severity = payload["severity"]
+            warning.title = payload["title"]
+            warning.description = payload["description"]
+            warning.end_date = end_date
+            warning.raw_data = payload.get("raw_data")
+        persisted_items.append({**payload, "id": warning.id})
+
+    await session.commit()
+    for item in persisted_items:
+        item["id"] = str(item["id"])
+    return persisted_items

@@ -1,3 +1,5 @@
+from datetime import UTC, datetime, timedelta
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,16 +19,58 @@ async def compare_dashboard(
     db: AsyncSession = Depends(get_db),
     _: User = Depends(require_roles("official", "admin")),
 ) -> DashboardCompareResponse:
-    area_result = await db.execute(select(func.coalesce(func.sum(Plot.area_hectares), 0.0)))
+    """Compare real records in current and previous calendar windows.
+
+    The database does not store historical plot snapshots, so cultivated area is
+    measured by plot records created in each window rather than fabricated by a
+    percentage multiplier.
+    """
+    now = datetime.now(UTC)
+    period_days = 365 if compare_type == "yoy" else 90
+    current_start = now - timedelta(days=period_days)
+    previous_start = current_start - timedelta(days=period_days)
+    region_filter = Plot.region == region if region else None
+
+    current_plot_filters = [Plot.created_at >= current_start, Plot.created_at < now]
+    previous_plot_filters = [Plot.created_at >= previous_start, Plot.created_at < current_start]
+    if region_filter is not None:
+        current_plot_filters.append(region_filter)
+        previous_plot_filters.append(region_filter)
+
+    area_result = await db.execute(
+        select(func.coalesce(func.sum(Plot.area_hectares), 0.0)).where(*current_plot_filters)
+    )
+    previous_area_result = await db.execute(
+        select(func.coalesce(func.sum(Plot.area_hectares), 0.0)).where(*previous_plot_filters)
+    )
     total_area = float(area_result.scalar_one())
+    previous_area = float(previous_area_result.scalar_one())
 
-    yield_result = await db.execute(select(func.coalesce(func.sum(YieldForecast.forecasted_yield_tons), 0.0)))
+    yield_filters = [YieldForecast.generated_at >= current_start, YieldForecast.generated_at < now]
+    previous_yield_filters = [YieldForecast.generated_at >= previous_start, YieldForecast.generated_at < current_start]
+    disease_filters = [DiseaseLog.created_at >= current_start, DiseaseLog.created_at < now]
+    previous_disease_filters = [DiseaseLog.created_at >= previous_start, DiseaseLog.created_at < current_start]
+    if region_filter is not None:
+        yield_filters.append(YieldForecast.plot.has(region_filter))
+        previous_yield_filters.append(YieldForecast.plot.has(region_filter))
+        disease_filters.append(DiseaseLog.plot.has(region_filter))
+        previous_disease_filters.append(DiseaseLog.plot.has(region_filter))
+
+    yield_result = await db.execute(
+        select(func.coalesce(func.sum(YieldForecast.forecasted_yield_tons), 0.0)).where(*yield_filters)
+    )
+    previous_yield_result = await db.execute(
+        select(func.coalesce(func.sum(YieldForecast.forecasted_yield_tons), 0.0)).where(*previous_yield_filters)
+    )
     total_yield = float(yield_result.scalar_one())
+    previous_yield = float(previous_yield_result.scalar_one())
 
-    disease_result = await db.execute(select(func.count(DiseaseLog.id)))
+    disease_result = await db.execute(select(func.count(DiseaseLog.id)).where(*disease_filters))
+    previous_disease_result = await db.execute(select(func.count(DiseaseLog.id)).where(*previous_disease_filters))
     disease_cases = int(disease_result.scalar_one())
+    previous_cases = int(previous_disease_result.scalar_one())
 
-    details_result = await db.execute(
+    details_query = (
         select(
             Crop.name,
             Crop.variety,
@@ -35,9 +79,11 @@ async def compare_dashboard(
         )
         .join(Plot, Plot.crop_id == Crop.id, isouter=True)
         .join(DiseaseLog, DiseaseLog.plot_id == Plot.id, isouter=True)
-        .group_by(Crop.name, Crop.variety)
-        .order_by(Crop.name)
     )
+    if region_filter is not None:
+        details_query = details_query.where(region_filter)
+    details_query = details_query.group_by(Crop.name, Crop.variety).order_by(Crop.name)
+    details_result = await db.execute(details_query)
     details = [
         CropCompareDetail(
             crop_name=f"{name} {variety}",
@@ -47,10 +93,6 @@ async def compare_dashboard(
         )
         for name, variety, area_ha, cases in details_result.all()
     ]
-
-    previous_area = total_area * (0.94 if compare_type == "yoy" else 0.98)
-    previous_yield = total_yield * (0.96 if total_yield else 0.95)
-    previous_cases = max(int(disease_cases * 1.2), 1) if disease_cases else 0
 
     return DashboardCompareResponse(
         compare_type=compare_type,

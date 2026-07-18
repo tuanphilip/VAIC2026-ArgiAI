@@ -13,6 +13,8 @@ export interface AuthUser {
 interface AuthStore {
   token: string | null;
   user: AuthUser | null;
+  hasHydrated: boolean;
+  setHydrated: () => void;
   login: (token: string, user: AuthUser) => void;
   logout: () => void;
 }
@@ -22,10 +24,17 @@ export const useAuthStore = create<AuthStore>()(
     (set) => ({
       token: null,
       user: null,
+      hasHydrated: false,
+      setHydrated: () => set({ hasHydrated: true }),
       login: (token, user) => set({ token, user }),
       logout: () => set({ token: null, user: null }),
     }),
-    { name: "argiai-auth" }
+    {
+      name: "argiai-auth",
+      onRehydrateStorage: () => (state) => {
+        state?.setHydrated?.();
+      },
+    }
   )
 );
 

@@ -37,7 +37,7 @@ export default function Page() {
     { id: 1, title: "Bán lô lúa hữu cơ Jasmine 85", type: "income", amount: 42000000, date: "15/07/2026", category: "Nông sản đầu ra" },
     { id: 2, title: "Mua phân bón hữu cơ NPK Lâm Thao", type: "expense", amount: 6500000, date: "12/07/2026", category: "Vật tư đầu vào" },
     { id: 3, title: "Bán 500kg Cà chua VietGAP", type: "income", amount: 15000000, date: "10/07/2026", category: "Nông sản đầu ra" },
-    { id: 4, title: "Thanh toán tiền điện trạm bơm & IoT", type: "expense", amount: 1200000, date: "05/07/2026", category: "Hệ thống điện nước" },
+    { id: 4, title: "Thanh toán tiền điện trạm bơm", type: "expense", amount: 1200000, date: "05/07/2026", category: "Hệ thống điện nước" },
     { id: 5, title: "Trả công lao động thu hoạch vụ mùa", type: "expense", amount: 8000000, date: "01/07/2026", category: "Nhân công" },
   ]);
 

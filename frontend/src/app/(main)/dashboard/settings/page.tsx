@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { AlertCircle, Database, Network, Save, Send, Sliders, Users } from "lucide-react";
+import { AlertCircle, Database, Save, Send, Sliders, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,9 +20,6 @@ export default function Page() {
   const [webhookToken, setWebhookToken] = useState("zalo_oa_secret_token_12345");
   const [webhookSaved, setWebhookSaved] = useState(false);
 
-  // API Config settings
-  const [apiEndpoint, setApiEndpoint] = useState("https://iot.argiai.com/v1/telemetry");
-  const [apiKey, setApiKey] = useState("argi_sensor_secure_key_x94j");
 
   // Backup settings
   const [backupSchedule, setBackupSchedule] = useState("daily");
@@ -57,10 +54,10 @@ export default function Page() {
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
-          Cài đặt Ngưỡng & Hệ thống
+          Cài đặt Canh tác & Hệ thống
         </h1>
         <p className="text-muted-foreground">
-          Cấu hình phạm vi kích hoạt thiết bị tự động và quản lý vai trò thành viên trang trại.
+          Cấu hình ngưỡng canh tác, kênh cảnh báo và quản lý vai trò thành viên trang trại.
         </p>
       </div>
 
@@ -70,10 +67,10 @@ export default function Page() {
           <Card className="shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Sliders className="size-5 text-emerald-600" /> Ngưỡng Thiết bị Cảm biến
+                <Sliders className="size-5 text-emerald-600" /> Ngưỡng Canh tác
               </CardTitle>
               <CardDescription>
-                Hệ thống sẽ gửi cảnh báo khẩn và tự kích hoạt vòi tưới/quạt gió nếu vượt ngoài phạm vi này.
+                Hệ thống sẽ sử dụng các ngưỡng này để đánh giá rủi ro thời tiết và đưa ra khuyến nghị canh tác.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -148,7 +145,7 @@ export default function Page() {
 
                 {saved && (
                   <div className="p-3 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 rounded-lg flex items-center gap-2 text-emerald-800 dark:text-emerald-300 text-xs font-semibold animate-in fade-in">
-                    <AlertCircle className="size-4" /> Cấu hình ngưỡng đã được lưu thành công trên Gateway IoT!
+                    <AlertCircle className="size-4" /> Cấu hình ngưỡng canh tác đã được lưu thành công.
                   </div>
                 )}
 
@@ -245,38 +242,7 @@ export default function Page() {
           </CardContent>
         </Card>
 
-        {/* Sub-Feature 2: IoT API Endpoints Configuration */}
-        <Card className="shadow-sm">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Network className="size-5 text-emerald-600" /> Cấu hình API Server IoT
-            </CardTitle>
-            <CardDescription>Địa chỉ nhận số liệu đo đạc (Telemetry) từ cảm biến thực tế.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <label className="text-xs font-semibold block mb-1">Endpoint Endpoint</label>
-              <span className="w-full text-xs p-2.5 bg-slate-50 dark:bg-slate-800 border rounded-lg block font-mono truncate">
-                {apiEndpoint}
-              </span>
-            </div>
-            <div>
-              <label className="text-xs font-semibold block mb-1">Mã xác thực API Key</label>
-              <input
-                type="password"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                className="w-full text-xs p-2.5 border rounded-lg dark:bg-slate-950 focus:outline-emerald-500"
-                required
-              />
-            </div>
-            <p className="text-[10px] text-muted-foreground">
-              Vui lòng không tiết lộ API Key này. Nó dùng để chứng thực Gateway cảm biến ngoài đồng ruộng.
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Sub-Feature 3: DB Backup Scheduler */}
+        {/* Sub-Feature 2: DB Backup Scheduler */}
         <Card className="shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">

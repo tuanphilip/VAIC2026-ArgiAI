@@ -38,6 +38,7 @@ def serialize_plot(plot: Plot) -> PlotResponse:
         moisture=f"{plot.moisture}%" if plot.moisture is not None else None,
         owner=plot.owner.full_name,
         owner_phone=plot.owner_phone,
+        region=plot.region,
         location=Location(lat=plot.location_lat, lng=plot.location_lng),
         boundary=plot.boundary,
         livestock=plot.livestock or [],
@@ -80,7 +81,7 @@ async def create_plot(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Plot code already exists")
 
     primary_crop_id, crop_types = await _resolve_crop_types(db, payload.crops)
-    owner_id = await _resolve_owner_id(db, payload.owner, current_user)
+    owner_id = await _resolve_owner_id(db, payload.owner_id, payload.owner, current_user)
     plot = Plot(
         code=payload.plot_id,
         user_id=owner_id,
@@ -94,6 +95,7 @@ async def create_plot(
         moisture=payload.moisture,
         boundary=payload.boundary,
         owner_phone=payload.owner_phone,
+        region=payload.region,
         livestock=[item.model_dump() for item in payload.livestock],
     )
     db.add(plot)
@@ -124,9 +126,9 @@ async def update_plot(
         primary_crop_id, crop_types = await _resolve_crop_types(db, payload.crops)
         plot.crop_id = primary_crop_id
         plot.crop_types = crop_types
-    if payload.owner is not None:
-        plot.user_id = await _resolve_owner_id(db, payload.owner, current_user)
-    if payload.owner_phone is not None:
+    if "owner_id" in payload.model_fields_set or "owner" in payload.model_fields_set:
+        plot.user_id = await _resolve_owner_id(db, payload.owner_id, payload.owner, current_user)
+    if "owner_phone" in payload.model_fields_set:
         plot.owner_phone = payload.owner_phone
     for field in [
         "area_hectares",
@@ -137,9 +139,10 @@ async def update_plot(
         "location_lng",
         "moisture",
         "boundary",
+        "region",
     ]:
         value = getattr(payload, field)
-        if value is not None:
+        if field in payload.model_fields_set and (value is not None or field == "boundary"):
             setattr(plot, field, value)
     if payload.livestock is not None:
         plot.livestock = [item.model_dump() for item in payload.livestock]
@@ -164,14 +167,22 @@ async def delete_plot(
     return {"status": "success", "message": "Plot deleted successfully"}
 
 
-async def _resolve_owner_id(db: AsyncSession, owner_name: str | None, current_user: User) -> UUID:
-    if owner_name is None:
+async def _resolve_owner_id(
+    db: AsyncSession,
+    owner_id: UUID | None,
+    owner_name: str | None,
+    current_user: User,
+) -> UUID:
+    if owner_id is None and owner_name is None:
         return current_user.id
     if current_user.role == "farmer":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Farmers cannot assign plot ownership"
         )
-    result = await db.execute(select(User).where(User.full_name == owner_name))
+    if owner_id is not None:
+        result = await db.execute(select(User).where(User.id == owner_id))
+    else:
+        result = await db.execute(select(User).where(User.username == owner_name))
     owner = result.scalar_one_or_none()
     if owner is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Owner not found")

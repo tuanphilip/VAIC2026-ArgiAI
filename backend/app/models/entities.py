@@ -54,6 +54,7 @@ class Plot(Base):
     livestock: Mapped[list[dict]] = mapped_column(JSONB, default=list, server_default="[]")
     crop_types: Mapped[list[dict]] = mapped_column(JSONB, default=list, server_default="[]")
     owner_phone: Mapped[str | None] = mapped_column(String(20))
+    region: Mapped[str | None] = mapped_column(String(100), index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 

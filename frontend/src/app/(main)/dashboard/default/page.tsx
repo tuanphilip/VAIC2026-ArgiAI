@@ -70,7 +70,7 @@ export default function Page() {
   const [isWatering, setIsWatering] = useState(false);
   const [emergencyDiseases, setEmergencyDiseases] = useState(initialEmergencyDiseases);
   const [tasks, setTasks] = useState([
-    { id: 1, text: "Kiểm tra cảm biến IoT thửa A1", completed: false },
+    { id: 1, text: "Kiểm tra tình trạng thửa A1", completed: false },
     { id: 2, text: "Bón phân hữu cơ đợt 2 cho Thửa B3", completed: true },
     { id: 3, text: "AI chẩn đoán sâu hại rau cải Thửa C1", completed: false },
   ]);
