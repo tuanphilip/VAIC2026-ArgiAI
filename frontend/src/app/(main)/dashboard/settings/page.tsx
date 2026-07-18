@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
+
 import { AlertCircle, Database, Save, Send, Sliders, Users } from "lucide-react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 
 export default function Page() {
   const [moistureMin, setMoistureMin] = useState(40);
@@ -19,7 +20,6 @@ export default function Page() {
   const [webhookUrl, setWebhookUrl] = useState("https://api.zalo.me/v2/oa/message");
   const [webhookToken, setWebhookToken] = useState("zalo_oa_secret_token_12345");
   const [webhookSaved, setWebhookSaved] = useState(false);
-
 
   // Backup settings
   const [backupSchedule, setBackupSchedule] = useState("daily");
@@ -182,7 +182,9 @@ export default function Page() {
                 <span className="font-semibold text-xs text-slate-800 dark:text-slate-200 block">Lê Thị Hoa</span>
                 <span className="text-[10px] text-slate-500">Kỹ sư bảo vệ thực vật</span>
               </div>
-              <Badge variant="outline" className="border-slate-300">Kỹ thuật</Badge>
+              <Badge variant="outline" className="border-slate-300">
+                Kỹ thuật
+              </Badge>
             </div>
             {/* Person 3 */}
             <div className="flex justify-between items-center">
@@ -190,7 +192,9 @@ export default function Page() {
                 <span className="font-semibold text-xs text-slate-800 dark:text-slate-200 block">Trần Văn Bình</span>
                 <span className="text-[10px] text-slate-500">Nhân công bón phân/tưới tiêu</span>
               </div>
-              <Badge variant="outline" className="border-slate-300">Nhân công</Badge>
+              <Badge variant="outline" className="border-slate-300">
+                Nhân công
+              </Badge>
             </div>
           </CardContent>
         </Card>
@@ -235,7 +239,10 @@ export default function Page() {
                 </div>
               )}
 
-              <Button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium">
+              <Button
+                type="submit"
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium"
+              >
                 Kết nối dịch vụ cảnh báo
               </Button>
             </form>
@@ -271,7 +278,10 @@ export default function Page() {
                 </div>
               )}
 
-              <Button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium">
+              <Button
+                type="submit"
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium"
+              >
                 Cập nhật lịch sao lưu
               </Button>
             </form>

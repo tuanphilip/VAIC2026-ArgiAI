@@ -34,8 +34,8 @@ export const useAuthStore = create<AuthStore>()(
       onRehydrateStorage: () => (state) => {
         state?.setHydrated?.();
       },
-    }
-  )
+    },
+  ),
 );
 
 const FALLBACK_USER: AuthUser = { id: "", name: "", username: "", email: "", avatar: "", role: "farmer" };

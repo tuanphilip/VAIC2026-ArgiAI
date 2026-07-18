@@ -1,12 +1,32 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowDownRight, ArrowUpRight, BarChart as BarChartIcon, FileText, Plus, Save, TrendingUp, Upload } from "lucide-react";
-import { Bar, BarChart, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
+import {
+  ArrowDownRight,
+  ArrowUpRight,
+  BarChart as BarChartIcon,
+  FileText,
+  Plus,
+  Save,
+  TrendingUp,
+  Upload,
+} from "lucide-react";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ComposedChart,
+  Line,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 
 const initialHistory = [
   { month: "T1", "Doanh thu": 50, "Chi phí": 30, "Lợi nhuận": 20 },
@@ -34,11 +54,46 @@ interface Transaction {
 
 export default function Page() {
   const [transactions, setTransactions] = useState<Transaction[]>([
-    { id: 1, title: "Bán lô lúa hữu cơ Jasmine 85", type: "income", amount: 42000000, date: "15/07/2026", category: "Nông sản đầu ra" },
-    { id: 2, title: "Mua phân bón hữu cơ NPK Lâm Thao", type: "expense", amount: 6500000, date: "12/07/2026", category: "Vật tư đầu vào" },
-    { id: 3, title: "Bán 500kg Cà chua VietGAP", type: "income", amount: 15000000, date: "10/07/2026", category: "Nông sản đầu ra" },
-    { id: 4, title: "Thanh toán tiền điện trạm bơm", type: "expense", amount: 1200000, date: "05/07/2026", category: "Hệ thống điện nước" },
-    { id: 5, title: "Trả công lao động thu hoạch vụ mùa", type: "expense", amount: 8000000, date: "01/07/2026", category: "Nhân công" },
+    {
+      id: 1,
+      title: "Bán lô lúa hữu cơ Jasmine 85",
+      type: "income",
+      amount: 42000000,
+      date: "15/07/2026",
+      category: "Nông sản đầu ra",
+    },
+    {
+      id: 2,
+      title: "Mua phân bón hữu cơ NPK Lâm Thao",
+      type: "expense",
+      amount: 6500000,
+      date: "12/07/2026",
+      category: "Vật tư đầu vào",
+    },
+    {
+      id: 3,
+      title: "Bán 500kg Cà chua VietGAP",
+      type: "income",
+      amount: 15000000,
+      date: "10/07/2026",
+      category: "Nông sản đầu ra",
+    },
+    {
+      id: 4,
+      title: "Thanh toán tiền điện trạm bơm",
+      type: "expense",
+      amount: 1200000,
+      date: "05/07/2026",
+      category: "Hệ thống điện nước",
+    },
+    {
+      id: 5,
+      title: "Trả công lao động thu hoạch vụ mùa",
+      type: "expense",
+      amount: 8000000,
+      date: "01/07/2026",
+      category: "Nhân công",
+    },
   ]);
 
   const [showAddModal, setShowAddModal] = useState(false);
@@ -52,13 +107,9 @@ export default function Page() {
   const [taxRate, setTaxRate] = useState("1"); // 1% VAT for agriculture cooperatives
   const [estimatedTax, setEstimatedTax] = useState<number | null>(null);
 
-  const totalIncome = transactions
-    .filter((t) => t.type === "income")
-    .reduce((sum, t) => sum + t.amount, 0);
+  const totalIncome = transactions.filter((t) => t.type === "income").reduce((sum, t) => sum + t.amount, 0);
 
-  const totalExpense = transactions
-    .filter((t) => t.type === "expense")
-    .reduce((sum, t) => sum + t.amount, 0);
+  const totalExpense = transactions.filter((t) => t.type === "expense").reduce((sum, t) => sum + t.amount, 0);
 
   const netProfit = totalIncome - totalExpense;
 
@@ -185,9 +236,13 @@ export default function Page() {
               <div key={t.id} className="flex items-center justify-between gap-3 pb-3 border-b last:border-0 last:pb-0">
                 <div className="space-y-0.5">
                   <h4 className="font-semibold text-xs text-slate-800 dark:text-slate-200">{t.title}</h4>
-                  <span className="text-[10px] text-slate-500 block">{t.date} | {t.category}</span>
+                  <span className="text-[10px] text-slate-500 block">
+                    {t.date} | {t.category}
+                  </span>
                 </div>
-                <span className={`text-xs font-bold shrink-0 ${t.type === "income" ? "text-emerald-600" : "text-rose-600"}`}>
+                <span
+                  className={`text-xs font-bold shrink-0 ${t.type === "income" ? "text-emerald-600" : "text-rose-600"}`}
+                >
                   {t.type === "income" ? "+" : "-"}
                   {new Intl.NumberFormat("vi-VN").format(t.amount)} đ
                 </span>
@@ -239,7 +294,10 @@ export default function Page() {
                 </div>
               )}
 
-              <Button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium gap-1.5">
+              <Button
+                type="submit"
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium gap-1.5"
+              >
                 Tính toán thuế
               </Button>
             </form>

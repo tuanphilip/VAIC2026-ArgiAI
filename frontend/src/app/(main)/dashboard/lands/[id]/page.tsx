@@ -1,14 +1,14 @@
 "use client";
 
 import * as React from "react";
+
 import Link from "next/link";
+
 import { ArrowLeft, Calendar, FileText, Leaf, ShieldAlert, Sprout } from "lucide-react";
 
-
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-
 
 export default function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = React.use(params);
@@ -24,21 +24,15 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
             </Button>
           </Link>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
-              Chi tiết Thửa đất {id}
-            </h1>
-            <p className="text-muted-foreground">
-              Nhật ký sinh trưởng và số liệu lịch sử của thửa đất canh tác.
-            </p>
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Chi tiết Thửa đất {id}</h1>
+            <p className="text-muted-foreground">Nhật ký sinh trưởng và số liệu lịch sử của thửa đất canh tác.</p>
           </div>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" className="gap-2">
             <FileText className="size-4" /> Xuất nhật ký
           </Button>
-          <Button className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2">
-            Cập nhật hoạt động
-          </Button>
+          <Button className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2">Cập nhật hoạt động</Button>
         </div>
       </div>
 
@@ -112,11 +106,15 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
                 <Leaf className="size-4" />
               </div>
               <div>
-                <span className="font-semibold text-sm text-slate-800 dark:text-slate-200 block">Bón phân NPK sinh học</span>
+                <span className="font-semibold text-sm text-slate-800 dark:text-slate-200 block">
+                  Bón phân NPK sinh học
+                </span>
                 <span className="text-xs text-muted-foreground flex items-center gap-1">
                   <Calendar className="size-3" /> Hôm qua, lúc 08:30
                 </span>
-                <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">Đã bón bổ sung đạm hữu cơ hòa tan giúp nuôi lá khỏe.</p>
+                <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+                  Đã bón bổ sung đạm hữu cơ hòa tan giúp nuôi lá khỏe.
+                </p>
               </div>
             </div>
 
@@ -126,11 +124,15 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
                 <Sprout className="size-4" />
               </div>
               <div>
-                <span className="font-semibold text-sm text-slate-800 dark:text-slate-200 block">Kích hoạt tưới bù ẩm</span>
+                <span className="font-semibold text-sm text-slate-800 dark:text-slate-200 block">
+                  Kích hoạt tưới bù ẩm
+                </span>
                 <span className="text-xs text-muted-foreground flex items-center gap-1">
                   <Calendar className="size-3" /> 14/07/2026, lúc 16:00
                 </span>
-                <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">Hệ thống tưới nhỏ giọt phun 20 phút nâng độ ẩm từ 42% lên 58%.</p>
+                <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+                  Hệ thống tưới nhỏ giọt phun 20 phút nâng độ ẩm từ 42% lên 58%.
+                </p>
               </div>
             </div>
 
@@ -140,11 +142,15 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
                 <ShieldAlert className="size-4" />
               </div>
               <div>
-                <span className="font-semibold text-sm text-slate-800 dark:text-slate-200 block">Kiểm tra đốm sâu hại lá</span>
+                <span className="font-semibold text-sm text-slate-800 dark:text-slate-200 block">
+                  Kiểm tra đốm sâu hại lá
+                </span>
                 <span className="text-xs text-muted-foreground flex items-center gap-1">
                   <Calendar className="size-3" /> 12/07/2026, lúc 10:15
                 </span>
-                <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">Phát hiện sâu hại đốm lá nhẹ rìa thửa. Đã phun cồn hành tỏi để xử lý sinh học.</p>
+                <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+                  Phát hiện sâu hại đốm lá nhẹ rìa thửa. Đã phun cồn hành tỏi để xử lý sinh học.
+                </p>
               </div>
             </div>
           </CardContent>
