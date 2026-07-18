@@ -315,35 +315,6 @@ async def _get_plot_for_report(db: AsyncSession, plot_id: str, current_user: Use
     return plot
 
 
-async def _get_or_create_mock_user(db: AsyncSession, actor: dict[str, str]) -> User:
-    result = await db.execute(select(User).where(User.username == actor["username"]))
-    user = result.scalar_one_or_none()
-    if user is not None:
-        return user
-
-    from app.core.security import hash_password
-
-    user = User(
-        username=actor["username"],
-        password_hash=hash_password("password123"),
-        email=f"{actor['username']}@dienbien.gov.vn",
-        full_name=actor["full_name"],
-        role=actor["role"],
-    )
-    db.add(user)
-    await db.flush()
-    return user
-
-
-def _actor_from_request(request: Request) -> dict[str, str]:
-    role = request.headers.get("x-mock-role", "farmer")
-    if role not in {"farmer", "official", "admin"}:
-        role = "farmer"
-    username = "nongdan_dienbien" if role == "farmer" else "canbo_dienbien"
-    full_name = "Nguyễn Văn A (Nông dân)" if role == "farmer" else "Trần Văn B (Cán bộ)"
-    return {"role": role, "username": username, "full_name": full_name}
-
-
 def _format_feedback(payload: DiseaseFeedbackRequest) -> str:
     lines = [
         "[FEEDBACK BÁC SĨ CÂY TRỒNG]",

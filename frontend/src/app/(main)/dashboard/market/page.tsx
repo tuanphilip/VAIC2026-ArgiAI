@@ -62,13 +62,19 @@ export default function Page() {
     c.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleSaveAlert = (e: React.FormEvent) => {
+  const handleSaveAlert = async (e: React.FormEvent) => {
     e.preventDefault();
-    setAlertSuccess(true);
-    setTimeout(() => {
+    setAlertSuccess(false);
+    try {
+      await apiFetch("/market/alerts", {
+        method: "POST",
+        body: JSON.stringify({ crop_name: alertCrop, target_price: Number(alertTargetPrice) }),
+      });
+      setAlertSuccess(true);
+    } catch (error) {
       setAlertSuccess(false);
-      setAlertTargetPrice("");
-    }, 2000);
+      window.alert(error instanceof Error ? error.message : "Không thể lưu cảnh báo giá.");
+    }
   };
 
   return (
