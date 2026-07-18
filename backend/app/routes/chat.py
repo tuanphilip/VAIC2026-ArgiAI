@@ -50,7 +50,7 @@ async def answer(
         )
         history = list(reversed(stored.all()))
 
-    result = _assistant.answer(payload.message, history)
+    result = await _assistant.answer_natural(payload.message, history)
     citations = [
         {"evidence_id": item.evidence_id, "title": item.title, "source_url": item.source_url}
         for item in result.citations
