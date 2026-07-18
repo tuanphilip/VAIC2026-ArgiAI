@@ -1,17 +1,21 @@
-"""Weather routes backed by plot records stored in the database."""
+"""Shared agricultural weather routes.
 
+Weather is a regional service. It intentionally has no plot/parcel dependency.
+"""
+
+import asyncio
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import Response
-from sqlalchemy import Select, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+
 
 from app.core.config import get_settings
 from app.core.dependencies import get_current_user
 from app.database.session import get_db
-from app.models import Plot, User, WeatherAlertSubscription
+from app.models import User, WeatherAlertSubscription
 from app.schemas.weather_alerts import (
     WeatherAlertSubscriptionCreateRequest,
     WeatherAlertSubscriptionData,
@@ -45,92 +49,23 @@ MAP_LAYERS = (
 )
 
 
-# ---------------------------------------------------------------------------
-# Plot helpers
-# ---------------------------------------------------------------------------
+AGRICULTURAL_WEATHER_CENTER = {"lat": 21.518, "lng": 103.223, "label": "Tây Bắc"}
 
 
-def _plot_query(current_user: User) -> Select[tuple[Plot]]:
-    query = select(Plot).options(selectinload(Plot.crop), selectinload(Plot.owner))
-    if current_user.role == "farmer":
-        query = query.where(Plot.user_id == current_user.id)
-    return query
-
-
-async def _get_plot_or_404(plot_code: str, db: AsyncSession, current_user: User) -> Plot:
-    result = await db.execute(_plot_query(current_user).where(Plot.code == plot_code))
-    plot = result.scalar_one_or_none()
-    if plot is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Plot not found")
-    return plot
-
-
-def _serialize_plot(plot: Plot) -> dict[str, Any]:
-    return {
-        "plot_code": plot.code,
-        "crop_name": plot.crop.name,
-        "crop_variety": plot.crop.variety,
-        "owner": plot.owner.full_name,
-        "location": {"lat": plot.location_lat, "lng": plot.location_lng},
-    }
-
-
-# ---------------------------------------------------------------------------
-# Weather-data endpoints (plot-based)
-# ---------------------------------------------------------------------------
-
-
-@router.get("/plots")
-async def list_weather_plots(
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-) -> list[dict[str, Any]]:
-    result = await db.execute(_plot_query(current_user).order_by(Plot.code.asc()))
-    return [_serialize_plot(plot) for plot in result.scalars().all()]
-
-
-@router.get("/current/{plot_code}")
-async def get_current_weather_for_plot(
-    plot_code: str,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-) -> dict[str, Any]:
-    plot = await _get_plot_or_404(plot_code, db, current_user)
+@router.get("/overview")
+async def get_weather_overview(current_user: User = Depends(get_current_user)) -> dict[str, Any]:
+    del current_user
     try:
-        weather = await fetch_current_weather(plot.location_lat, plot.location_lng)
+        current, forecast = await asyncio.gather(
+            fetch_current_weather(AGRICULTURAL_WEATHER_CENTER["lat"], AGRICULTURAL_WEATHER_CENTER["lng"]),
+            fetch_forecast(AGRICULTURAL_WEATHER_CENTER["lat"], AGRICULTURAL_WEATHER_CENTER["lng"]),
+        )
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Failed to fetch current weather: {exc}",
+            detail=f"Failed to fetch regional weather: {exc}",
         ) from exc
-
-    return {
-        "plot_code": plot.code,
-        "location": {"lat": plot.location_lat, "lng": plot.location_lng},
-        "data": weather,
-    }
-
-
-@router.get("/forecast/{plot_code}")
-async def get_forecast_for_plot(
-    plot_code: str,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-) -> dict[str, Any]:
-    plot = await _get_plot_or_404(plot_code, db, current_user)
-    try:
-        forecast = await fetch_forecast(plot.location_lat, plot.location_lng)
-    except Exception as exc:
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Failed to fetch forecast: {exc}",
-        ) from exc
-
-    return {
-        "plot_code": plot.code,
-        "location": {"lat": plot.location_lat, "lng": plot.location_lng},
-        "data": forecast,
-    }
+    return {"scope": "regional", "area": AGRICULTURAL_WEATHER_CENTER, "current": current, "forecast": forecast}
 
 
 # ---------------------------------------------------------------------------

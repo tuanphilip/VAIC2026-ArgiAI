@@ -1,25 +1,5 @@
 export type OpenWeatherLayerId = "openweather-rain" | "openweather-wind" | "openweather-temperature";
 
-export interface FarmPlotBase {
-  id: string;
-  name: string;
-  crop: string;
-  owner: string;
-  lat: number;
-  lng: number;
-}
-
-export interface WeatherApiPlot {
-  plot_code: string;
-  crop_name: string;
-  crop_variety: string | null;
-  owner: string;
-  location: {
-    lat: number;
-    lng: number;
-  };
-}
-
 export interface WeatherTileLayer {
   id: string;
   label: string;
@@ -30,6 +10,13 @@ export interface WeatherTileLayer {
 export interface WeatherMapConfigResponse {
   default_zoom: number;
   tile_layers: WeatherTileLayer[];
+}
+
+export interface WeatherOverviewResponse {
+  scope: "regional";
+  area: { lat: number; lng: number; label: string };
+  current: Record<string, unknown>;
+  forecast: Record<string, unknown>;
 }
 
 const DEFAULT_API_BASE_URL = "/api/v1";
@@ -45,23 +32,10 @@ export function buildWeatherApiUrl(
 ) {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
   const normalizedBaseUrl = baseUrl.replace(/\/+$/, "") || DEFAULT_API_BASE_URL;
-
   if (/^https?:\/\//.test(normalizedBaseUrl)) {
     return new URL(normalizedPath.replace(/^\//, ""), `${normalizedBaseUrl}/`).toString();
   }
-
   return `${normalizedBaseUrl}${normalizedPath}`;
-}
-
-export function normalizeWeatherPlot(plot: WeatherApiPlot): FarmPlotBase {
-  return {
-    id: plot.plot_code,
-    name: `Lô ${plot.plot_code}`,
-    crop: formatCropName(plot.crop_name, plot.crop_variety),
-    owner: plot.owner,
-    lat: plot.location.lat,
-    lng: plot.location.lng,
-  };
 }
 
 export function buildOpenWeatherLayerTemplates(config: WeatherMapConfigResponse) {
@@ -74,75 +48,18 @@ export function buildOpenWeatherLayerTemplates(config: WeatherMapConfigResponse)
 }
 
 export function resolveLayerUrl(urlTemplate: string, origin?: string) {
-  if (/^https?:\/\//.test(urlTemplate) || !origin) {
-    return urlTemplate;
-  }
-
-  const normalizedOrigin = origin.replace(/\/+$/, "");
-  const normalizedPath = urlTemplate.startsWith("/") ? urlTemplate : `/${urlTemplate}`;
-  return `${normalizedOrigin}${normalizedPath}`;
+  if (/^https?:\/\//.test(urlTemplate) || !origin) return urlTemplate;
+  return `${origin.replace(/\/+$/, "")}/${urlTemplate.replace(/^\//, "")}`;
 }
 
-export async function readWeatherApiError(response: Response, fallbackMessage: string) {
-  try {
-    const body = (await response.json()) as { detail?: string };
-    if (typeof body.detail === "string" && body.detail.trim()) {
-      return body.detail;
-    }
-  } catch {
-    // Ignore JSON parsing errors and use the fallback message instead.
-  }
-
-  return fallbackMessage;
+export async function fetchWeatherOverview(baseUrl?: string): Promise<WeatherOverviewResponse> {
+  const response = await fetch(buildWeatherApiUrl("/weather/overview", baseUrl));
+  if (!response.ok) throw new Error(`Không tải được thời tiết khu vực (${response.status}).`);
+  return response.json() as Promise<WeatherOverviewResponse>;
 }
 
-// ─── Typed API fetch functions ─────────────────────────────────────────
-
-export async function fetchWeatherPlots(
-  baseUrl?: string,
-): Promise<WeatherApiPlot[]> {
-  const response = await fetch(buildWeatherApiUrl("/weather/plots", baseUrl));
-
-  if (!response.ok) {
-    throw new ApiWeatherError(
-      await readWeatherApiError(response, `Failed to load plots (${response.status}).`),
-      response.status,
-    );
-  }
-
-  return response.json() as Promise<WeatherApiPlot[]>;
-}
-
-export async function fetchMapConfig(
-  baseUrl?: string,
-): Promise<WeatherMapConfigResponse> {
+export async function fetchMapConfig(baseUrl?: string): Promise<WeatherMapConfigResponse> {
   const response = await fetch(buildWeatherApiUrl("/weather/map-config", baseUrl));
-
-  if (!response.ok) {
-    throw new ApiWeatherError(
-      await readWeatherApiError(response, `Failed to load map config (${response.status}).`),
-      response.status,
-    );
-  }
-
+  if (!response.ok) throw new Error(`Không tải được cấu hình bản đồ (${response.status}).`);
   return response.json() as Promise<WeatherMapConfigResponse>;
-}
-
-export class ApiWeatherError extends Error {
-  status: number;
-
-  constructor(message: string, status: number) {
-    super(message);
-    this.name = "ApiWeatherError";
-    this.status = status;
-  }
-}
-
-function formatCropName(cropName: string, cropVariety?: string | null) {
-  const normalizedVariety = cropVariety?.trim();
-  if (!normalizedVariety) {
-    return cropName;
-  }
-
-  return `${cropName} · ${normalizedVariety}`;
 }
