@@ -174,127 +174,7 @@ const mapLayerLabels: Record<WeatherLayer, string> = {
 
 const DEFAULT_MAP_CENTER: Leaflet.LatLngTuple = [21.518, 103.223];
 
-const fallbackForecast: ForecastDay[] = [
-  {
-    day: "Thứ 2",
-    date: "20/07",
-    isoDate: "2026-07-20",
-    icon: CloudSun,
-    tempMax: 30,
-    tempMin: 23,
-    rain: 12,
-    rainProbability: 45,
-    wind: 12,
-    windGust: 24,
-    humidity: 78,
-    soilMoisture: 61,
-    evapotranspiration: 3.2,
-    weatherCode: 3,
-    advice: "Có thể làm cỏ và kiểm tra sâu bệnh vào buổi sáng.",
-  },
-  {
-    day: "Thứ 3",
-    date: "21/07",
-    isoDate: "2026-07-21",
-    icon: Sun,
-    tempMax: 32,
-    tempMin: 24,
-    rain: 2,
-    rainProbability: 18,
-    wind: 9,
-    windGust: 18,
-    humidity: 63,
-    soilMoisture: 54,
-    evapotranspiration: 4.5,
-    weatherCode: 1,
-    advice: "Phù hợp bón phân gốc, tránh tưới mạnh giữa trưa.",
-  },
-  {
-    day: "Thứ 4",
-    date: "22/07",
-    isoDate: "2026-07-22",
-    icon: Sun,
-    tempMax: 35,
-    tempMin: 25,
-    rain: 0,
-    rainProbability: 8,
-    wind: 11,
-    windGust: 20,
-    humidity: 58,
-    soilMoisture: 46,
-    evapotranspiration: 5.6,
-    weatherCode: 0,
-    advice: "Tăng tưới sáng sớm cho cà phê và rau màu.",
-  },
-  {
-    day: "Thứ 5",
-    date: "23/07",
-    isoDate: "2026-07-23",
-    icon: CloudSun,
-    tempMax: 31,
-    tempMin: 24,
-    rain: 8,
-    rainProbability: 40,
-    wind: 16,
-    windGust: 32,
-    humidity: 76,
-    soilMoisture: 59,
-    evapotranspiration: 3.8,
-    weatherCode: 3,
-    advice: "Theo dõi mưa chiều trước khi phun chế phẩm sinh học.",
-  },
-  {
-    day: "Thứ 6",
-    date: "24/07",
-    isoDate: "2026-07-24",
-    icon: CloudRain,
-    tempMax: 28,
-    tempMin: 22,
-    rain: 58,
-    rainProbability: 86,
-    wind: 24,
-    windGust: 54,
-    humidity: 92,
-    soilMoisture: 84,
-    evapotranspiration: 2.1,
-    weatherCode: 95,
-    advice: "Không bón phân, kiểm tra bờ vùng và thoát nước.",
-  },
-  {
-    day: "Thứ 7",
-    date: "25/07",
-    isoDate: "2026-07-25",
-    icon: CloudRain,
-    tempMax: 27,
-    tempMin: 21,
-    rain: 36,
-    rainProbability: 72,
-    wind: 21,
-    windGust: 42,
-    humidity: 89,
-    soilMoisture: 79,
-    evapotranspiration: 2.4,
-    weatherCode: 80,
-    advice: "Cảnh giác nấm bệnh sau mưa, ưu tiên vệ sinh đồng ruộng.",
-  },
-  {
-    day: "Chủ nhật",
-    date: "26/07",
-    isoDate: "2026-07-26",
-    icon: CloudSun,
-    tempMax: 29,
-    tempMin: 22,
-    rain: 10,
-    rainProbability: 34,
-    wind: 10,
-    windGust: 18,
-    humidity: 74,
-    soilMoisture: 67,
-    evapotranspiration: 3.1,
-    weatherCode: 2,
-    advice: "Kiểm tra cây non và phục hồi luống sau đợt mưa.",
-  },
-];
+
 
 export default function Page() {
   const [selectedPlotId, setSelectedPlotId] = useState<string | null>(null);
@@ -323,62 +203,56 @@ export default function Page() {
   useEffect(() => {
     let cancelled = false;
 
+    if (isServiceLoading) return;
+
+    if (basePlots.length === 0) {
+      setWeatherData({
+        status: "ready",
+        plots: [],
+        alerts: [],
+        actions: [],
+        updatedAt: new Date().toLocaleString("vi-VN"),
+        message: serviceError ?? "Backend chưa trả về thửa ruộng nào để hiển thị.",
+      });
+      return;
+    }
+
+    if (serviceError) {
+      setWeatherData({
+        status: "error",
+        plots: [],
+        alerts: [],
+        actions: [],
+        updatedAt: new Date().toLocaleString("vi-VN"),
+        message: serviceError,
+      });
+      return;
+    }
+
     async function enrichPlots() {
-      if (basePlots.length === 0) {
-        if (isServiceLoading) {
-          // Still loading — keep the initial loading message
-          return;
-        }
-        setWeatherData({
-          status: "ready",
-          plots: [],
-          alerts: [],
-          actions: [],
-          updatedAt: new Date().toLocaleString("vi-VN"),
-          message: serviceError ?? "Backend chưa trả về thửa ruộng nào để hiển thị.",
-        });
-        return;
-      }
-
-      if (!isServiceLoading && serviceError) {
-        // Backend error — use fallback data
-        const fallbackPlots = buildFallbackPlots(basePlots);
-        if (cancelled) return;
-        setWeatherData({
-          status: "error",
-          plots: fallbackPlots,
-          alerts: buildAlerts(fallbackPlots),
-          actions: buildActions(fallbackPlots),
-          updatedAt: new Date().toLocaleString("vi-VN"),
-          message: `${serviceError} Đang dùng dữ liệu thời tiết dự phòng cho các thửa từ backend.`,
-        });
-        return;
-      }
-
       try {
-        const plots = await Promise.all(basePlots.map((plot) => fetchPlotWeather(plot)));
+        const enriched = await Promise.all(basePlots.map((plot) => fetchPlotWeather(plot)));
         if (cancelled) return;
         setWeatherData({
           status: "ready",
-          plots,
-          alerts: buildAlerts(plots),
-          actions: buildActions(plots),
+          plots: enriched,
+          alerts: buildAlerts(enriched),
+          actions: buildActions(enriched),
           updatedAt: new Date().toLocaleString("vi-VN"),
           message: "Đang hiển thị thửa ruộng thật từ backend và dữ liệu thời tiết từ Open-Meteo.",
         });
       } catch (error) {
         if (cancelled) return;
-        const fallbackPlots = buildFallbackPlots(basePlots);
         setWeatherData({
           status: "error",
-          plots: fallbackPlots,
-          alerts: buildAlerts(fallbackPlots),
-          actions: buildActions(fallbackPlots),
+          plots: basePlots.map((p) => ({ ...p, source: "Open-Meteo" }) as unknown as FarmPlotWeather),
+          alerts: [],
+          actions: [],
           updatedAt: new Date().toLocaleString("vi-VN"),
           message:
             error instanceof Error
-              ? `${error.message} Đang dùng dữ liệu thời tiết dự phòng cho các thửa từ backend.`
-              : "Không thể tải thời tiết thật, đang dùng dữ liệu dự phòng cho các thửa từ backend.",
+              ? `Open-Meteo không khả dụng — ${error.message}`
+              : "Dịch vụ thời tiết tạm thời không khả dụng.",
         });
       }
     }
@@ -1279,7 +1153,7 @@ async function fetchPlotWeather(plot: FarmPlotBase): Promise<FarmPlotWeather> {
   const data = (await response.json()) as OpenMeteoResponse;
   const forecast = buildForecastDays(data);
   const current = data.current ?? {};
-  const firstForecast = forecast[0] ?? fallbackForecast[0];
+  const firstForecast = forecast[0] ?? ({} as ForecastDay);
   const soilMoisture =
     averageToday(data.hourly?.time, data.hourly?.soil_moisture_3_9cm, "soil") ?? firstForecast.soilMoisture;
   const soilTemperature = averageToday(data.hourly?.time, data.hourly?.soil_temperature_6cm, "temperature") ?? 24;
@@ -1346,42 +1220,6 @@ function buildForecastDays(data: OpenMeteoResponse): ForecastDay[] {
     return {
       ...day,
       advice: buildDailyAdvice(day),
-    };
-  });
-}
-
-function buildFallbackPlots(basePlots: FarmPlotBase[]): FarmPlotWeather[] {
-  return basePlots.map((plot, index) => {
-    const forecast = fallbackForecast.map((item) => ({ ...item }));
-    const firstForecast = forecast[0];
-    const soilMoisture = Math.max(38, firstForecast.soilMoisture - index * 6);
-    const humidity = Math.min(94, firstForecast.humidity + index * 5);
-    const risk = getRiskLevel({
-      rain: firstForecast.rain,
-      rainProbability: firstForecast.rainProbability,
-      windGust: firstForecast.windGust,
-      tempMax: firstForecast.tempMax,
-      humidity,
-      soilMoisture,
-    });
-
-    return {
-      ...plot,
-      temperature: firstForecast.tempMax - index,
-      humidity,
-      rainfallToday: firstForecast.rain + index * 8,
-      rainProbability: firstForecast.rainProbability + index * 8,
-      windSpeed: firstForecast.wind + index * 3,
-      windGust: firstForecast.windGust + index * 6,
-      soilMoisture,
-      soilTemperature: 25.4 - index,
-      evapotranspiration: firstForecast.evapotranspiration,
-      weatherCode: firstForecast.weatherCode,
-      risk,
-      mainAlert: buildMainAlert(risk, firstForecast, soilMoisture, humidity),
-      recommendation: buildRecommendation(plot.crop, firstForecast, soilMoisture, humidity),
-      forecast,
-      source: "Fallback",
     };
   });
 }
