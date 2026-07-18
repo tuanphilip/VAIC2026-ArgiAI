@@ -96,6 +96,48 @@ export async function readWeatherApiError(response: Response, fallbackMessage: s
   return fallbackMessage;
 }
 
+// ─── Typed API fetch functions ─────────────────────────────────────────
+
+export async function fetchWeatherPlots(
+  baseUrl?: string,
+): Promise<WeatherApiPlot[]> {
+  const response = await fetch(buildWeatherApiUrl("/weather/plots", baseUrl));
+
+  if (!response.ok) {
+    throw new ApiWeatherError(
+      await readWeatherApiError(response, `Failed to load plots (${response.status}).`),
+      response.status,
+    );
+  }
+
+  return response.json() as Promise<WeatherApiPlot[]>;
+}
+
+export async function fetchMapConfig(
+  baseUrl?: string,
+): Promise<WeatherMapConfigResponse> {
+  const response = await fetch(buildWeatherApiUrl("/weather/map-config", baseUrl));
+
+  if (!response.ok) {
+    throw new ApiWeatherError(
+      await readWeatherApiError(response, `Failed to load map config (${response.status}).`),
+      response.status,
+    );
+  }
+
+  return response.json() as Promise<WeatherMapConfigResponse>;
+}
+
+export class ApiWeatherError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "ApiWeatherError";
+    this.status = status;
+  }
+}
+
 function formatCropName(cropName: string, cropVariety?: string | null) {
   const normalizedVariety = cropVariety?.trim();
   if (!normalizedVariety) {
