@@ -43,8 +43,8 @@ class Settings(BaseSettings):
     vision_base_url: str = "https://api.naga.ac/v1"
     vision_model: str = "gemini-2.5-flash"
     llm_api_key: str | None = None
-    llm_base_url: str = "https://9router.platform.robosoft.site/v1"
-    llm_model: str = "argi-ai"
+    llm_base_url: str = "https://api.tokenrouter.com/v1"
+    llm_model: str = "z-ai/glm-5.2-free"
     llm_symptom_triage_enabled: bool = False
     tavily_api_key: str | None = None
     tavily_fallback_enabled: bool = False
