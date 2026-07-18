@@ -18,7 +18,7 @@ import {
   MessageScrollerViewport,
 } from "@/components/ui/message-scroller";
 import { cn, getInitials } from "@/lib/utils";
-import { askAgriculturalAssistant, type ChatTurn } from "@/lib/chat-api";
+import { streamAgriculturalAssistant, type ChatTurn } from "@/lib/chat-api";
 
 import { type Message as ChatMessage, type Contact, currentUser } from "./data";
 
@@ -66,13 +66,19 @@ export function ChatThread({ contact, messages, onOpenContact, onBack, showBackB
         role: item.align === "end" ? "user" : "assistant",
         content: item.text,
       }));
-      const answer = await askAgriculturalAssistant(trimmed, [...history, { role: "user", content: trimmed }], sessionId);
-      setSessionId(answer.session_id);
-      const text = answer.sections.map((section) => `**${section.title}:**\n${section.content.join("\n")}`).join("\n\n");
-      const assistantMessage: ChatMessage = { id: Date.now() + 1, align: "start", text, time: "Vừa xong" };
+      const assistantId = Date.now() + 1;
+      const assistantMessage: ChatMessage = { id: assistantId, align: "start", text: "", time: "Đang trả lời" };
       setThreadMessages((current) => [...current, assistantMessage]);
+      let text = "";
+      const answer = await streamAgriculturalAssistant(trimmed, [...history, { role: "user", content: trimmed }], sessionId, (token) => {
+        text += token;
+        setThreadMessages((current) => current.map((item) => item.id === assistantId ? { ...item, text } : item));
+      });
+      setSessionId(answer.session_id);
+      const completedMessage = { ...assistantMessage, text, time: "Vừa xong" };
+      setThreadMessages((current) => current.map((item) => item.id === assistantId ? completedMessage : item));
       setHistoryItems((current) => {
-        const next = current.map((item) => item.id === historyId ? { ...item, messages: [...item.messages, assistantMessage] } : item);
+        const next = current.map((item) => item.id === historyId ? { ...item, messages: [...item.messages, completedMessage] } : item);
         window.localStorage.setItem("agriai-chat-history", JSON.stringify(next));
         return next;
       });
@@ -202,7 +208,7 @@ export function ChatThread({ contact, messages, onOpenContact, onBack, showBackB
         </MessageScroller>
       </MessageScrollerProvider>
 
-      <div className="border-t bg-background/80 px-4 py-4 backdrop-blur sm:px-5">
+      <div className="border-t bg-background/80 px-3 py-3 backdrop-blur sm:px-4">
         <MessageComposer placeholder="Hỏi về cây trồng, sâu bệnh, thời tiết..." onSend={sendMessage} disabled={isSending} />
         <p className="mt-2 text-center text-muted-foreground text-[11px]">AI có thể sai. Hãy kiểm tra khuyến nghị thuốc và liều lượng với cán bộ kỹ thuật.</p>
       </div>
@@ -222,19 +228,19 @@ function MessageComposer({ placeholder, onSend, disabled = false }: { placeholde
         if (onSend) setValue("");
       }}
     >
-      <InputGroup className="rounded-2xl border bg-muted/30 shadow-none has-[[data-slot=input-group-control]:focus-visible]:border-emerald-500 has-[[data-slot=input-group-control]:focus-visible]:ring-1 has-[[data-slot=input-group-control]:focus-visible]:ring-emerald-500/30 dark:bg-muted/20">
+      <InputGroup className="mx-auto max-w-2xl rounded-xl border bg-muted/30 shadow-none has-[[data-slot=input-group-control]:focus-visible]:border-primary has-[[data-slot=input-group-control]:focus-visible]:ring-1 has-[[data-slot=input-group-control]:focus-visible]:ring-primary/30 dark:bg-muted/20">
         <InputGroupTextarea
           placeholder={placeholder}
           value={value}
           onChange={(event) => setValue(event.target.value)}
           disabled={disabled}
-          className="min-h-16 resize-none border-0 bg-transparent px-4 py-3 text-sm shadow-none ring-0 focus-visible:ring-0 aria-invalid:ring-0 dark:aria-invalid:ring-0"
+          className="min-h-11 max-h-28 resize-none border-0 bg-transparent px-3 py-2 text-sm shadow-none ring-0 focus-visible:ring-0 aria-invalid:ring-0 dark:aria-invalid:ring-0"
         />
         <InputGroupAddon align="block-end">
           <InputGroupButton aria-label="Đính kèm tệp" type="button" size="icon-sm">
             <Paperclip />
           </InputGroupButton>
-          <InputGroupButton type="submit" variant="default" size="icon-sm" className="ml-auto rounded-xl bg-emerald-600 hover:bg-emerald-700" disabled={disabled || !value.trim()}>
+          <InputGroupButton type="submit" variant="default" size="icon-sm" className="ml-auto rounded-lg" disabled={disabled || !value.trim()}>
             <Send />
             <span className="sr-only">Gửi</span>
           </InputGroupButton>
