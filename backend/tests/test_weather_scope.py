@@ -7,4 +7,4 @@ def test_weather_routes_do_not_contain_plot_scoped_endpoints() -> None:
     assert 'router.get("/plots")' not in source
     assert 'router.get("/current/{plot_code}")' not in source
     assert 'router.get("/forecast/{plot_code}")' not in source
-    assert 'router.get("/overview")' in source
+    assert 'router.get("/overview"' in source

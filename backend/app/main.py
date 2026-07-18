@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.core.config import get_settings
-from app.routes import auth, dashboard, diseases, disaster_warnings, health, market, plots, users, weather, yield_forecasts
+from app.routes import auth, chat, dashboard, diseases, disaster_warnings, health, market, plots, users, weather, yield_forecasts
 from app.services.weather import shutdown_weather_cache_lifespan, weather_cache_lifespan
 
 settings = get_settings()
@@ -45,6 +45,7 @@ app.mount("/uploads", StaticFiles(directory=str(upload_path)), name="uploads")
 
 app.include_router(health.router)
 app.include_router(auth.router, prefix=settings.api_v1_prefix)
+app.include_router(chat.router, prefix=settings.api_v1_prefix)
 app.include_router(plots.router, prefix=settings.api_v1_prefix)
 app.include_router(users.router, prefix=settings.api_v1_prefix)
 app.include_router(diseases.router, prefix=settings.api_v1_prefix)

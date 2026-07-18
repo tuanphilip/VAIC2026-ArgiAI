@@ -4,9 +4,10 @@ Weather is a regional service. It intentionally has no plot/parcel dependency.
 """
 
 import asyncio
+from datetime import UTC, datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,7 +16,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import get_settings
 from app.core.dependencies import get_current_user
 from app.database.session import get_db
-from app.models import User, WeatherAlertSubscription
+from app.models import Plot, User, WeatherAlertSubscription
+from app.schemas.weather import WeatherOverviewResponse
 from app.schemas.weather_alerts import (
     WeatherAlertSubscriptionCreateRequest,
     WeatherAlertSubscriptionData,
@@ -52,20 +54,158 @@ MAP_LAYERS = (
 AGRICULTURAL_WEATHER_CENTER = {"lat": 21.518, "lng": 103.223, "label": "Tây Bắc"}
 
 
-@router.get("/overview")
-async def get_weather_overview(current_user: User = Depends(get_current_user)) -> dict[str, Any]:
+@router.get("/locations")
+async def get_weather_locations(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> list[dict[str, Any]]:
+    """Return selectable regional and known plot locations visible to the user."""
+    query = select(Plot.region, Plot.location_lat, Plot.location_lng).where(Plot.region.is_not(None))
+    if current_user.role == "farmer":
+        query = query.where(Plot.user_id == current_user.id)
+    rows = (await db.execute(query)).all()
+    locations: list[dict[str, Any]] = [{"id": "dien-bien", **AGRICULTURAL_WEATHER_CENTER, "source": "default"}]
+    seen = {"dien-bien"}
+    for region, lat, lon in rows:
+        location_id = str(region).strip().lower().replace(" ", "-")
+        if location_id in seen:
+            continue
+        seen.add(location_id)
+        locations.append({"id": location_id, "label": str(region), "lat": float(lat), "lon": float(lon), "source": "plot"})
+    return locations
+
+
+@router.get("/windy-embed-config")
+async def get_windy_embed_config(
+    lat: float = Query(AGRICULTURAL_WEATHER_CENTER["lat"], ge=-90, le=90),
+    lon: float = Query(AGRICULTURAL_WEATHER_CENTER["lng"], ge=-180, le=180),
+    zoom: int = Query(7, ge=3, le=12),
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    del current_user
+    return {"lat": lat, "lon": lon, "zoom": zoom, "provider": "windy-embed"}
+
+
+@router.get("/overview", response_model=WeatherOverviewResponse)
+async def get_weather_overview(
+    lat: float = Query(AGRICULTURAL_WEATHER_CENTER["lat"], ge=-90, le=90),
+    lon: float = Query(AGRICULTURAL_WEATHER_CENTER["lng"], ge=-180, le=180),
+    label: str = Query(AGRICULTURAL_WEATHER_CENTER["label"], min_length=1, max_length=100),
+    current_user: User = Depends(get_current_user),
+) -> WeatherOverviewResponse:
     del current_user
     try:
         current, forecast = await asyncio.gather(
-            fetch_current_weather(AGRICULTURAL_WEATHER_CENTER["lat"], AGRICULTURAL_WEATHER_CENTER["lng"]),
-            fetch_forecast(AGRICULTURAL_WEATHER_CENTER["lat"], AGRICULTURAL_WEATHER_CENTER["lng"]),
+            fetch_current_weather(lat, lon),
+            fetch_forecast(lat, lon),
         )
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Failed to fetch regional weather: {exc}",
+            detail="Không thể lấy dữ liệu thời tiết từ nhà cung cấp.",
         ) from exc
-    return {"scope": "regional", "area": AGRICULTURAL_WEATHER_CENTER, "current": current, "forecast": forecast}
+    return _normalize_weather_payload(lat, lon, label, current, forecast)
+
+
+def _normalize_weather_payload(
+    lat: float,
+    lon: float,
+    label: str,
+    current_payload: dict[str, Any],
+    forecast_payload: dict[str, Any],
+) -> WeatherOverviewResponse:
+    current_raw = current_payload.get("current_weather") or current_payload.get("current") or {}
+    hourly_raw = forecast_payload.get("hourly") or current_payload.get("hourly") or {}
+    daily_raw = forecast_payload.get("daily") or {}
+    current = {
+        "temperature_c": _number(current_raw.get("temperature_2m", current_raw.get("temperature"))),
+        "feels_like_c": _number(current_raw.get("apparent_temperature")),
+        "humidity_pct": _number(_at(hourly_raw.get("relative_humidity_2m"), 0)),
+        "precipitation_mm": _number(_at(hourly_raw.get("precipitation"), 0), 0.0),
+        "wind_speed_kmh": _number(current_raw.get("wind_speed_10m", current_raw.get("windspeed"))),
+        "wind_direction_deg": _number(current_raw.get("wind_direction_10m", current_raw.get("winddirection"))),
+        "weather_code": _integer(current_raw.get("weather_code", current_raw.get("weathercode"))),
+    }
+    current["weather_label"] = _weather_label(current["weather_code"])
+    hourly = []
+    for index, time_value in enumerate(hourly_raw.get("time", [])[:24]):
+        item = {
+            "time": str(time_value),
+            "temperature_c": _number(_at(hourly_raw.get("temperature_2m"), index)),
+            "humidity_pct": _number(_at(hourly_raw.get("relative_humidity_2m"), index)),
+            "precipitation_mm": _number(_at(hourly_raw.get("precipitation"), index), 0.0),
+            "precipitation_probability_pct": _number(_at(hourly_raw.get("precipitation_probability"), index)),
+            "wind_speed_kmh": _number(_at(hourly_raw.get("wind_speed_10m", hourly_raw.get("windspeed_10m")), index)),
+            "weather_code": _integer(_at(hourly_raw.get("weathercode"), index)),
+        }
+        item["weather_label"] = _weather_label(item["weather_code"])
+        hourly.append(item)
+    daily = []
+    for index, date_value in enumerate(daily_raw.get("time", [])):
+        item = {
+            "date": str(date_value),
+            "temperature_max_c": _number(_at(daily_raw.get("temperature_2m_max"), index)),
+            "temperature_min_c": _number(_at(daily_raw.get("temperature_2m_min"), index)),
+            "precipitation_mm": _number(_at(daily_raw.get("precipitation_sum"), index), 0.0),
+            "precipitation_probability_pct": _number(_at(daily_raw.get("precipitation_probability_max"), index)),
+            "wind_speed_max_kmh": _number(_at(daily_raw.get("windspeed_10m_max"), index)),
+            "weather_code": _integer(_at(daily_raw.get("weathercode"), index)),
+        }
+        item["weather_label"] = _weather_label(item["weather_code"])
+        daily.append(item)
+    return WeatherOverviewResponse(
+        scope="regional",
+        area={"lat": lat, "lng": lon, "label": label},
+        location={"id": label.lower().replace(" ", "-"), "label": label, "lat": lat, "lon": lon, "source": "open-meteo"},
+        observed_at=current_raw.get("time"),
+        current=current,
+        hourly=hourly,
+        daily=daily,
+        source="open-meteo",
+        model=forecast_payload.get("generationtime_ms") and "best_match",
+        fetched_at=datetime.now(UTC).isoformat(),
+    )
+
+
+def _at(values: Any, index: int) -> Any:
+    return values[index] if isinstance(values, list) and index < len(values) else None
+
+
+def _number(value: Any, default: float | None = None) -> float | None:
+    try:
+        return round(float(value), 1) if value is not None else default
+    except (TypeError, ValueError):
+        return default
+
+
+def _integer(value: Any) -> int | None:
+    try:
+        return int(value) if value is not None else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _weather_label(code: int | None) -> str | None:
+    return {
+        0: "Trời quang",
+        1: "Ít mây",
+        2: "Có mây",
+        3: "Nhiều mây",
+        45: "Sương mù",
+        48: "Sương muối",
+        51: "Mưa phùn nhẹ",
+        53: "Mưa phùn",
+        55: "Mưa phùn dày",
+        61: "Mưa nhẹ",
+        63: "Mưa vừa",
+        65: "Mưa lớn",
+        80: "Mưa rào",
+        81: "Mưa rào vừa",
+        82: "Mưa rào lớn",
+        95: "Dông",
+        96: "Dông kèm mưa đá",
+        99: "Dông mạnh kèm mưa đá",
+    }.get(code)
 
 
 # ---------------------------------------------------------------------------
