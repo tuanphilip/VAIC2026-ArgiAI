@@ -1,10 +1,14 @@
+import json
 from dataclasses import dataclass
 from typing import Literal
 
+import httpx
+
+from app.core.config import get_settings
 from app.services.agricultural_retriever import AgriculturalKnowledgeRetriever
 from app.services.disease_knowledge import CropProfile, DiseaseKnowledgeRepository, DiseaseProfile, normalize_text
 
-Intent = Literal["disease", "technique", "weather", "out_of_scope"]
+Intent = Literal["disease", "technique", "weather", "market", "seasonal", "general", "out_of_scope"]
 QUICK_REPLIES = ["Xem quy trình bón phân cho lúa", "Kiểm tra thời tiết Điện Biên tuần này", "Xem danh sách đại lý vật tư", "Gọi cán bộ khuyến nông"]
 
 SYSTEM_PROMPT = """Bạn là Trợ lý nông nghiệp AI của Điện Biên, Việt Nam.
@@ -41,6 +45,43 @@ class AgriculturalChatAssistant:
     @staticmethod
     def build_context(history: list[tuple[str, str]]) -> list[tuple[str, str]]:
         return history[-10:]
+
+    async def answer_natural(self, question: str, history: list[tuple[str, str]]) -> Answer:
+        settings = get_settings()
+        if not settings.llm_api_key:
+            return self.answer(question, history)
+        try:
+            return await self._answer_with_llm(question, history, settings.llm_base_url, settings.llm_model, settings.llm_api_key)
+        except Exception:
+            return self.answer(question, history)
+
+    async def _answer_with_llm(self, question: str, history: list[tuple[str, str]], base_url: str, model: str, api_key: str) -> Answer:
+        known_crops = [crop.crop for crop in self.knowledge.crops]
+        context = "\n".join(f"{role}: {content[:1200]}" for role, content in self.build_context(history))
+        payload = {
+            "model": model,
+            "temperature": 0.35,
+            "response_format": {"type": "json_object"},
+            "messages": [
+                {"role": "system", "content": SYSTEM_PROMPT + "\nCây trồng đã có trong kho tri thức: " + ", ".join(known_crops)},
+                {"role": "user", "content": f"Lịch sử gần đây:\n{context or '(chưa có)'}\n\nCâu hỏi hiện tại:\n{question}\n\nTrả JSON đúng dạng {{\"intent\":\"disease|technique|weather|market|seasonal|general|out_of_scope\",\"sections\":[{{\"title\":\"...\",\"content\":[\"...\"]}}],\"confidence\":0.0}}. Chỉ dùng 1–4 phần thật cần thiết. Nếu thiếu dữ liệu, nói rõ thiếu gì; không bịa."},
+            ],
+        }
+        async with httpx.AsyncClient(timeout=35) as client:
+            response = await client.post(f"{base_url.rstrip('/')}/chat/completions", headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}, json=payload)
+            response.raise_for_status()
+        raw = response.json()["choices"][0]["message"]["content"]
+        data = json.loads(raw if isinstance(raw, str) else str(raw))
+        sections = [
+            Section(_plain_text(str(item.get("title", "Trả lời"))), [_plain_text(str(line)) for line in item.get("content", []) if str(line).strip()])
+            for item in data.get("sections", []) if isinstance(item, dict)
+        ][:4]
+        if not sections:
+            raise ValueError("LLM returned no safe sections")
+        intent = str(data.get("intent", "general"))
+        if intent not in {"disease", "technique", "weather", "market", "seasonal", "general", "out_of_scope"}:
+            intent = "general"
+        return Answer(intent, sections, QUICK_REPLIES, [], max(0.0, min(1.0, float(data.get("confidence", 0.0)))))
 
     def answer(self, question: str, history: list[tuple[str, str]]) -> Answer:
         del history
@@ -91,3 +132,7 @@ class AgriculturalChatAssistant:
                 if any(len(token) > 3 and token in normalized for token in tokens): score = max(score, 0.35)
                 if best is None or score > best[2]: best = (crop, disease, score)
         return best if best and best[2] > 0 else None
+
+
+def _plain_text(value: str) -> str:
+    return value.replace("```", "").replace("**", "").replace("__", "").strip()
