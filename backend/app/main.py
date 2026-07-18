@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -6,14 +7,28 @@ from fastapi.staticfiles import StaticFiles
 
 from app.core.config import get_settings
 from app.routes import auth, dashboard, diseases, health, market, plots, weather, yield_forecasts
+from app.services.weather import shutdown_weather_cache_lifespan, weather_cache_lifespan
 
 settings = get_settings()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    stop_event, task = await weather_cache_lifespan()
+    app.state.weather_cache_stop_event = stop_event
+    app.state.weather_cache_task = task
+    try:
+        yield
+    finally:
+        await shutdown_weather_cache_lifespan(stop_event, task)
+
 
 app = FastAPI(
     title=settings.app_name,
     version="1.0.0",
     openapi_url=f"{settings.api_v1_prefix}/openapi.json",
     docs_url=f"{settings.api_v1_prefix}/docs",
+    lifespan=lifespan,
 )
 
 app.add_middleware(

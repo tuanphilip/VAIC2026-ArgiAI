@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     supabase_storage_bucket: str = "disease-images"
 
     openweather_api_key: str = ""
+    weather_cache_background_enabled: bool = True
+    weather_cache_refresh_interval_seconds: int = 1800
+    weather_cache_sqlite_path: str | None = None
 
     upload_dir: str = "uploads"
     public_upload_base_url: str | None = None

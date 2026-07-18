@@ -5,8 +5,9 @@ import os
 import pytest
 
 # Required by Settings() when app.main is imported (database_url, jwt_secret_key).
-os.environ.setdefault("DATABASE_URL", "postgresql://u:p@localhost:5432/db")
+os.environ.setdefault("DATABASE_URL", "postgresql://u:***@localhost:5432/db")
 os.environ.setdefault("JWT_SECRET_KEY", "a" * 32)
+os.environ.setdefault("WEATHER_CACHE_BACKGROUND_ENABLED", "false")
 
 
 @pytest.fixture(autouse=True)
