@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { AlertTriangle, CloudRain, Droplets, ExternalLink, Map as MapIcon, RefreshCw, Sun, Thermometer, Wind } from "lucide-react";
+import { AlertTriangle, CloudRain, Droplets, ExternalLink, RefreshCw, Thermometer, Wind } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -91,62 +91,50 @@ export default function WeatherPage() {
   };
 
   return (
-    <div className="flex flex-col gap-6">
-      <header className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
-            <MapIcon className="size-7" />
-            <p className="font-semibold text-sm uppercase tracking-wider">Weather intelligence</p>
-          </div>
-          <h1 className="font-bold text-3xl tracking-tight">Thời tiết & cảnh báo nông nghiệp</h1>
-          <p className="max-w-3xl text-muted-foreground text-sm">Xem bản đồ Windy tổng quan, dự báo địa phương và cảnh báo thiên tai trong cùng một màn hình.</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Select value={location.id} onValueChange={handleLocationChange}>
-            <SelectTrigger className="w-[190px]"><SelectValue placeholder="Chọn khu vực" /></SelectTrigger>
-            <SelectContent>{locations.map((item) => <SelectItem key={item.id} value={item.id}>{item.label}</SelectItem>)}</SelectContent>
-          </Select>
-          <Button onClick={() => void loadWeather(location)} variant="outline" size="icon" title="Làm mới thời tiết"><RefreshCw className="size-4" /></Button>
-        </div>
-      </header>
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Tabs defaultValue="map">
+          <TabsList>
+            <TabsTrigger value="map">Bản đồ</TabsTrigger>
+            <TabsTrigger value="local">Dự báo</TabsTrigger>
+            <TabsTrigger value="alerts">Cảnh báo</TabsTrigger>
+          </TabsList>
 
-      <div className="flex items-center gap-2 rounded-lg border bg-muted/30 p-3 text-muted-foreground text-sm">
-        {status === "loading" ? <RefreshCw className="size-4 animate-spin" /> : <Sun className="size-4 text-amber-500" />}
-        <span>{message}</span>
-        <Badge className="ml-auto" variant="outline">{location.label}</Badge>
+          <TabsContent className="mt-3 space-y-3" value="map">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Select value={location.id} onValueChange={handleLocationChange}>
+                  <SelectTrigger className="h-9 w-[180px]"><SelectValue placeholder="Chọn khu vực" /></SelectTrigger>
+                  <SelectContent>{locations.map((item) => <SelectItem key={item.id} value={item.id}>{item.label}</SelectItem>)}</SelectContent>
+                </Select>
+                <Button onClick={() => void loadWeather(location)} variant="outline" size="icon" title="Làm mới thời tiết"><RefreshCw className={`size-4 ${status === "loading" ? "animate-spin" : ""}`} /></Button>
+              </div>
+              <Button asChild variant="ghost" size="sm" className="gap-2"><a href={windyUrl} target="_blank" rel="noreferrer">Mở rộng <ExternalLink className="size-4" /></a></Button>
+            </div>
+            {status === "error" && <Card className="border-rose-200"><CardContent className="p-3 text-rose-700 text-sm">{message}</CardContent></Card>}
+            <Card className="overflow-hidden">
+              <CardContent className="p-0">
+                <iframe className="h-[calc(100vh-190px)] min-h-[620px] w-full border-0 bg-muted sm:min-h-[700px]" src={windyUrl} title="Bản đồ thời tiết" loading="lazy" allow="fullscreen" />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent className="mt-3 space-y-4" value="local">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-muted-foreground text-sm">{location.label}</p>
+              <Button onClick={() => void loadWeather(location)} variant="outline" size="sm" className="gap-2"><RefreshCw className="size-4" /> Cập nhật</Button>
+            </div>
+            <CurrentWeather weather={weather} />
+            <HourlyForecast weather={weather} />
+            <DailyForecast daily={weather?.daily ?? []} />
+          </TabsContent>
+
+          <TabsContent className="mt-3" value="alerts">
+            <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50/60 p-4 text-amber-900 text-sm dark:bg-amber-950/20 dark:text-amber-200">Cảnh báo được tổng hợp từ dữ liệu thời tiết và nguồn cảnh báo đã cấu hình. Hãy kiểm tra thời gian cập nhật trước khi ra quyết định sản xuất.</div>
+            <div className="grid gap-4 lg:grid-cols-2">{alerts.length === 0 ? <Card><CardContent className="p-8 text-center text-muted-foreground text-sm">Chưa có cảnh báo thiên tai hoạt động.</CardContent></Card> : alerts.map((alert) => <WeatherAlertCard alert={alert} key={alert.id} />)}</div>
+          </TabsContent>
+        </Tabs>
       </div>
-
-      {status === "error" && <Card className="border-rose-200"><CardContent className="p-4 text-rose-700 text-sm">{message}</CardContent></Card>}
-
-      <Tabs defaultValue="map">
-        <TabsList className="grid w-full grid-cols-3 md:w-fit md:grid-cols-3">
-          <TabsTrigger value="map">Bản đồ tổng quan</TabsTrigger>
-          <TabsTrigger value="local">Dự báo địa phương</TabsTrigger>
-          <TabsTrigger value="alerts">Cảnh báo khẩn</TabsTrigger>
-        </TabsList>
-
-        <TabsContent className="mt-4 space-y-4" value="map">
-          <Card>
-            <CardHeader className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div><CardTitle>Bản đồ thời tiết Windy</CardTitle><CardDescription>Gió, mưa, nhiệt độ và timeline dự báo do Windy cung cấp.</CardDescription></div>
-              <Button asChild variant="outline" className="gap-2"><a href={windyUrl} target="_blank" rel="noreferrer">Mở Windy <ExternalLink className="size-4" /></a></Button>
-            </CardHeader>
-            <CardContent><iframe className="h-[520px] w-full rounded-lg border bg-muted" src={windyUrl} title="Bản đồ thời tiết Windy" loading="lazy" allow="fullscreen" /></CardContent>
-          </Card>
-          <p className="text-muted-foreground text-xs">Bản đồ nhúng từ Windy. Dữ liệu nghiệp vụ, cảnh báo và khuyến nghị nông nghiệp của ArgiAI nằm ở các tab bên cạnh.</p>
-        </TabsContent>
-
-        <TabsContent className="mt-4 space-y-4" value="local">
-          <CurrentWeather weather={weather} />
-          <HourlyForecast weather={weather} />
-          <DailyForecast daily={weather?.daily ?? []} />
-        </TabsContent>
-
-        <TabsContent className="mt-4" value="alerts">
-          <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50/60 p-4 text-amber-900 text-sm dark:bg-amber-950/20 dark:text-amber-200">Cảnh báo được tổng hợp từ dữ liệu thời tiết và nguồn cảnh báo đã cấu hình. Hãy kiểm tra thời gian cập nhật trước khi ra quyết định sản xuất.</div>
-          <div className="grid gap-4 lg:grid-cols-2">{alerts.length === 0 ? <Card><CardContent className="p-8 text-center text-muted-foreground text-sm">Chưa có cảnh báo thiên tai hoạt động.</CardContent></Card> : alerts.map((alert) => <WeatherAlertCard alert={alert} key={alert.id} />)}</div>
-        </TabsContent>
-      </Tabs>
     </div>
   );
 }
