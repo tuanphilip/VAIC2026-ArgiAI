@@ -41,8 +41,8 @@ export default function RegisterV1() {
               className="mx-auto size-12"
             />
             <div className="space-y-2">
-              <h1 className="font-light text-5xl text-primary-foreground">Welcome!</h1>
-              <p className="text-primary-foreground/80 text-xl">You&apos;re in the right place.</p>
+              <h1 className="font-light text-5xl text-primary-foreground">Chào mừng!</h1>
+              <p className="text-primary-foreground/80 text-xl">Bạn đang ở đúng nơi để bắt đầu.</p>
             </div>
           </div>
         </div>

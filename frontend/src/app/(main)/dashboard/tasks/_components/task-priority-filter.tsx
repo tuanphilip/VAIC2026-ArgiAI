@@ -84,7 +84,7 @@ export function TaskPriorityFilter<TData>({ table }: TaskPriorityFilterProps<TDa
             <DropdownMenuGroup>
               <DropdownMenuItem onSelect={clearFilter} className="justify-center text-center">
                 <X />
-                Clear filters
+                Xóa bộ lọc
               </DropdownMenuItem>
             </DropdownMenuGroup>
           </>

@@ -1,6 +1,5 @@
 import {
   BarChart3,
-  BellRing,
   Bug,
   CalendarDays,
   CloudSun,
@@ -59,10 +58,9 @@ export const sidebarItems: NavGroup[] = [
     id: 1,
     label: "Trung tâm công việc",
     items: [
-      { id: "default", title: "Tổng quan Dashboard", url: "/dashboard/default", icon: LayoutDashboard },
-      { id: "copilot", title: "AI Agricultural Copilot", url: "/dashboard/chat", icon: MessageCircle, badge: "new" },
+      { id: "default", title: "Tổng quan", url: "/dashboard/default", icon: LayoutDashboard },
+      { id: "copilot", title: "Trợ lý nông nghiệp AI", url: "/dashboard/chat", icon: MessageCircle, badge: "new" },
       { id: "calendar", title: "Lịch mùa vụ", url: "/dashboard/calendar", icon: CalendarDays },
-      { id: "alerts", title: "Cảnh báo sớm", url: "/dashboard/weather", icon: BellRing },
     ],
   },
   {

@@ -1160,7 +1160,7 @@ export default function Page() {
                         onChange={(e) => setEditStatus(e.target.value as "active" | "resolved")}
                         className="w-full rounded-lg border p-2 text-xs focus:outline-emerald-500 dark:bg-slate-950"
                       >
-                        <option value="active">Đang diễn ra (Active)</option>
+                        <option value="active">Đang diễn ra</option>
                         <option value="resolved">Đã khống chế/Xử lý xong (Resolved)</option>
                       </select>
                     </div>

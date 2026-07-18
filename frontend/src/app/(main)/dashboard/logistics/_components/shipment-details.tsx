@@ -94,10 +94,10 @@ function ShipmentOverview({ shipment }: { shipment: Shipment }) {
             {shipment.status}
           </Badge>
           <span className="text-muted-foreground">·</span>
-          <span className="text-foreground tabular-nums">{shipment.progress}% complete</span>
+          <span className="text-foreground tabular-nums">{shipment.progress}% hoàn thành</span>
           <span className="text-muted-foreground">·</span>
           <span className="text-foreground tabular-nums">
-            ETA: {shipment.eta} {shipment.etaMeta}
+            Dự kiến đến: {shipment.eta} {shipment.etaMeta}
           </span>
         </div>
       </div>
@@ -132,7 +132,7 @@ function ShipmentOverview({ shipment }: { shipment: Shipment }) {
 
       <div className="flex flex-col gap-8">
         <div className="flex items-start justify-between gap-4">
-          <h2 className="font-medium">Cargo details</h2>
+          <h2 className="font-medium">Chi tiết hàng hóa</h2>
 
           <Button variant="outline" size="sm">
             <ContactIcon data-icon="inline-start" />
@@ -142,7 +142,7 @@ function ShipmentOverview({ shipment }: { shipment: Shipment }) {
 
         <div className="grid grid-cols-2 gap-x-4 gap-y-5 md:grid-cols-[1.35fr_1fr_1.1fr_1.15fr_1fr]">
           <div className="col-span-2 flex flex-col gap-1 md:col-span-1 md:gap-2">
-            <div className="text-muted-foreground text-xs leading-none md:invisible md:text-sm">Cargo</div>
+            <div className="text-muted-foreground text-xs leading-none md:invisible md:text-sm">Hàng hóa</div>
             <div className="whitespace-nowrap text-sm leading-none">{shipment.cargo}</div>
           </div>
 
@@ -164,8 +164,8 @@ function ShipmentOverview({ shipment }: { shipment: Shipment }) {
           </div>
 
           <div className="flex flex-col gap-2 md:text-right">
-            <div className="text-muted-foreground text-xs leading-none md:text-sm">Status</div>
-            <div className="text-sm leading-none">{shipment.progress}% complete</div>
+            <div className="text-muted-foreground text-xs leading-none md:text-sm">Trạng thái</div>
+            <div className="text-sm leading-none">{shipment.progress}% hoàn thành</div>
           </div>
         </div>
       </div>
