@@ -27,6 +27,8 @@ class Settings(BaseSettings):
     supabase_service_role_key: str | None = None
     supabase_storage_bucket: str = "disease-images"
 
+    openweather_api_key: str = ""
+
     upload_dir: str = "uploads"
     public_upload_base_url: str | None = None
 
