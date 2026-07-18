@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowDownRight, ArrowUpRight, Bell, FileText, Info, Search, Sprout, TrendingUp, Trash2, Plus } from "lucide-react";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
@@ -8,28 +8,42 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useActiveUser } from "@/stores/auth-store";
+import { apiFetch } from "@/lib/api-client";
 
-// Bộ dữ liệu khởi tạo theo phạm vi Điện Biên. Giá live phải đi qua API có nguồn và ngày ghi nhận.
-const priceFluctuation = [
-  { day: "Thứ 2", "Cà phê Mường Ảng": 82000, "Lúa Seng Cù": 15800, "Mắc ca Điện Biên": 145000 },
-  { day: "Thứ 3", "Cà phê Mường Ảng": 82800, "Lúa Seng Cù": 16000, "Mắc ca Điện Biên": 146000 },
-  { day: "Thứ 4", "Cà phê Mường Ảng": 84000, "Lúa Seng Cù": 16150, "Mắc ca Điện Biên": 147000 },
-  { day: "Thứ 5", "Cà phê Mường Ảng": 84800, "Lúa Seng Cù": 16300, "Mắc ca Điện Biên": 148000 },
-  { day: "Thứ 6", "Cà phê Mường Ảng": 85000, "Lúa Seng Cù": 16450, "Mắc ca Điện Biên": 149000 },
-  { day: "Thứ 7", "Cà phê Mường Ảng": 85500, "Lúa Seng Cù": 16600, "Mắc ca Điện Biên": 150000 },
-  { day: "Chủ Nhật", "Cà phê Mường Ảng": 86000, "Lúa Seng Cù": 16800, "Mắc ca Điện Biên": 151000 },
-];
+type MarketCatalogItem = {
+  name: string;
+  price: number;
+  unit: string;
+  recorded_date: string;
+  source: string;
+  is_verified_live: boolean;
+};
+
+const priceFluctuation: Array<Record<string, string | number>> = [];
 
 export default function Page() {
   const activeUser = useActiveUser();
   const [searchTerm, setSearchTerm] = useState("");
-  const [cropPrices, setCropPrices] = useState([
-    { name: "Cà phê Robusta Mường Ảng", price: 86000, unit: "kg", change: 1.2, status: "up", min: 82000, max: 86000 },
-    { name: "Lúa Seng Cù Điện Biên", price: 16800, unit: "kg", change: 0.5, status: "up", min: 15800, max: 16800 },
-    { name: "Mắc ca Điện Biên", price: 151000, unit: "kg", change: 0.8, status: "up", min: 145000, max: 151000 },
-    { name: "Cải ngọt Điện Biên", price: 18000, unit: "kg", change: 0.0, status: "flat", min: 18000, max: 18000 },
-    { name: "Ngô địa phương Điện Biên", price: 12500, unit: "kg", change: 0.0, status: "flat", min: 12500, max: 12500 },
-  ]);
+  const [cropPrices, setCropPrices] = useState<Array<MarketCatalogItem & { change: number; status: "up" | "down" | "flat"; min: number; max: number }>>([]);
+  const [marketLoading, setMarketLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    apiFetch<MarketCatalogItem[]>("/market/catalog")
+      .then((items) => {
+        if (!active) return;
+        setCropPrices(items.map((item) => ({ ...item, change: 0, status: "flat" as const, min: item.price, max: item.price })));
+      })
+      .catch(() => {
+        if (active) setCropPrices([]);
+      })
+      .finally(() => {
+        if (active) setMarketLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // Alert form state
   const [alertCrop, setAlertCrop] = useState("Cà phê Robusta Mường Ảng");
@@ -78,16 +92,20 @@ export default function Page() {
             <CardDescription>Biến thiên giá thu mua tuần qua (VNĐ/kg).</CardDescription>
           </CardHeader>
           <CardContent className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={priceFluctuation} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="day" tickLine={false} />
-                <YAxis tickLine={false} />
-                <Tooltip />
-                <Line type="monotone" dataKey="Cà phê Mường Ảng" stroke="hsl(var(--primary))" name="Cà phê Mường Ảng (đ/kg)" strokeWidth={2} />
-                <Line type="monotone" dataKey="Lúa Seng Cù" stroke="#f59e0b" name="Lúa Seng Cù (đ/kg)" strokeWidth={2} />
-              </LineChart>
-            </ResponsiveContainer>
+            {marketLoading ? (
+              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Đang tải dữ liệu thị trường…</div>
+            ) : priceFluctuation.length === 0 ? (
+              <div className="flex h-full items-center justify-center text-center text-sm text-muted-foreground">Chưa có chuỗi giá live đã xác minh để vẽ biểu đồ.</div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={priceFluctuation} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="day" tickLine={false} />
+                  <YAxis tickLine={false} />
+                  <Tooltip />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
 
@@ -157,6 +175,9 @@ export default function Page() {
                   name: newCropName,
                   price: priceNum,
                   unit: newCropUnit,
+                  recorded_date: new Date().toISOString().slice(0, 10),
+                  source: "Nhập thủ công — chưa xác minh live",
+                  is_verified_live: false,
                   change: changeNum,
                   status: newCropStatus,
                   min: priceNum * 0.95,

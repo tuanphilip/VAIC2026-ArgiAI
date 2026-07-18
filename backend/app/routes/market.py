@@ -21,6 +21,37 @@ from app.services.market_analysis import build_market_recommendation
 router = APIRouter(prefix="/market", tags=["Market"])
 
 
+@router.get("/catalog")
+async def list_catalog(
+    db: AsyncSession = Depends(get_db),
+) -> list[dict[str, object]]:
+    """Return the latest recorded quote for every local crop."""
+    latest_date = (
+        select(func.max(MarketPrice.recorded_date))
+        .where(MarketPrice.crop_id == Crop.id)
+        .correlate(Crop)
+        .scalar_subquery()
+    )
+    query = (
+        select(Crop, MarketPrice)
+        .join(MarketPrice, MarketPrice.crop_id == Crop.id)
+        .where(MarketPrice.recorded_date == latest_date)
+        .order_by(Crop.name, Crop.variety)
+    )
+    rows = (await db.execute(query)).all()
+    return [
+        {
+            "name": f"{crop.name} {crop.variety}",
+            "price": price.price_per_kg,
+            "unit": "kg",
+            "recorded_date": price.recorded_date,
+            "source": price.source,
+            "is_verified_live": "chưa xác minh live" not in price.source.lower(),
+        }
+        for crop, price in rows
+    ]
+
+
 @router.get("/prices", response_model=MarketPricesResponse)
 async def list_prices(
     crop_id: str | None = Query(default=None),
