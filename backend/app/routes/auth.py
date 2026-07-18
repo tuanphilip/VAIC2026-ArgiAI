@@ -15,6 +15,8 @@ async def register(payload: RegisterRequest, db: AsyncSession = Depends(get_db))
     conditions = [User.username == payload.username]
     if payload.email:
         conditions.append(User.email == str(payload.email))
+    if payload.citizen_id:
+        conditions.append(User.citizen_id == payload.citizen_id)
     existing = await db.execute(select(User).where(or_(*conditions)))
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username or email already exists")
@@ -23,6 +25,8 @@ async def register(payload: RegisterRequest, db: AsyncSession = Depends(get_db))
         username=payload.username,
         password_hash=hash_password(payload.password),
         email=str(payload.email) if payload.email else None,
+        citizen_id=payload.citizen_id,
+        phone_number=payload.phone_number,
         full_name=payload.full_name,
         role=payload.role,
     )
@@ -35,6 +39,9 @@ async def register(payload: RegisterRequest, db: AsyncSession = Depends(get_db))
             username=user.username,
             full_name=user.full_name,
             role=user.role,
+            citizen_id=user.citizen_id,
+            email=user.email,
+            phone_number=user.phone_number,
         )
     )
 
@@ -48,5 +55,13 @@ async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)) -> Lo
 
     return LoginResponse(
         access_token=create_access_token(user.id, user.role),
-        user=AuthUser(user_id=user.id, username=user.username, full_name=user.full_name, role=user.role),
+        user=AuthUser(
+            user_id=user.id,
+            username=user.username,
+            full_name=user.full_name,
+            role=user.role,
+            citizen_id=user.citizen_id,
+            email=user.email,
+            phone_number=user.phone_number,
+        ),
     )

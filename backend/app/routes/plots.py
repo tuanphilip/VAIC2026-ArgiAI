@@ -1,7 +1,7 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import delete, select
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import delete, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -37,6 +37,10 @@ def serialize_plot(plot: Plot) -> PlotResponse:
         health=plot.health,
         moisture=f"{plot.moisture}%" if plot.moisture is not None else None,
         owner=plot.owner.full_name,
+        owner_id=plot.owner.id,
+        owner_username=plot.owner.username,
+        owner_citizen_id=plot.owner.citizen_id,
+        owner_email=plot.owner.email,
         owner_phone=plot.owner_phone,
         region=plot.region,
         location=Location(lat=plot.location_lat, lng=plot.location_lng),
@@ -62,10 +66,32 @@ async def _resolve_crop_types(db: AsyncSession, crops: list[CropTypeItem]) -> tu
 async def list_plots(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    search: str | None = Query(default=None, min_length=1, max_length=100),
+    region: str | None = Query(default=None, max_length=100),
 ) -> list[PlotResponse]:
-    query = select(Plot).options(selectinload(Plot.crop), selectinload(Plot.owner)).order_by(Plot.created_at.desc())
+    query = (
+        select(Plot)
+        .join(User, Plot.user_id == User.id)
+        .options(selectinload(Plot.crop), selectinload(Plot.owner))
+        .order_by(Plot.created_at.desc())
+    )
     if current_user.role == "farmer":
         query = query.where(Plot.user_id == current_user.id)
+    if region:
+        query = query.where(Plot.region.ilike(region))
+    if search:
+        pattern = f"%{search.strip()}%"
+        query = query.where(
+            or_(
+                Plot.code.ilike(pattern),
+                Plot.region.ilike(pattern),
+                User.full_name.ilike(pattern),
+                User.username.ilike(pattern),
+                User.citizen_id.ilike(pattern),
+                User.email.ilike(pattern),
+                Plot.owner_phone.ilike(pattern),
+            )
+        )
     result = await db.execute(query)
     return [serialize_plot(plot) for plot in result.scalars().all()]
 
@@ -81,7 +107,9 @@ async def create_plot(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Plot code already exists")
 
     primary_crop_id, crop_types = await _resolve_crop_types(db, payload.crops)
-    owner_id = await _resolve_owner_id(db, payload.owner_id, payload.owner, current_user)
+    owner_id = await _resolve_owner_id(
+        db, payload.owner_id, payload.owner, payload.owner_citizen_id, payload.owner_email, current_user
+    )
     plot = Plot(
         code=payload.plot_id,
         user_id=owner_id,
@@ -126,8 +154,10 @@ async def update_plot(
         primary_crop_id, crop_types = await _resolve_crop_types(db, payload.crops)
         plot.crop_id = primary_crop_id
         plot.crop_types = crop_types
-    if "owner_id" in payload.model_fields_set or "owner" in payload.model_fields_set:
-        plot.user_id = await _resolve_owner_id(db, payload.owner_id, payload.owner, current_user)
+    if {"owner_id", "owner", "owner_citizen_id", "owner_email"} & payload.model_fields_set:
+        plot.user_id = await _resolve_owner_id(
+            db, payload.owner_id, payload.owner, payload.owner_citizen_id, payload.owner_email, current_user
+        )
     if "owner_phone" in payload.model_fields_set:
         plot.owner_phone = payload.owner_phone
     for field in [
@@ -171,9 +201,11 @@ async def _resolve_owner_id(
     db: AsyncSession,
     owner_id: UUID | None,
     owner_name: str | None,
+    owner_citizen_id: str | None,
+    owner_email: str | None,
     current_user: User,
 ) -> UUID:
-    if owner_id is None and owner_name is None:
+    if owner_id is None and owner_name is None and owner_citizen_id is None and owner_email is None:
         return current_user.id
     if current_user.role == "farmer":
         raise HTTPException(
@@ -181,6 +213,10 @@ async def _resolve_owner_id(
         )
     if owner_id is not None:
         result = await db.execute(select(User).where(User.id == owner_id))
+    elif owner_citizen_id is not None:
+        result = await db.execute(select(User).where(User.citizen_id == owner_citizen_id))
+    elif owner_email is not None:
+        result = await db.execute(select(User).where(User.email == owner_email))
     else:
         result = await db.execute(select(User).where(User.username == owner_name))
     owner = result.scalar_one_or_none()

@@ -63,7 +63,12 @@ interface Land {
   lat: number;
   lng: number;
   owner: string;
+  ownerId: string;
+  ownerUsername: string;
+  ownerCitizenId: string;
+  ownerEmail: string;
   ownerPhone: string;
+  region: string;
   livestock?: { type: string; quantity: number }[];
   /** Polygon ranh giới thửa đất (lat, lng), khoanh vùng quanh tâm [lat, lng]. */
   boundary: [number, number][];
@@ -149,7 +154,12 @@ function apiPlotToLand(plot: PlotResponse): Land {
     lat: plot.location.lat,
     lng: plot.location.lng,
     owner: plot.owner,
+    ownerId: plot.owner_id,
+    ownerUsername: plot.owner_username,
+    ownerCitizenId: plot.owner_citizen_id ?? "",
+    ownerEmail: plot.owner_email ?? "",
     ownerPhone: plot.owner_phone ?? "",
+    region: plot.region ?? "",
     livestock: plot.livestock,
     boundary: plot.boundary ?? makeBoundary(plot.location.lat, plot.location.lng, plot.area_hectares, quadRegular),
   };
@@ -752,6 +762,8 @@ export default function Page() {
   const [editSeedingDate, setEditSeedingDate] = useState("");
   const [editHealth, setEditHealth] = useState<"Khỏe mạnh" | "Cảnh báo độ ẩm" | "Sâu bệnh nhẹ">("Khỏe mạnh");
   const [editOwner, setEditOwner] = useState("");
+  const [editOwnerCitizenId, setEditOwnerCitizenId] = useState("");
+  const [editOwnerEmail, setEditOwnerEmail] = useState("");
   const [editOwnerPhone, setEditOwnerPhone] = useState("");
   const [editStatus, setEditStatus] = useState<"growing" | "harvested" | "disease_outbreak">("growing");
   const [editBoundaryPoints, setEditBoundaryPoints] = useState<{ lat: string; lng: string }[]>([]);
@@ -765,6 +777,8 @@ export default function Page() {
   const [newSeedingDate, setNewSeedingDate] = useState("");
   const [newHealth, setNewHealth] = useState<"Khỏe mạnh" | "Cảnh báo độ ẩm" | "Sâu bệnh nhẹ">("Khỏe mạnh");
   const [newOwner, setNewOwner] = useState("");
+  const [newOwnerCitizenId, setNewOwnerCitizenId] = useState("");
+  const [newOwnerEmail, setNewOwnerEmail] = useState("");
   const [newOwnerPhone, setNewOwnerPhone] = useState("");
   const [newBoundaryPoints, setNewBoundaryPoints] = useState<{ lat: string; lng: string }[]>([]);
   const [newLivestock, setNewLivestock] = useState<{ type: string; quantity: number }[]>([]);
@@ -785,6 +799,9 @@ export default function Page() {
     const matchesSearch =
       !query ||
       land.owner.toLowerCase().includes(query) ||
+      land.ownerUsername.toLowerCase().includes(query) ||
+      land.ownerCitizenId.includes(query) ||
+      land.ownerEmail.toLowerCase().includes(query) ||
       land.ownerPhone.toLowerCase().includes(query) ||
       land.id.toLowerCase().includes(query);
     const matchesCrop = filterCropType === "all" || land.crops.some((c) => c.type === filterCropType);
@@ -922,6 +939,8 @@ export default function Page() {
     setEditSeedingDate(land.seedingDate);
     setEditHealth(land.health);
     setEditOwner(land.owner);
+    setEditOwnerCitizenId(land.ownerCitizenId);
+    setEditOwnerEmail(land.ownerEmail);
     setEditOwnerPhone(land.ownerPhone);
     setEditStatus(land.status);
     setEditBoundaryPoints(land.boundary.map(([lat, lng]) => ({ lat: lat.toString(), lng: lng.toString() })));
@@ -954,6 +973,8 @@ export default function Page() {
         health: editHealth,
         // Chỉ cán bộ được phép đổi chủ sở hữu — backend từ chối (403) nếu farmer gửi owner.
         ...(activeUser.role === "official" ? { owner: editOwner } : {}),
+        ...(activeUser.role === "official" ? { owner_citizen_id: editOwnerCitizenId || undefined } : {}),
+        ...(activeUser.role === "official" ? { owner_email: editOwnerEmail || undefined } : {}),
         owner_phone: editOwnerPhone,
         location_lat: resolved.center[0],
         location_lng: resolved.center[1],
@@ -989,6 +1010,8 @@ export default function Page() {
         health: newHealth,
         // Sheet đăng ký mới chỉ cán bộ mở được nên luôn được phép chỉ định chủ sở hữu.
         owner: newOwner,
+        owner_citizen_id: newOwnerCitizenId || undefined,
+        owner_email: newOwnerEmail || undefined,
         owner_phone: newOwnerPhone,
         boundary: resolved.boundary,
         livestock: newLivestock,
@@ -1321,6 +1344,31 @@ export default function Page() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
+                <label className="mb-1 block font-semibold text-xs">CCCD chủ hộ</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={12}
+                  placeholder="12 chữ số"
+                  value={newOwnerCitizenId}
+                  onChange={(e) => setNewOwnerCitizenId(e.target.value.replace(/\D/g, "").slice(0, 12))}
+                  className="w-full rounded-lg border p-2 text-xs dark:bg-slate-950 focus:outline-emerald-500"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block font-semibold text-xs">Email chủ hộ</label>
+                <input
+                  type="email"
+                  placeholder="ho.dan@example.com"
+                  value={newOwnerEmail}
+                  onChange={(e) => setNewOwnerEmail(e.target.value)}
+                  className="w-full rounded-lg border p-2 text-xs dark:bg-slate-950 focus:outline-emerald-500"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
                 <label className="text-xs font-semibold block mb-1">Diện tích (Ha)</label>
                 <input
                   type="number"
@@ -1430,6 +1478,31 @@ export default function Page() {
                     value={editOwnerPhone}
                     onChange={(e) => setEditOwnerPhone(e.target.value)}
                     className="w-full text-xs p-2 border rounded-lg dark:bg-slate-950 focus:outline-emerald-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1 block font-semibold text-xs">CCCD chủ hộ</label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={12}
+                    value={editOwnerCitizenId}
+                    onChange={(e) => setEditOwnerCitizenId(e.target.value.replace(/\D/g, "").slice(0, 12))}
+                    className="w-full rounded-lg border p-2 text-xs dark:bg-slate-950 focus:outline-emerald-500"
+                    disabled={activeUser.role === "farmer"}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block font-semibold text-xs">Email chủ hộ</label>
+                  <input
+                    type="email"
+                    value={editOwnerEmail}
+                    onChange={(e) => setEditOwnerEmail(e.target.value)}
+                    className="w-full rounded-lg border p-2 text-xs dark:bg-slate-950 focus:outline-emerald-500"
+                    disabled={activeUser.role === "farmer"}
                   />
                 </div>
               </div>

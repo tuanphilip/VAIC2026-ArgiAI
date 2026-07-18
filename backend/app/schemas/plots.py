@@ -1,7 +1,7 @@
 from datetime import date
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 
 class Location(BaseModel):
@@ -49,6 +49,10 @@ class PlotResponse(BaseModel):
     health: str
     moisture: str | None
     owner: str
+    owner_id: UUID
+    owner_username: str
+    owner_citizen_id: str | None = None
+    owner_email: EmailStr | None = None
     owner_phone: str | None = None
     region: str | None = None
     location: Location
@@ -63,6 +67,8 @@ class PlotCreateRequest(BaseModel):
     seeding_date: date
     owner_id: UUID | None = None
     owner: str | None = None
+    owner_citizen_id: str | None = Field(default=None, min_length=12, max_length=12, pattern=r"^\d{12}$")
+    owner_email: EmailStr | None = None
     owner_phone: str | None = Field(default=None, max_length=20)
     region: str | None = Field(default=None, max_length=100)
     location_lat: float = Field(ge=-90, le=90)
@@ -86,6 +92,8 @@ class PlotUpdateRequest(BaseModel):
     health: str | None = None
     owner_id: UUID | None = None
     owner: str | None = None
+    owner_citizen_id: str | None = Field(default=None, min_length=12, max_length=12, pattern=r"^\d{12}$")
+    owner_email: EmailStr | None = None
     owner_phone: str | None = Field(default=None, max_length=20)
     region: str | None = Field(default=None, max_length=100)
     location_lat: float | None = Field(default=None, ge=-90, le=90)
