@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from pydantic import BaseModel, Field
 
 
@@ -8,6 +10,7 @@ class ChatTurn(BaseModel):
 
 class ChatRequest(BaseModel):
     message: str = Field(min_length=1, max_length=4000)
+    session_id: UUID | None = None
     history: list[ChatTurn] = Field(default_factory=list, max_length=20)
 
 
@@ -23,6 +26,7 @@ class ChatCitationResponse(BaseModel):
 
 
 class ChatResponse(BaseModel):
+    session_id: UUID
     intent: str
     sections: list[ChatSectionResponse]
     quick_replies: list[str]
