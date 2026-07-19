@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   ArrowDownRight,
@@ -26,6 +26,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { apiFetch } from "@/lib/api-client";
 
 const initialHistory = [
   { month: "T1", "Doanh thu": 50, "Chi phí": 30, "Lợi nhuận": 20 },
@@ -43,7 +44,7 @@ const forecastCashFlow = [
 ];
 
 interface Transaction {
-  id: number;
+  id: string;
   title: string;
   type: "income" | "expense";
   amount: number;
@@ -52,48 +53,16 @@ interface Transaction {
 }
 
 export default function Page() {
-  const [transactions, setTransactions] = useState<Transaction[]>([
-    {
-      id: 1,
-      title: "Bán lô lúa Seng Cù Điện Biên",
-      type: "income",
-      amount: 42000000,
-      date: "15/07/2026",
-      category: "Nông sản đầu ra",
-    },
-    {
-      id: 2,
-      title: "Mua phân bón hữu cơ NPK Lâm Thao",
-      type: "expense",
-      amount: 6500000,
-      date: "12/07/2026",
-      category: "Vật tư đầu vào",
-    },
-    {
-      id: 3,
-      title: "Mua 500kg cà phê Mường Ảng",
-      type: "income",
-      amount: 15000000,
-      date: "10/07/2026",
-      category: "Nông sản đầu ra",
-    },
-    {
-      id: 4,
-      title: "Thanh toán tiền điện trạm bơm",
-      type: "expense",
-      amount: 1200000,
-      date: "05/07/2026",
-      category: "Hệ thống điện nước",
-    },
-    {
-      id: 5,
-      title: "Trả công lao động thu hoạch vụ mùa",
-      type: "expense",
-      amount: 8000000,
-      date: "01/07/2026",
-      category: "Nhân công",
-    },
-  ]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [financeLoading, setFinanceLoading] = useState(true);
+  const [financeError, setFinanceError] = useState<string | null>(null);
+
+  useEffect(() => {
+    apiFetch<Transaction[]>("/finance/transactions")
+      .then(setTransactions)
+      .catch((error) => setFinanceError(error instanceof Error ? error.message : "Không thể tải sổ thu chi."))
+      .finally(() => setFinanceLoading(false));
+  }, []);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [newTitle, setNewTitle] = useState("");
@@ -112,23 +81,21 @@ export default function Page() {
 
   const netProfit = totalIncome - totalExpense;
 
-  const handleAddTransaction = (e: React.FormEvent) => {
+  const handleAddTransaction = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle.trim() || !newAmount) return;
-
-    const t: Transaction = {
-      id: Date.now(),
-      title: newTitle,
-      type: newType,
-      amount: parseFloat(newAmount),
-      date: new Date().toLocaleDateString("vi-VN"),
-      category: newCategory,
-    };
-
-    setTransactions([t, ...transactions]);
-    setNewTitle("");
-    setNewAmount("");
-    setShowAddModal(false);
+    try {
+      const created = await apiFetch<Transaction>("/finance/transactions", {
+        method: "POST",
+        body: JSON.stringify({ title: newTitle, type: newType, amount: Number(newAmount), category: newCategory }),
+      });
+      setTransactions((current) => [created, ...current]);
+      setNewTitle("");
+      setNewAmount("");
+      setShowAddModal(false);
+    } catch (error) {
+      setFinanceError(error instanceof Error ? error.message : "Không thể lưu giao dịch.");
+    }
   };
 
   const handleCalculateTax = (e: React.FormEvent) => {
@@ -144,6 +111,8 @@ export default function Page() {
 
   return (
     <div className="flex flex-col gap-6">
+      {financeLoading && <div className="rounded-lg border p-3 text-sm text-muted-foreground">Đang tải sổ thu chi…</div>}
+      {financeError && <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{financeError}</div>}
       {/* Header */}
       <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
         <div>

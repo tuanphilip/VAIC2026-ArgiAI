@@ -146,6 +146,19 @@ class PriceAlert(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class FinanceTransaction(Base):
+    __tablename__ = "finance_transactions"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, server_default=func.gen_random_uuid())
+    owner_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    title: Mapped[str] = mapped_column(String(200))
+    type: Mapped[str] = mapped_column(String(20))
+    amount: Mapped[float] = mapped_column(Float)
+    category: Mapped[str] = mapped_column(String(100))
+    transaction_date: Mapped[date] = mapped_column(Date, default=date.today)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class ShipmentRecord(Base):
     __tablename__ = "shipment_records"
 
