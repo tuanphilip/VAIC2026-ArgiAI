@@ -527,10 +527,28 @@ function LandBoundaryDrawMap({
           attributionControl: false,
         }).setView([centerLat, centerLng], 16);
 
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        const osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
           attribution: "&copy; OpenStreetMap contributors",
           maxZoom: 19,
-        }).addTo(mapRef.current);
+        });
+        const satellite = L.tileLayer(
+          "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+          {
+            attribution: "&copy; Esri, Maxar, Earthstar Geographics, and the GIS User Community",
+            maxZoom: 19,
+          },
+        );
+        osm.addTo(mapRef.current);
+        L.control
+          .layers(
+            {
+              "Bản đồ đường phố": osm,
+              "Chế độ vệ tinh": satellite,
+            },
+            {},
+            { collapsed: false, position: "bottomleft" },
+          )
+          .addTo(mapRef.current);
 
         mapRef.current.on("click", (e: any) => {
           const { lat, lng } = e.latlng;
@@ -924,10 +942,28 @@ function LandMapOverlay({ land }: { land: Land }) {
           attributionControl: false,
         }).setView([land.lat, land.lng], 15);
 
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        const osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
           attribution: "&copy; OpenStreetMap contributors",
           maxZoom: 18,
-        }).addTo(mapRef.current);
+        });
+        const satellite = L.tileLayer(
+          "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+          {
+            attribution: "&copy; Esri, Maxar, Earthstar Geographics, and the GIS User Community",
+            maxZoom: 18,
+          },
+        );
+        osm.addTo(mapRef.current);
+        L.control
+          .layers(
+            {
+              "Bản đồ đường phố": osm,
+              "Chế độ vệ tinh": satellite,
+            },
+            {},
+            { collapsed: false, position: "bottomleft" },
+          )
+          .addTo(mapRef.current);
       }
 
       const map = mapRef.current;
@@ -1141,9 +1177,26 @@ export default function Page() {
 
     if (!mapRef.current) {
       mapRef.current = L.map(mapContainerRef.current).setView(DEFAULT_MAP_CENTER, 13);
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      const osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-      }).addTo(mapRef.current);
+      });
+      const satellite = L.tileLayer(
+        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+        {
+          attribution: "&copy; Esri, Maxar, Earthstar Geographics, and the GIS User Community",
+        },
+      );
+      osm.addTo(mapRef.current);
+      L.control
+        .layers(
+          {
+            "Bản đồ đường phố": osm,
+            "Chế độ vệ tinh": satellite,
+          },
+          {},
+          { collapsed: false, position: "bottomleft" },
+        )
+        .addTo(mapRef.current);
     }
 
     // Clear old markers and boundary polygons
