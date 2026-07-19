@@ -1,158 +1,132 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user
 from app.database.session import get_db
-from app.models import InventoryItem, InventoryMovement, User
+from app.models import InventoryItem, StockMovement, User
 from app.schemas.inventory import (
-    InventoryItemsResponse,
+    InventoryCreateRequest,
     InventoryItemResponse,
-    InventoryMovementResponse,
-    InventoryMovementsResponse,
-    InventoryReceiptCreate,
-    InventoryReceiptResponse,
+    InventoryUpdateRequest,
+    StockAdjustRequest,
+    StockMovementResponse,
 )
 
 router = APIRouter(prefix="/inventory", tags=["Inventory"])
 
 
-def _scope_query(query, user: User):
-    if user.role not in {"official", "admin"}:
-        return query.where(InventoryItem.owner_id == user.id)
-    return query
-
-
 def _status(item: InventoryItem) -> str:
     if item.quantity <= 0:
         return "Hết hàng"
-    if item.quantity <= item.min_quantity:
+    if item.quantity <= item.reorder_level:
         return "Sắp hết"
     return "Đầy kho"
 
 
-def _item_response(item: InventoryItem) -> InventoryItemResponse:
+def _serialize(item: InventoryItem) -> InventoryItemResponse:
     return InventoryItemResponse(
         id=item.id,
         name=item.name,
         category=item.category,
         quantity=item.quantity,
         unit=item.unit,
-        min_quantity=item.min_quantity,
         location=item.location,
+        reorder_level=item.reorder_level,
         status=_status(item),
+        created_at=item.created_at,
         updated_at=item.updated_at,
     )
 
 
-@router.get("/items", response_model=InventoryItemsResponse)
-async def list_items(
-    search: str | None = Query(default=None, max_length=100),
-    category: str | None = Query(default=None, max_length=50),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-) -> InventoryItemsResponse:
-    query = _scope_query(select(InventoryItem), current_user).order_by(InventoryItem.name)
-    if search:
-        query = query.where(InventoryItem.name.ilike(f"%{search}%"))
-    if category and category != "All":
-        query = query.where(InventoryItem.category == category)
-    result = await db.execute(query)
-    return InventoryItemsResponse(items=[_item_response(item) for item in result.scalars().all()])
+def _can_access(item: InventoryItem, user: User) -> bool:
+    return user.role in {"official", "admin"} or item.owner_id == user.id
 
 
-@router.get("/movements", response_model=InventoryMovementsResponse)
-async def list_movements(
-    limit: int = Query(default=50, ge=1, le=200),
+@router.get("", response_model=list[InventoryItemResponse])
+async def list_inventory(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
-) -> InventoryMovementsResponse:
-    query = (
-        select(InventoryMovement, InventoryItem)
-        .join(InventoryItem, InventoryItem.id == InventoryMovement.item_id)
-        .order_by(InventoryMovement.created_at.desc())
-        .limit(limit)
-    )
+) -> list[InventoryItemResponse]:
+    query = select(InventoryItem).order_by(InventoryItem.name)
     if current_user.role not in {"official", "admin"}:
         query = query.where(InventoryItem.owner_id == current_user.id)
-    rows = (await db.execute(query)).all()
-    return InventoryMovementsResponse(
-        movements=[
-            InventoryMovementResponse(
-                id=movement.id,
-                item_id=movement.item_id,
-                item_name=item.name,
-                quantity_change=movement.quantity_change,
-                movement_type=movement.movement_type,
-                supplier=movement.supplier,
-                note=movement.note,
-                created_at=movement.created_at,
-            )
-            for movement, item in rows
-        ]
-    )
+    result = await db.execute(query)
+    return [_serialize(item) for item in result.scalars().all()]
 
 
-@router.post("/receipts", response_model=InventoryReceiptResponse, status_code=status.HTTP_201_CREATED)
-async def receive_stock(
-    payload: InventoryReceiptCreate,
+@router.post("", response_model=InventoryItemResponse, status_code=status.HTTP_201_CREATED)
+async def create_inventory_item(
+    payload: InventoryCreateRequest,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
-) -> InventoryReceiptResponse:
-    query = (
-        select(InventoryItem)
-        .where(
-            InventoryItem.owner_id == current_user.id,
-            InventoryItem.name == payload.item_name,
-            InventoryItem.unit == payload.unit,
-        )
-        .with_for_update()
-    )
-    item = (await db.execute(query)).scalar_one_or_none()
-    if item is None:
-        item = InventoryItem(
-            owner_id=current_user.id,
-            name=payload.item_name,
-            category=payload.category,
-            quantity=0,
-            unit=payload.unit,
-            min_quantity=payload.min_quantity,
-            location=payload.location,
-        )
-        db.add(item)
-        await db.flush()
-    else:
-        item.category = payload.category
-        item.location = payload.location
-        item.min_quantity = payload.min_quantity
-
-    item.quantity += payload.quantity
-    movement = InventoryMovement(
-        item_id=item.id,
-        created_by=current_user.id,
-        quantity_change=payload.quantity,
-        movement_type="receipt",
-        supplier=payload.supplier,
-        note=payload.note,
-    )
-    db.add(movement)
+) -> InventoryItemResponse:
+    item = InventoryItem(owner_id=current_user.id, **payload.model_dump())
+    db.add(item)
     await db.commit()
     await db.refresh(item)
-    await db.refresh(movement)
+    return _serialize(item)
 
-    return InventoryReceiptResponse(
-        message="Đã nhập kho và lưu vào cơ sở dữ liệu.",
-        item=_item_response(item),
-        movement=InventoryMovementResponse(
-            id=movement.id,
-            item_id=movement.item_id,
-            item_name=item.name,
-            quantity_change=movement.quantity_change,
-            movement_type=movement.movement_type,
-            supplier=movement.supplier,
-            note=movement.note,
-            created_at=movement.created_at,
-        ),
-    )
+
+@router.patch("/{item_id}", response_model=InventoryItemResponse)
+async def update_inventory_item(
+    item_id: UUID,
+    payload: InventoryUpdateRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> InventoryItemResponse:
+    item = await _get_item(db, item_id)
+    if not _can_access(item, current_user):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Không có quyền sửa vật tư này")
+    for key, value in payload.model_dump(exclude_unset=True).items():
+        setattr(item, key, value)
+    await db.commit()
+    await db.refresh(item)
+    return _serialize(item)
+
+
+@router.post("/{item_id}/adjust", response_model=InventoryItemResponse)
+async def adjust_inventory_item(
+    item_id: UUID,
+    payload: StockAdjustRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> InventoryItemResponse:
+    if payload.quantity_delta == 0:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Số lượng điều chỉnh không được bằng 0")
+    item = await _get_item(db, item_id, for_update=True)
+    if not _can_access(item, current_user):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Không có quyền điều chỉnh vật tư này")
+    next_quantity = item.quantity + payload.quantity_delta
+    if next_quantity < 0:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Số lượng tồn không thể âm")
+    item.quantity = next_quantity
+    db.add(StockMovement(inventory_item_id=item.id, actor_id=current_user.id, quantity_delta=payload.quantity_delta, reason=payload.reason))
+    await db.commit()
+    await db.refresh(item)
+    return _serialize(item)
+
+
+@router.get("/{item_id}/movements", response_model=list[StockMovementResponse])
+async def list_inventory_movements(
+    item_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> list[StockMovementResponse]:
+    item = await _get_item(db, item_id)
+    if not _can_access(item, current_user):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Không có quyền xem vật tư này")
+    result = await db.execute(select(StockMovement).where(StockMovement.inventory_item_id == item.id).order_by(StockMovement.created_at.desc()))
+    return [StockMovementResponse.model_validate(m) for m in result.scalars().all()]
+
+
+async def _get_item(db: AsyncSession, item_id: UUID, for_update: bool = False) -> InventoryItem:
+    query = select(InventoryItem).where(InventoryItem.id == item_id)
+    if for_update:
+        query = query.with_for_update()
+    item = (await db.execute(query)).scalar_one_or_none()
+    if item is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy vật tư")
+    return item

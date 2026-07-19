@@ -1,54 +1,52 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
 
 
-class InventoryReceiptCreate(BaseModel):
-    item_name: str = Field(min_length=1, max_length=200)
-    category: str = Field(min_length=1, max_length=50)
-    quantity: float = Field(gt=0)
+CATEGORIES = ("Hạt giống", "Phân bón", "Thuốc BVTV", "Thiết bị")
+
+
+class InventoryCreateRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=150)
+    category: str = Field(min_length=1, max_length=30)
+    quantity: float = Field(default=0, ge=0)
     unit: str = Field(min_length=1, max_length=30)
-    location: str = Field(default="Kho chính", min_length=1, max_length=100)
-    min_quantity: float = Field(default=0, ge=0)
-    supplier: str | None = Field(default=None, max_length=200)
-    note: str | None = Field(default=None, max_length=500)
+    location: str | None = Field(default=None, max_length=120)
+    reorder_level: float = Field(default=0, ge=0)
+
+
+class InventoryUpdateRequest(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=150)
+    category: str | None = Field(default=None, min_length=1, max_length=30)
+    unit: str | None = Field(default=None, min_length=1, max_length=30)
+    location: str | None = Field(default=None, max_length=120)
+    reorder_level: float | None = Field(default=None, ge=0)
+
+
+class StockAdjustRequest(BaseModel):
+    quantity_delta: float
+    reason: str = Field(min_length=1, max_length=255)
 
 
 class InventoryItemResponse(BaseModel):
+    model_config = {"from_attributes": True}
     id: UUID
     name: str
     category: str
     quantity: float
     unit: str
-    min_quantity: float
-    location: str
+    location: str | None
+    reorder_level: float
     status: str
+    created_at: datetime
     updated_at: datetime
 
-    model_config = ConfigDict(from_attributes=True)
 
-
-class InventoryMovementResponse(BaseModel):
+class StockMovementResponse(BaseModel):
+    model_config = {"from_attributes": True}
     id: UUID
-    item_id: UUID
-    item_name: str
-    quantity_change: float
-    movement_type: str
-    supplier: str | None
-    note: str | None
+    inventory_item_id: UUID
+    quantity_delta: float
+    reason: str
     created_at: datetime
-
-
-class InventoryReceiptResponse(BaseModel):
-    message: str
-    item: InventoryItemResponse
-    movement: InventoryMovementResponse
-
-
-class InventoryItemsResponse(BaseModel):
-    items: list[InventoryItemResponse]
-
-
-class InventoryMovementsResponse(BaseModel):
-    movements: list[InventoryMovementResponse]

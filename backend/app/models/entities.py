@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from uuid import UUID
 
-from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, String, Text, func
+from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, JSON, String, Text, UniqueConstraint, func, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -23,6 +23,9 @@ class User(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     plots: Mapped[list["Plot"]] = relationship(back_populates="owner")
+    harvest_plans: Mapped[list["HarvestPlan"]] = relationship(
+        back_populates="owner", foreign_keys=lambda: [HarvestPlan.owner_id]
+    )
 
 
 class ChatSession(Base):
@@ -87,6 +90,7 @@ class Plot(Base):
     crop: Mapped[Crop] = relationship(back_populates="plots")
     disease_logs: Mapped[list["DiseaseLog"]] = relationship(back_populates="plot")
     yield_forecasts: Mapped[list["YieldForecast"]] = relationship(back_populates="plot")
+    harvest_plans: Mapped[list["HarvestPlan"]] = relationship(back_populates="plot")
 
 
 class DiseaseLog(Base):
@@ -119,8 +123,62 @@ class YieldForecast(Base):
     optimal_harvest_end: Mapped[date] = mapped_column(Date)
     weather_advisory: Mapped[str | None] = mapped_column(Text)
     generated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    forecast_method: Mapped[str] = mapped_column(String(40), default="heuristic_v1", server_default="heuristic_v1")
+    model_version: Mapped[str] = mapped_column(String(80), default="heuristic-v1", server_default="heuristic-v1")
+    status: Mapped[str] = mapped_column(String(30), default="review_required", server_default="review_required")
+    forecasted_yield_min_tons: Mapped[float | None] = mapped_column(Float)
+    forecasted_yield_max_tons: Mapped[float | None] = mapped_column(Float)
+    input_snapshot: Mapped[dict] = mapped_column(JSONB, default=dict, server_default="{}")
+    weather_source: Mapped[str | None] = mapped_column(String(150))
+    weather_snapshot: Mapped[dict | None] = mapped_column(JSONB)
+    explanation: Mapped[str | None] = mapped_column(Text)
+    needs_human_review: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
 
     plot: Mapped[Plot] = relationship(back_populates="yield_forecasts")
+
+
+class HarvestPlan(Base):
+    __tablename__ = "harvest_plans"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, server_default=func.gen_random_uuid())
+    plot_id: Mapped[UUID] = mapped_column(ForeignKey("plots.id", ondelete="CASCADE"), index=True)
+    forecast_id: Mapped[UUID | None] = mapped_column(ForeignKey("yield_forecasts.id", ondelete="SET NULL"))
+    owner_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    title: Mapped[str] = mapped_column(String(200))
+    status: Mapped[str] = mapped_column(String(30), default="draft")
+    planned_start_date: Mapped[date] = mapped_column(Date)
+    planned_end_date: Mapped[date] = mapped_column(Date)
+    expected_yield_tons: Mapped[float | None] = mapped_column(Float)
+    actual_yield_tons: Mapped[float | None] = mapped_column(Float)
+    labor_count: Mapped[int | None] = mapped_column(Integer)
+    transport_notes: Mapped[str | None] = mapped_column(Text)
+    storage_notes: Mapped[str | None] = mapped_column(Text)
+    risk_notes: Mapped[str | None] = mapped_column(Text)
+    created_by: Mapped[UUID] = mapped_column(ForeignKey("users.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    plot: Mapped[Plot] = relationship(back_populates="harvest_plans")
+    owner: Mapped[User] = relationship(back_populates="harvest_plans", foreign_keys=[owner_id])
+    tasks: Mapped[list["HarvestPlanTask"]] = relationship(back_populates="plan", cascade="all, delete-orphan")
+
+
+class HarvestPlanTask(Base):
+    __tablename__ = "harvest_plan_tasks"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, server_default=func.gen_random_uuid())
+    harvest_plan_id: Mapped[UUID] = mapped_column(ForeignKey("harvest_plans.id", ondelete="CASCADE"), index=True)
+    task_type: Mapped[str] = mapped_column(String(40))
+    title: Mapped[str] = mapped_column(String(200))
+    description: Mapped[str | None] = mapped_column(Text)
+    planned_date: Mapped[date] = mapped_column(Date)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    status: Mapped[str] = mapped_column(String(30), default="pending")
+    assigned_to: Mapped[UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    plan: Mapped[HarvestPlan] = relationship(back_populates="tasks")
 
 
 class MarketPrice(Base):
@@ -146,6 +204,125 @@ class PriceAlert(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class FinanceTransaction(Base):
+    __tablename__ = "finance_transactions"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, server_default=func.gen_random_uuid())
+    owner_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    title: Mapped[str] = mapped_column(String(200))
+    type: Mapped[str] = mapped_column(String(20))
+    amount: Mapped[float] = mapped_column(Float)
+    category: Mapped[str] = mapped_column(String(100))
+    transaction_date: Mapped[date] = mapped_column(Date, default=date.today)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class Supplier(Base):
+    __tablename__ = "suppliers"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, server_default=func.gen_random_uuid())
+    owner_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(150))
+    contact: Mapped[str | None] = mapped_column(String(100))
+    email: Mapped[str | None] = mapped_column(String(150))
+    address: Mapped[str | None] = mapped_column(String(255))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class PurchaseRequest(Base):
+    __tablename__ = "purchase_requests"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, server_default=func.gen_random_uuid())
+    owner_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    item_name: Mapped[str] = mapped_column(String(150))
+    quantity: Mapped[float] = mapped_column(Float)
+    supplier_id: Mapped[UUID | None] = mapped_column(ForeignKey("suppliers.id", ondelete="SET NULL"))
+    status: Mapped[str] = mapped_column(String(30), default="pending")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class StockTransfer(Base):
+    __tablename__ = "stock_transfers"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, server_default=func.gen_random_uuid())
+    owner_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    item_name: Mapped[str] = mapped_column(String(150))
+    quantity: Mapped[float] = mapped_column(Float)
+    source: Mapped[str] = mapped_column(String(120))
+    destination: Mapped[str] = mapped_column(String(120))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class UserSettings(Base):
+    __tablename__ = "user_settings"
+    id: Mapped[UUID] = mapped_column(primary_key=True, server_default=func.gen_random_uuid())
+    owner_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), unique=True, index=True)
+    settings: Mapped[dict] = mapped_column(JSON, default=dict)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class SeasonalEvent(Base):
+    __tablename__ = "seasonal_events"
+    id: Mapped[UUID] = mapped_column(primary_key=True, server_default=func.gen_random_uuid())
+    owner_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    title: Mapped[str] = mapped_column(String(200))
+    start_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    end_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    calendar_key: Mapped[str] = mapped_column(String(40), default="work")
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class TraceabilityLabel(Base):
+    __tablename__ = "traceability_labels"
+    id: Mapped[UUID] = mapped_column(primary_key=True, server_default=func.gen_random_uuid())
+    owner_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    lot_name: Mapped[str] = mapped_column(String(200))
+    harvest_date: Mapped[date] = mapped_column(Date)
+    standard: Mapped[str] = mapped_column(String(80))
+    farmer: Mapped[str] = mapped_column(String(150))
+    qr_value: Mapped[str] = mapped_column(String(100), unique=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ShipmentRecord(Base):
+    __tablename__ = "shipment_records"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, server_default=func.gen_random_uuid())
+    owner_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    shipment_code: Mapped[str] = mapped_column(String(50), unique=True, index=True)
+    status: Mapped[str] = mapped_column(String(30), default="scheduled")
+    payload: Mapped[dict] = mapped_column(JSONB, default=dict, server_default="{}")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class InventoryItem(Base):
+    __tablename__ = "inventory_items"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, server_default=func.gen_random_uuid())
+    owner_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(150))
+    category: Mapped[str] = mapped_column(String(30))
+    quantity: Mapped[float] = mapped_column(Float, default=0)
+    unit: Mapped[str] = mapped_column(String(30))
+    location: Mapped[str | None] = mapped_column(String(120))
+    reorder_level: Mapped[float] = mapped_column(Float, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class StockMovement(Base):
+    __tablename__ = "stock_movements"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, server_default=func.gen_random_uuid())
+    inventory_item_id: Mapped[UUID] = mapped_column(ForeignKey("inventory_items.id", ondelete="CASCADE"), index=True)
+    actor_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
+    quantity_delta: Mapped[float] = mapped_column(Float)
+    reason: Mapped[str] = mapped_column(String(255))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class WeatherAlertSubscription(Base):
     __tablename__ = "weather_alert_subscriptions"
 
@@ -159,34 +336,6 @@ class WeatherAlertSubscription(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-
-
-class InventoryItem(Base):
-    __tablename__ = "inventory_items"
-
-    id: Mapped[UUID] = mapped_column(primary_key=True, server_default=func.gen_random_uuid())
-    owner_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
-    name: Mapped[str] = mapped_column(String(200))
-    category: Mapped[str] = mapped_column(String(50))
-    quantity: Mapped[float] = mapped_column(Float, default=0)
-    unit: Mapped[str] = mapped_column(String(30))
-    min_quantity: Mapped[float] = mapped_column(Float, default=0)
-    location: Mapped[str] = mapped_column(String(100), default="Kho chính")
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-
-
-class InventoryMovement(Base):
-    __tablename__ = "inventory_movements"
-
-    id: Mapped[UUID] = mapped_column(primary_key=True, server_default=func.gen_random_uuid())
-    item_id: Mapped[UUID] = mapped_column(ForeignKey("inventory_items.id", ondelete="CASCADE"), index=True)
-    created_by: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
-    quantity_change: Mapped[float] = mapped_column(Float)
-    movement_type: Mapped[str] = mapped_column(String(20))
-    supplier: Mapped[str | None] = mapped_column(String(200))
-    note: Mapped[str | None] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class DisasterWarning(Base):

@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Award, Calendar, Download, FileCheck, Printer, QrCode, RefreshCw, UserCheck } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { apiFetch } from "@/lib/api-client";
 import { Badge } from "@/components/ui/badge";
 
 const certificates = [
@@ -32,27 +33,26 @@ export default function Page() {
     standard: string;
     farmer: string;
     qrVal: string;
-  } | null>({
-    lotName: "Lô Lúa Seng Cù Điện Biên",
-    harvestDate: "2026-07-15",
-    standard: "VietGAP",
-    farmer: "Nguyễn Văn An",
-    qrVal: "ARGI-JAS-A1-20260715",
-  });
+  } | null>(null);
+  const [traceError, setTraceError] = useState<string | null>(null);
 
-  const handleGenerate = (e: React.FormEvent) => {
+  useEffect(() => {
+    apiFetch<Array<{ lot_name: string; harvest_date: string; standard: string; farmer: string; qr_value: string }>>("/traceability/labels")
+      .then((rows) => { const latest = rows[0]; if (latest) setGeneratedLabel({ lotName: latest.lot_name, harvestDate: latest.harvest_date, standard: latest.standard, farmer: latest.farmer, qrVal: latest.qr_value }); })
+      .catch((error) => setTraceError(error instanceof Error ? error.message : "Không thể tải nhãn truy xuất."));
+  }, []);
+
+  const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
-    setGeneratedLabel({
-      lotName,
-      harvestDate,
-      standard,
-      farmer,
-      qrVal: `ARGI-${lotName.substring(0, 3).toUpperCase()}-${Date.now().toString().slice(-4)}`,
-    });
+    try {
+      const created = await apiFetch<{ lot_name: string; harvest_date: string; standard: string; farmer: string; qr_value: string }>("/traceability/labels", { method: "POST", body: JSON.stringify({ lot_name: lotName, harvest_date: harvestDate, standard, farmer }) });
+      setGeneratedLabel({ lotName: created.lot_name, harvestDate: created.harvest_date, standard: created.standard, farmer: created.farmer, qrVal: created.qr_value });
+    } catch (error) { setTraceError(error instanceof Error ? error.message : "Không thể tạo nhãn truy xuất."); }
   };
 
   return (
     <div className="flex flex-col gap-6">
+      {traceError && <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{traceError}</div>}
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">

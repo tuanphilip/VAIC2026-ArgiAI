@@ -1,6 +1,5 @@
 import { apiFetch } from "@/lib/api-client";
 
-export type InventoryCategory = "Hạt giống" | "Phân bón" | "Thuốc BVTV" | "Thiết bị";
 export type InventoryStatus = "Đầy kho" | "Sắp hết" | "Hết hàng";
 
 export interface InventoryItem {
@@ -27,6 +26,7 @@ export interface InventoryMovement {
 }
 
 export interface InventoryReceiptInput {
+  item_id?: string;
   item_name: string;
   category: string;
   quantity: number;
@@ -37,29 +37,77 @@ export interface InventoryReceiptInput {
   note?: string;
 }
 
-export interface InventoryReceiptResponse {
-  message: string;
-  item: InventoryItem;
-  movement: InventoryMovement;
+interface InventoryApiItem {
+  id: string;
+  name: string;
+  category: string;
+  quantity: number;
+  unit: string;
+  location: string | null;
+  reorder_level: number;
+  status: InventoryStatus;
+  updated_at: string;
 }
 
-export async function listInventoryItems(params?: { search?: string; category?: string }): Promise<InventoryItem[]> {
-  const query = new URLSearchParams();
-  if (params?.search) query.set("search", params.search);
-  if (params?.category && params.category !== "All") query.set("category", params.category);
-  const suffix = query.toString() ? `?${query.toString()}` : "";
-  const response = await apiFetch<{ items: InventoryItem[] }>(`/inventory/items${suffix}`);
-  return response.items;
+interface InventoryApiMovement {
+  id: string;
+  inventory_item_id: string;
+  quantity_delta: number;
+  reason: string;
+  created_at: string;
 }
 
-export async function listInventoryMovements(limit = 50): Promise<InventoryMovement[]> {
-  const response = await apiFetch<{ movements: InventoryMovement[] }>(`/inventory/movements?limit=${limit}`);
-  return response.movements;
+function mapItem(item: InventoryApiItem): InventoryItem {
+  return {
+    ...item,
+    min_quantity: item.reorder_level,
+    location: item.location ?? "Chưa cập nhật",
+  };
 }
 
-export function receiveInventory(payload: InventoryReceiptInput): Promise<InventoryReceiptResponse> {
-  return apiFetch<InventoryReceiptResponse>("/inventory/receipts", {
+export async function listInventoryItems(): Promise<InventoryItem[]> {
+  const rows = await apiFetch<InventoryApiItem[]>("/inventory");
+  return rows.map(mapItem);
+}
+
+export async function listInventoryMovements(items: InventoryItem[]): Promise<InventoryMovement[]> {
+  const grouped = await Promise.all(items.map(async (item) => {
+    const rows = await apiFetch<InventoryApiMovement[]>(`/inventory/${item.id}/movements`);
+    return rows.map((movement) => ({
+      id: movement.id,
+      item_id: movement.inventory_item_id,
+      item_name: item.name,
+      quantity_change: movement.quantity_delta,
+      movement_type: movement.quantity_delta >= 0 ? "receipt" as const : "issue" as const,
+      supplier: null,
+      note: movement.reason,
+      created_at: movement.created_at,
+    }));
+  }));
+  return grouped.flat().sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
+}
+
+export async function receiveInventory(payload: InventoryReceiptInput): Promise<InventoryItem> {
+  if (payload.item_id) {
+    const response = await apiFetch<InventoryApiItem>(`/inventory/${payload.item_id}/adjust`, {
+      method: "POST",
+      body: JSON.stringify({
+        quantity_delta: payload.quantity,
+        reason: payload.note || `Nhập kho${payload.supplier ? ` từ ${payload.supplier}` : ""}`,
+      }),
+    });
+    return mapItem(response);
+  }
+  const response = await apiFetch<InventoryApiItem>("/inventory", {
     method: "POST",
-    body: JSON.stringify(payload),
+    body: JSON.stringify({
+      name: payload.item_name,
+      category: payload.category,
+      quantity: payload.quantity,
+      unit: payload.unit,
+      location: payload.location,
+      reorder_level: payload.min_quantity,
+    }),
   });
+  return mapItem(response);
 }

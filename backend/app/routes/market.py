@@ -1,4 +1,5 @@
-from datetime import date
+from datetime import date, timedelta
+from typing import cast
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -50,6 +51,45 @@ async def list_catalog(
         }
         for crop, price in rows
     ]
+
+
+@router.get("/summary")
+async def market_summary(
+    days: int = Query(default=7, ge=1, le=365),
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, object]:
+    """Return a real per-crop market summary for the plots API contract."""
+    cutoff = date.today() - timedelta(days=days - 1)
+    result = await db.execute(
+        select(Crop, MarketPrice)
+        .join(MarketPrice, MarketPrice.crop_id == Crop.id)
+        .where(MarketPrice.recorded_date >= cutoff)
+        .order_by(Crop.name, Crop.variety, MarketPrice.recorded_date.desc())
+    )
+    grouped: dict[UUID, dict[str, object]] = {}
+    for crop, price in result.all():
+        item = grouped.setdefault(
+            crop.id,
+            {
+                "crop_name": f"{crop.name} {crop.variety}",
+                "unit": "kg",
+                "latest_price": price.price_per_kg,
+                "previous_price": None,
+                "change_percent": None,
+                "week_min": price.price_per_kg,
+                "week_max": price.price_per_kg,
+                "history": [],
+            },
+        )
+        history = cast(list[dict[str, object]], item["history"])
+        history.append({"id": price.id, "date": price.recorded_date, "price": price.price_per_kg, "source": price.source})
+        item["week_min"] = min(cast(float, item["week_min"]), price.price_per_kg)
+        item["week_max"] = max(cast(float, item["week_max"]), price.price_per_kg)
+        if len(history) == 2:
+            item["previous_price"] = price.price_per_kg
+            latest = cast(float, item["latest_price"])
+            item["change_percent"] = round(((latest - price.price_per_kg) / price.price_per_kg) * 100, 2) if price.price_per_kg else None
+    return {"currency": "VND/kg", "items": list(grouped.values())}
 
 
 @router.get("/prices", response_model=MarketPricesResponse)

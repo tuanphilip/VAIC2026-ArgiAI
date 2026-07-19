@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { BarChart3, Calendar, Download, FileSpreadsheet, RefreshCw, Sprout, TrendingDown, TrendingUp } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { apiFetch } from "@/lib/api-client";
 import { Badge } from "@/components/ui/badge";
 
 // Mock comparison data for different configurations
@@ -41,6 +42,15 @@ export default function Page() {
   const [cropFilter, setCropFilter] = useState("all");
   const [compareType, setCompareType] = useState<"yoy" | "qoq">("yoy");
   const [regionFilter, setRegionFilter] = useState("all");
+  const [comparisonRows, setComparisonRows] = useState<Array<{ period: string; cultivatedArea: number; yieldTons: number; diseaseCases: number }>>([]);
+  const [compareError, setCompareError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const region = regionFilter === "all" ? "" : `&region=${encodeURIComponent(regionFilter)}`;
+    apiFetch<{ metrics: Record<string, { current_period_ha?: number; current_period_tons?: number }>; details_by_crop: Array<{ crop_name: string; area_ha: number; yield_tons: number; disease_cases: number }> }>(`/dashboard/compare?compare_type=${compareType}${region}`)
+      .then((data) => setComparisonRows(data.details_by_crop.map((item) => ({ period: item.crop_name, cultivatedArea: item.area_ha, yieldTons: item.yield_tons, diseaseCases: item.disease_cases }))))
+      .catch((error) => setCompareError(error instanceof Error ? error.message : "Không thể tải dữ liệu so sánh."));
+  }, [compareType, regionFilter]);
 
   const [isExporting, setIsExporting] = useState(false);
 
@@ -207,7 +217,7 @@ export default function Page() {
           <CardContent className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
-                data={(compareType === "yoy" ? dataYoY : dataQoQ) as any[]}
+                data={comparisonRows}
                 margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
               >
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -215,17 +225,7 @@ export default function Page() {
                 <YAxis tickLine={false} style={{ fontSize: 10 }} />
                 <Tooltip />
                 <Legend style={{ fontSize: 10 }} />
-                {compareType === "yoy" ? (
-                  <>
-                    <Bar dataKey="Sản lượng 2025 (tấn)" fill="#94a3b8" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="Sản lượng 2026 (tấn)" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                  </>
-                ) : (
-                  <>
-                    <Bar dataKey="Sản lượng cũ (tấn)" fill="#94a3b8" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="Sản lượng mới (tấn)" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                  </>
-                )}
+                <Bar dataKey="yieldTons" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -243,25 +243,15 @@ export default function Page() {
           <CardContent className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart
-                data={(compareType === "yoy" ? diseaseHistoryYoY : diseaseHistoryQoQ) as any[]}
+                data={comparisonRows}
                 margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
               >
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="month" tickLine={false} style={{ fontSize: 10 }} />
+                <XAxis dataKey="period" tickLine={false} style={{ fontSize: 10 }} />
                 <YAxis tickLine={false} style={{ fontSize: 10 }} />
                 <Tooltip />
                 <Legend style={{ fontSize: 10 }} />
-                {compareType === "yoy" ? (
-                  <>
-                    <Line type="monotone" dataKey="2025" stroke="#94a3b8" strokeWidth={2} dot={{ r: 4 }} />
-                    <Line type="monotone" dataKey="2026" stroke="#f43f5e" strokeWidth={2} dot={{ r: 4 }} />
-                  </>
-                ) : (
-                  <>
-                    <Line type="monotone" dataKey="Kỳ trước (Q2)" stroke="#94a3b8" strokeWidth={2} dot={{ r: 4 }} />
-                    <Line type="monotone" dataKey="Kỳ này (Q3)" stroke="#f43f5e" strokeWidth={2} dot={{ r: 4 }} />
-                  </>
-                )}
+                <Line type="monotone" dataKey="diseaseCases" stroke="#f43f5e" strokeWidth={2} dot={{ r: 4 }} />
               </LineChart>
             </ResponsiveContainer>
           </CardContent>

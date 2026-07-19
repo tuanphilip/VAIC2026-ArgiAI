@@ -53,10 +53,8 @@ export default function Page() {
     setLoading(true);
     setError("");
     try {
-      const [nextItems, nextMovements] = await Promise.all([
-        listInventoryItems({ search: searchTerm, category: selectedCategory }),
-        listInventoryMovements(),
-      ]);
+      const nextItems = await listInventoryItems();
+      const nextMovements = await listInventoryMovements(nextItems);
       setItems(nextItems);
       setMovements(nextMovements);
     } catch (cause) {
@@ -71,6 +69,11 @@ export default function Page() {
   }, [loadInventory]);
 
   const lowStockCount = useMemo(() => items.filter((item) => item.status !== "Đầy kho").length, [items]);
+  const displayedItems = useMemo(() => items.filter((item) => {
+    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = selectedCategory === "All" || item.category === selectedCategory;
+    return matchesSearch && matchesCategory;
+  }), [items, searchTerm, selectedCategory]);
 
   const openReceipt = (item?: InventoryItem) => {
     setSelectedItem(item ?? null);
@@ -100,7 +103,8 @@ export default function Page() {
     setSubmitting(true);
     setError("");
     try {
-      const response = await receiveInventory({
+      const savedItem = await receiveInventory({
+        item_id: selectedItem?.id,
         item_name: form.item_name.trim(),
         category: form.category,
         quantity,
@@ -110,7 +114,7 @@ export default function Page() {
         supplier: form.supplier.trim() || undefined,
         note: form.note.trim() || undefined,
       });
-      setSuccess(response.message);
+      setSuccess(`Đã lưu nhập kho: ${savedItem.name} (${savedItem.quantity} ${savedItem.unit}).`);
       setShowReceiptModal(false);
       await loadInventory();
     } catch (cause) {
@@ -166,7 +170,7 @@ export default function Page() {
             <div className="relative w-full md:w-[260px]"><Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" /><input aria-label="Tìm kiếm vật tư" placeholder="Tìm kiếm vật tư..." value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} className="w-full rounded-lg border py-2 pl-8 pr-3 text-xs focus:outline-emerald-500 dark:bg-slate-950" /></div>
           </CardHeader>
           <CardContent className="p-0">
-            {loading ? <div className="flex min-h-48 items-center justify-center text-sm text-muted-foreground"><Loader2 className="mr-2 size-5 animate-spin" /> Đang tải tồn kho...</div> : items.length === 0 ? <div className="flex min-h-48 items-center justify-center p-6 text-center text-sm text-muted-foreground">Chưa có vật tư phù hợp. Bấm “Nhập kho nhanh” để tạo phiếu đầu tiên.</div> : <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="border-b bg-slate-50 text-xs font-semibold text-slate-500 dark:bg-slate-900/40"><tr><th className="p-4">Tên vật tư</th><th className="p-4">Phân loại</th><th className="p-4">Số lượng</th><th className="p-4">Trạng thái</th><th className="p-4">Vị trí</th><th className="p-4 text-right">Thao tác</th></tr></thead><tbody className="divide-y">{items.map((item) => <tr key={item.id} className="transition hover:bg-slate-50/50 dark:hover:bg-slate-900/10"><td className="p-4 font-semibold text-slate-800 dark:text-slate-200">{item.name}</td><td className="p-4 text-xs text-slate-500">{item.category}</td><td className="p-4 font-medium">{item.quantity} {item.unit}</td><td className="p-4"><Badge className={statusClass(item.status)}>{item.status}</Badge></td><td className="p-4 text-xs text-slate-500">{item.location}</td><td className="p-4 text-right"><Button size="xs" variant="outline" onClick={() => openReceipt(item)} className="border-emerald-200 text-emerald-700">Nhập thêm</Button></td></tr>)}</tbody></table></div>}
+            {loading ? <div className="flex min-h-48 items-center justify-center text-sm text-muted-foreground"><Loader2 className="mr-2 size-5 animate-spin" /> Đang tải tồn kho...</div> : items.length === 0 ? <div className="flex min-h-48 items-center justify-center p-6 text-center text-sm text-muted-foreground">Chưa có vật tư phù hợp. Bấm “Nhập kho nhanh” để tạo phiếu đầu tiên.</div> : <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="border-b bg-slate-50 text-xs font-semibold text-slate-500 dark:bg-slate-900/40"><tr><th className="p-4">Tên vật tư</th><th className="p-4">Phân loại</th><th className="p-4">Số lượng</th><th className="p-4">Trạng thái</th><th className="p-4">Vị trí</th><th className="p-4 text-right">Thao tác</th></tr></thead><tbody className="divide-y">{displayedItems.map((item) => <tr key={item.id} className="transition hover:bg-slate-50/50 dark:hover:bg-slate-900/10"><td className="p-4 font-semibold text-slate-800 dark:text-slate-200">{item.name}</td><td className="p-4 text-xs text-slate-500">{item.category}</td><td className="p-4 font-medium">{item.quantity} {item.unit}</td><td className="p-4"><Badge className={statusClass(item.status)}>{item.status}</Badge></td><td className="p-4 text-xs text-slate-500">{item.location}</td><td className="p-4 text-right"><Button size="xs" variant="outline" onClick={() => openReceipt(item)} className="border-emerald-200 text-emerald-700">Nhập thêm</Button></td></tr>)}</tbody></table></div>}
           </CardContent>
         </Card>
       </div>

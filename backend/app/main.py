@@ -6,7 +6,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.core.config import get_settings
-from app.routes import auth, chat, dashboard, diseases, disaster_warnings, health, inventory, market, plots, users, weather, yield_forecasts
+from app.database.migrations import run_runtime_migrations
+from app.database.session import engine
+from app.routes import auth, calendar, chat, dashboard, diseases, disaster_warnings, finance, health, inventory, market, plots, procurement, settings as settings_routes, shipments, traceability, users, weather, yield_forecasts
 from app.services.weather import shutdown_weather_cache_lifespan, weather_cache_lifespan
 
 settings = get_settings()
@@ -14,6 +16,7 @@ settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    await run_runtime_migrations(engine)
     stop_event, task = await weather_cache_lifespan()
     app.state.weather_cache_stop_event = stop_event
     app.state.weather_cache_task = task
@@ -49,9 +52,15 @@ app.include_router(chat.router, prefix=settings.api_v1_prefix)
 app.include_router(plots.router, prefix=settings.api_v1_prefix)
 app.include_router(users.router, prefix=settings.api_v1_prefix)
 app.include_router(diseases.router, prefix=settings.api_v1_prefix)
-app.include_router(inventory.router, prefix=settings.api_v1_prefix)
 app.include_router(weather.router, prefix=settings.api_v1_prefix)
 app.include_router(yield_forecasts.router, prefix=settings.api_v1_prefix)
+app.include_router(inventory.router, prefix=settings.api_v1_prefix)
+app.include_router(finance.router, prefix=settings.api_v1_prefix)
+app.include_router(procurement.router, prefix=settings.api_v1_prefix)
+app.include_router(settings_routes.router, prefix=settings.api_v1_prefix)
+app.include_router(calendar.router, prefix=settings.api_v1_prefix)
+app.include_router(traceability.router, prefix=settings.api_v1_prefix)
+app.include_router(shipments.router, prefix=settings.api_v1_prefix)
 app.include_router(market.router, prefix=settings.api_v1_prefix)
 app.include_router(dashboard.router, prefix=settings.api_v1_prefix)
 app.include_router(disaster_warnings.router, prefix=settings.api_v1_prefix)

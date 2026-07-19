@@ -1,0 +1,40 @@
+{
+  "dataset_id": "dien-bien-weather",
+  "crawl_date": "2026-07-18T20:17:47.892511+00:00",
+  "geographic_scope": "Điện Biên, Việt Nam",
+  "coordinates": {
+    "requested": {
+      "latitude": 21.386,
+      "longitude": 103.016
+    },
+    "model_grid": {
+      "latitude": 21.335676,
+      "longitude": 103.02752
+    }
+  },
+  "sources": [
+    {
+      "name": "Open-Meteo Forecast API",
+      "url": "https://api.open-meteo.com/v1/forecast?latitude=21.386&longitude=103.016&current=temperature_2m,relative_humidity_2m,precipitation,rain,weather_code,wind_speed_10m,wind_gusts_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,wind_gusts_10m_max&timezone=Asia%2FBangkok&forecast_days=7",
+      "data_type": "forecast",
+      "records": 7
+    },
+    {
+      "name": "NASA POWER Daily API",
+      "url": "https://power.larc.nasa.gov/api/temporal/daily/point?parameters=PRECTOTCORR,T2M,T2M_MAX,T2M_MIN,RH2M&community=AG&longitude=103.016&latitude=21.386&start=20250101&end=20251231&format=JSON",
+      "data_type": "modeled",
+      "records": 365
+    }
+  ],
+  "verification": {
+    "coordinates_checked": true,
+    "schema_checked": true,
+    "nulls_dropped_from_nasa": true
+  },
+  "missing_fields": [
+    "publish_date",
+    "field_observation_id",
+    "soil_moisture",
+    "official_provincial_station_id"
+  ]
+}
