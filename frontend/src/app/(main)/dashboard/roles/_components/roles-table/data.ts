@@ -1,3 +1,5 @@
+import type { UserDirectoryItem } from "@/lib/users-api";
+
 export type Role = {
   role: string;
   group: string;
@@ -9,125 +11,20 @@ export type Role = {
   status: "Active" | "Needs review";
 };
 
-export const roles: Role[] = [
-  {
-    role: "Owner",
-    group: "Needs review",
-    accessLevel: "Full",
-    users: 2,
-    permissionSets: ["Users", "Settings", "Billing", "Reports", "Integrations", "Audit Logs"],
-    lastReview: "Apr 12, 2025",
-    owner: "System",
-    status: "Needs review",
-  },
-  {
-    role: "Admin",
-    group: "Needs review",
-    accessLevel: "Full",
-    users: 5,
-    permissionSets: ["Users", "Settings", "Reports", "Billing", "Integrations"],
-    lastReview: "Apr 15, 2025",
-    owner: "Jane Doe",
-    status: "Needs review",
-  },
-  {
-    role: "Manager",
-    group: "Needs review",
-    accessLevel: "Scoped",
-    users: 12,
-    permissionSets: ["Users", "Reports", "Projects", "Tasks"],
-    lastReview: "Apr 18, 2025",
-    owner: "Jane Doe",
-    status: "Needs review",
-  },
-  {
-    role: "Support",
-    group: "System roles",
-    accessLevel: "Scoped",
-    users: 8,
-    permissionSets: ["Users", "Tickets", "Reports", "Knowledge Base"],
-    lastReview: "May 1, 2025",
-    owner: "System",
-    status: "Active",
-  },
-  {
-    role: "Analyst",
-    group: "System roles",
-    accessLevel: "Scoped",
-    users: 6,
-    permissionSets: ["Reports", "Analytics", "Dashboards", "Exports"],
-    lastReview: "May 5, 2025",
-    owner: "System",
-    status: "Active",
-  },
-  {
-    role: "Guest",
-    group: "System roles",
-    accessLevel: "Read only",
-    users: 14,
-    permissionSets: ["Reports", "Dashboards"],
-    lastReview: "May 6, 2025",
-    owner: "System",
-    status: "Active",
-  },
-  {
-    role: "Service",
-    group: "System roles",
-    accessLevel: "API access",
-    users: 3,
-    permissionSets: ["Integrations", "API Keys", "Webhooks", "Logs"],
-    lastReview: "Apr 22, 2025",
-    owner: "System",
-    status: "Active",
-  },
-  {
-    role: "Billing",
-    group: "Custom roles",
-    accessLevel: "Scoped",
-    users: 3,
-    permissionSets: ["Billing", "Invoices", "Payments", "Reports"],
-    lastReview: "Apr 28, 2025",
-    owner: "Alex Kim",
-    status: "Active",
-  },
-  {
-    role: "Marketing",
-    group: "Custom roles",
-    accessLevel: "Scoped",
-    users: 9,
-    permissionSets: ["Users", "Reports", "Campaigns", "Analytics", "Exports"],
-    lastReview: "May 2, 2025",
-    owner: "Alex Kim",
-    status: "Active",
-  },
-  {
-    role: "Developer",
-    group: "Custom roles",
-    accessLevel: "Scoped",
-    users: 10,
-    permissionSets: ["Repos", "Deployments", "Settings", "API Keys", "Logs"],
-    lastReview: "May 3, 2025",
-    owner: "Chris Lee",
-    status: "Active",
-  },
-  {
-    role: "Project Lead",
-    group: "Custom roles",
-    accessLevel: "Scoped",
-    users: 7,
-    permissionSets: ["Projects", "Tasks", "Reports", "Users", "Settings"],
-    lastReview: "Apr 30, 2025",
-    owner: "Chris Lee",
-    status: "Active",
-  },
-  {
-    role: "Finance Viewer",
-    group: "Custom roles",
-    accessLevel: "Read only",
-    users: 4,
-    permissionSets: ["Billing", "Reports", "Invoices", "Dashboards"],
-    lastReview: "May 7, 2025",
-    owner: "Jane Doe",
-    status: "Active",
-  },
-];
+export function toRoles(users: UserDirectoryItem[]): Role[] {
+  const counts = new Map<string, number>();
+  for (const user of users) counts.set(user.role, (counts.get(user.role) ?? 0) + 1);
+
+  return [...counts.entries()]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([role, count]) => ({
+      role,
+      group: "System roles",
+      accessLevel: "Assigned users",
+      users: count,
+      permissionSets: [],
+      lastReview: "—",
+      owner: "System",
+      status: "Active" as const,
+    }));
+}

@@ -87,3 +87,21 @@ class DiseaseLogResponse(BaseModel):
     image_url: str
     created_at: datetime
     resolved_at: datetime | None = None
+
+
+class TreatmentPlanCreate(BaseModel):
+    disease_log_id: UUID
+    plot_label: str = Field(min_length=1, max_length=200)
+    treatment_agent: str = Field(min_length=1, max_length=200)
+    interval_days: int = Field(ge=3, le=90)
+
+
+class TreatmentPlanResponse(BaseModel):
+    id: UUID
+    disease_log_id: UUID
+    plot_label: str
+    treatment_agent: str
+    interval_days: int
+    status: str
+    created_at: datetime
+    updated_at: datetime

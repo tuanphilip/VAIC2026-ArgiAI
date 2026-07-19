@@ -110,6 +110,23 @@ class DiseaseLog(Base):
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     plot: Mapped[Plot | None] = relationship(back_populates="disease_logs")
+    treatment_plans: Mapped[list["TreatmentPlan"]] = relationship(back_populates="disease_log")
+
+
+class TreatmentPlan(Base):
+    __tablename__ = "treatment_plans"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, server_default=func.gen_random_uuid())
+    owner_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    disease_log_id: Mapped[UUID] = mapped_column(ForeignKey("disease_logs.id", ondelete="CASCADE"), index=True)
+    plot_label: Mapped[str] = mapped_column(String(200))
+    treatment_agent: Mapped[str] = mapped_column(String(200))
+    interval_days: Mapped[int] = mapped_column(Integer)
+    status: Mapped[str] = mapped_column(String(20), default="planned", server_default="planned")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    disease_log: Mapped[DiseaseLog] = relationship(back_populates="treatment_plans")
 
 
 class YieldForecast(Base):
