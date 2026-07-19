@@ -9,7 +9,6 @@ import { useShallow } from "zustand/react/shallow";
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -21,7 +20,6 @@ import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
 import { useActiveUser } from "@/stores/auth-store";
 
 import { NavMain } from "./nav-main";
-import { NavUser } from "./nav-user";
 
 
 const _data = {
@@ -114,9 +112,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         {/* <NavDocuments items={data.documents} /> */}
         {/* <NavSecondary items={data.navSecondary} className="mt-auto" /> */}
       </SidebarContent>
-      <SidebarFooter>
-        <NavUser user={activeUser} />
-      </SidebarFooter>
     </Sidebar>
   );
 }
