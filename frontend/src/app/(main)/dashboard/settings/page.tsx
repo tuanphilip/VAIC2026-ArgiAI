@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { AlertCircle, Database, Save, Send, Sliders, Users } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { apiFetch } from "@/lib/api-client";
 
 export default function Page() {
   const [moistureMin, setMoistureMin] = useState(40);
@@ -18,35 +19,42 @@ export default function Page() {
 
   // Webhook settings
   const [webhookUrl, setWebhookUrl] = useState("https://api.zalo.me/v2/oa/message");
-  const [webhookToken, setWebhookToken] = useState("zalo_oa_secret_token_12345");
+  const [webhookToken, setWebhookToken] = useState("");
   const [webhookSaved, setWebhookSaved] = useState(false);
 
   // Backup settings
   const [backupSchedule, setBackupSchedule] = useState("daily");
   const [backupSaved, setBackupSaved] = useState(false);
 
-  const handleSave = (e: React.FormEvent) => {
-    e.preventDefault();
-    setSaved(true);
-    setTimeout(() => {
-      setSaved(false);
-    }, 2000);
+  useEffect(() => {
+    apiFetch<{ settings: Record<string, unknown> }>("/settings").then(({ settings }) => {
+      if (typeof settings.moistureMin === "number") setMoistureMin(settings.moistureMin);
+      if (typeof settings.moistureMax === "number") setMoistureMax(settings.moistureMax);
+      if (typeof settings.tempMin === "number") setTempMin(settings.tempMin);
+      if (typeof settings.tempMax === "number") setTempMax(settings.tempMax);
+      if (typeof settings.webhookUrl === "string") setWebhookUrl(settings.webhookUrl);
+      if (typeof settings.backupSchedule === "string") setBackupSchedule(settings.backupSchedule);
+    }).catch(() => undefined);
+  }, []);
+
+  const saveSettings = async (patch: Record<string, unknown>) => {
+    const current = { moistureMin, moistureMax, tempMin, tempMax, webhookUrl, webhookToken, backupSchedule, ...patch };
+    await apiFetch("/settings", { method: "PUT", body: JSON.stringify({ settings: current }) });
   };
 
-  const handleSaveWebhook = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    setWebhookSaved(true);
-    setTimeout(() => {
-      setWebhookSaved(false);
-    }, 2000);
+    try { await saveSettings({}); setSaved(true); } catch { setSaved(false); }
   };
 
-  const handleSaveBackup = (e: React.FormEvent) => {
+  const handleSaveWebhook = async (e: React.FormEvent) => {
     e.preventDefault();
-    setBackupSaved(true);
-    setTimeout(() => {
-      setBackupSaved(false);
-    }, 2000);
+    try { await saveSettings({ webhookUrl }); setWebhookSaved(true); } catch { setWebhookSaved(false); }
+  };
+
+  const handleSaveBackup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try { await saveSettings({ backupSchedule }); setBackupSaved(true); } catch { setBackupSaved(false); }
   };
 
   return (
