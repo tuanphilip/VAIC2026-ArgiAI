@@ -1,7 +1,7 @@
 from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import func, select
+from sqlalchemy import func, literal, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import require_roles
@@ -45,11 +45,11 @@ async def dashboard_summary(
             func.coalesce(func.sum(Plot.area_hectares), 0.0),
             func.count(Plot.id).filter(Plot.status != "harvested"),
             func.count(func.distinct(Plot.crop_id)),
-            func.count(func.distinct(Plot.region)).filter(Plot.region.is_not(None)),
+            literal(0),
             func.avg(Plot.moisture),
         ).where(*plot_filters)
     )
-    plot_count, total_area, active_plot_count, crop_count, region_count, average_moisture = totals.one()
+    plot_count, total_area, active_plot_count, crop_count, _legacy_region_count, average_moisture = totals.one()
 
     disease_query = (
         select(func.count(DiseaseLog.id))
@@ -58,16 +58,25 @@ async def dashboard_summary(
     )
     active_disease_count = int((await db.execute(disease_query)).scalar_one())
 
-    region_rows = await db.execute(
-        select(
-            func.coalesce(Plot.region, "Chưa phân loại"),
-            func.count(Plot.id),
-            func.coalesce(func.sum(Plot.area_hectares), 0.0),
+    try:
+        region_rows = await db.execute(
+            select(
+                func.coalesce(Plot.region, "Chưa phân loại"),
+                func.count(Plot.id),
+                func.coalesce(func.sum(Plot.area_hectares), 0.0),
+            )
+            .where(*plot_filters)
+            .group_by(func.coalesce(Plot.region, "Chưa phân loại"))
+            .order_by(func.sum(Plot.area_hectares).desc())
         )
-        .where(*plot_filters)
-        .group_by(func.coalesce(Plot.region, "Chưa phân loại"))
-        .order_by(func.sum(Plot.area_hectares).desc())
-    )
+        regions = region_rows.all()
+    except Exception:
+        # Older production schemas may not have the optional region column yet.
+        # Keep the real totals usable instead of turning the entire dashboard into 500.
+        await db.rollback()
+        regions = []
+
+    region_count = len(regions)
     crop_rows = await db.execute(
         select(
             Crop.name,
@@ -99,7 +108,7 @@ async def dashboard_summary(
         average_moisture=round(float(average_moisture), 1) if average_moisture is not None else None,
         regions=[
             DashboardRegionStat(region=region, plot_count=int(count), area_hectares=round(float(area), 2))
-            for region, count, area in region_rows.all()
+            for region, count, area in regions
         ],
         crops=[
             DashboardCropStat(
