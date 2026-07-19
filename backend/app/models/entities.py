@@ -146,6 +146,32 @@ class PriceAlert(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class InventoryItem(Base):
+    __tablename__ = "inventory_items"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, server_default=func.gen_random_uuid())
+    owner_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(150))
+    category: Mapped[str] = mapped_column(String(30))
+    quantity: Mapped[float] = mapped_column(Float, default=0)
+    unit: Mapped[str] = mapped_column(String(30))
+    location: Mapped[str | None] = mapped_column(String(120))
+    reorder_level: Mapped[float] = mapped_column(Float, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class StockMovement(Base):
+    __tablename__ = "stock_movements"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, server_default=func.gen_random_uuid())
+    inventory_item_id: Mapped[UUID] = mapped_column(ForeignKey("inventory_items.id", ondelete="CASCADE"), index=True)
+    actor_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
+    quantity_delta: Mapped[float] = mapped_column(Float)
+    reason: Mapped[str] = mapped_column(String(255))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class WeatherAlertSubscription(Base):
     __tablename__ = "weather_alert_subscriptions"
 

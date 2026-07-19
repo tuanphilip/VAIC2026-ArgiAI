@@ -1,14 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AlertCircle, ArrowDownLeft, ArrowUpRight, BookOpen, Plus, Save, Search, Warehouse } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { apiFetch } from "@/lib/api-client";
 import { Badge } from "@/components/ui/badge";
 
 interface InventoryItem {
-  id: number;
+  id: string;
   name: string;
   category: "Hạt giống" | "Phân bón" | "Thuốc BVTV" | "Thiết bị";
   qty: number;
@@ -30,19 +31,28 @@ const stockTransfers = [
 ];
 
 export default function Page() {
-  const [items, setItems] = useState<InventoryItem[]>([
-    { id: 1, name: "Hạt giống Lúa Seng Cù Điện Biên", category: "Hạt giống", qty: 250, unit: "kg", status: "Đầy kho", location: "Kệ A1" },
-    { id: 2, name: "Phân bón hữu cơ NPK Lâm Thao", category: "Phân bón", qty: 15, unit: "bao", status: "Sắp hết", location: "Kệ B2" },
-    { id: 3, name: "Thuốc trừ sâu sinh học Neem Oil", category: "Thuốc BVTV", qty: 45, unit: "lít", status: "Đầy kho", location: "Kệ C1" },
-    { id: 4, name: "Đầu phun xoay van nhỏ giọt", category: "Thiết bị", qty: 120, unit: "cái", status: "Đầy kho", location: "Kệ D3" },
-    { id: 5, name: "Rau cải ngọt Điện Biên", category: "Hạt giống", qty: 0, unit: "hộp", status: "Hết hàng", location: "Kệ A2" },
-  ]);
+  const [items, setItems] = useState<InventoryItem[]>([]);
+  const [inventoryLoading, setInventoryLoading] = useState(true);
+  const [inventoryError, setInventoryError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    apiFetch<Array<{ id: string; name: string; category: InventoryItem["category"]; quantity: number; unit: string; status: InventoryItem["status"]; location: string | null }>>("/inventory")
+      .then((rows) => {
+        if (!active) return;
+        setItems(rows.map((row) => ({ ...row, qty: row.quantity, location: row.location ?? "Chưa cập nhật" })));
+      })
+      .catch((error) => active && setInventoryError(error instanceof Error ? error.message : "Không thể tải tồn kho."))
+      .finally(() => active && setInventoryLoading(false));
+    return () => { active = false; };
+  }, []);
+
 
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
 
   const [showInModal, setShowInModal] = useState(false);
-  const [selectedItemId, setSelectedItemId] = useState<number | null>(null);
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [adjustQty, setAdjustQty] = useState(0);
 
   // Purchase Form state
@@ -51,30 +61,23 @@ export default function Page() {
   const [reqSupplier, setReqSupplier] = useState("HTX Nông nghiệp Mường Ảng");
   const [reqSuccess, setReqSuccess] = useState(false);
 
-  const handleAdjustStock = (e: React.FormEvent) => {
+  const handleAdjustStock = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (selectedItemId === null) return;
-
-    setItems(
-      items.map((item) => {
-        if (item.id === selectedItemId) {
-          const newQty = Math.max(0, item.qty + adjustQty);
-          let newStatus: InventoryItem["status"] = "Đầy kho";
-          if (newQty === 0) newStatus = "Hết hàng";
-          else if (newQty < 20) newStatus = "Sắp hết";
-
-          return {
-            ...item,
-            qty: newQty,
-            status: newStatus,
-          };
-        }
-        return item;
-      })
-    );
-
-    setShowInModal(false);
-    setAdjustQty(0);
+    if (selectedItemId === null || adjustQty === 0) return;
+    try {
+      const updated = await apiFetch<{
+        id: string; name: string; category: InventoryItem["category"]; quantity: number; unit: string;
+        status: InventoryItem["status"]; location: string | null;
+      }>(`/inventory/${selectedItemId}/adjust`, {
+        method: "POST",
+        body: JSON.stringify({ quantity_delta: adjustQty, reason: adjustQty > 0 ? "Nhập kho thủ công" : "Xuất kho thủ công" }),
+      });
+      setItems((current) => current.map((item) => item.id === updated.id ? { ...item, ...updated, qty: updated.quantity, location: updated.location ?? "Chưa cập nhật" } : item));
+      setShowInModal(false);
+      setAdjustQty(0);
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "Không thể điều chỉnh tồn kho.");
+    }
   };
 
   const handleCreateRequest = (e: React.FormEvent) => {
@@ -119,6 +122,9 @@ export default function Page() {
           </Button>
         </div>
       </div>
+
+      {inventoryLoading && <div className="rounded-lg border p-4 text-sm text-muted-foreground">Đang tải dữ liệu tồn kho…</div>}
+      {inventoryError && <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">{inventoryError}</div>}
 
       {/* Main content grid */}
       <div className="grid gap-6 md:grid-cols-4">
