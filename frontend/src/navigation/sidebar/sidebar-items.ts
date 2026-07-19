@@ -6,13 +6,14 @@ import {
   Database,
   FileBarChart,
   LayoutDashboard,
-  Map,
+  type LucideIcon,
+  MapIcon,
   MessageCircle,
   PackageSearch,
+  Settings,
+  Sprout,
   Store,
   Truck,
-  Settings,
-  type LucideIcon,
 } from "lucide-react";
 
 export type NavBadge = "new" | "soon";
@@ -67,7 +68,7 @@ export const sidebarItems: NavGroup[] = [
     id: 2,
     label: "Dữ liệu & Canh tác",
     items: [
-      { id: "lands", title: "Thửa đất & Cây trồng", url: "/dashboard/lands", icon: Map },
+      { id: "lands", title: "Thửa đất & Cây trồng", url: "/dashboard/lands", icon: MapIcon },
       { id: "pest-doctor", title: "Bác sĩ Cây trồng AI", url: "/dashboard/pest-doctor", icon: Bug, badge: "new" },
       { id: "weather", title: "Thời tiết Nông nghiệp", url: "/dashboard/weather", icon: CloudSun },
       { id: "inventory", title: "Vật tư & Tồn kho", url: "/dashboard/inventory", icon: PackageSearch },
@@ -78,6 +79,7 @@ export const sidebarItems: NavGroup[] = [
     label: "Phân tích & Thị trường",
     items: [
       { id: "analytics", title: "Phân tích mùa vụ", url: "/dashboard/analytics", icon: BarChart3 },
+      { id: "yield-planning", title: "Dự báo & Thu hoạch AI", url: "/dashboard/yield-planning", icon: Sprout },
       { id: "compare", title: "So sánh chu kỳ", url: "/dashboard/compare", icon: FileBarChart },
       { id: "market", title: "Giá cả thị trường", url: "/dashboard/market", icon: Store },
       { id: "traceability", title: "Truy xuất nguồn gốc", url: "/dashboard/traceability", icon: Database },
@@ -87,8 +89,6 @@ export const sidebarItems: NavGroup[] = [
   {
     id: 4,
     label: "Quản trị",
-    items: [
-      { id: "settings", title: "Cài đặt hệ thống", url: "/dashboard/settings", icon: Settings },
-    ],
+    items: [{ id: "settings", title: "Cài đặt hệ thống", url: "/dashboard/settings", icon: Settings }],
   },
 ];
