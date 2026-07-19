@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 import { ArrowLeft, History, Paperclip, Send, X } from "lucide-react";
 
-import { Avatar, AvatarBadge, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarBadge, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Bubble, BubbleContent, BubbleGroup, BubbleReactions } from "@/components/ui/bubble";
 import { Button } from "@/components/ui/button";
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupTextarea } from "@/components/ui/input-group";
@@ -17,7 +17,7 @@ import {
   MessageScrollerProvider,
   MessageScrollerViewport,
 } from "@/components/ui/message-scroller";
-import { cn, getInitials } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { streamAgriculturalAssistant, type ChatTurn } from "@/lib/chat-api";
 
 import { type Message as ChatMessage, type Contact, currentUser } from "./data";
@@ -130,7 +130,8 @@ export function ChatThread({ contact, messages, onOpenContact, onBack, showBackB
               </Button>
             )}
             <Avatar className="size-9">
-              <AvatarFallback className="bg-emerald-600 font-semibold text-white">AI</AvatarFallback>
+              <AvatarImage src="/logo.png" alt="AgriAI" className="object-contain p-1" />
+              <AvatarFallback className="bg-emerald-600 font-semibold text-white">A</AvatarFallback>
               <AvatarBadge className="bg-emerald-500" />
             </Avatar>
             <div>
@@ -180,7 +181,7 @@ export function ChatThread({ contact, messages, onOpenContact, onBack, showBackB
                               isOutbound && "bg-primary text-primary-foreground",
                             )}
                           >
-                            {getInitials(senderName)}
+                            {senderName.trim().charAt(0).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                       </MessageAvatar>
