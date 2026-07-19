@@ -224,18 +224,15 @@ _MIGRATIONS = (
 
 
 async def run_runtime_migrations(engine: AsyncEngine) -> None:
-    try:
-        async with engine.begin() as connection:
-            for migration_name, sql in _MIGRATIONS:
+    for migration_name, sql in _MIGRATIONS:
+        try:
+            async with engine.begin() as connection:
                 for statement in sql.split(";"):
                     statement = statement.strip()
                     if statement:
                         await connection.execute(text(statement))
-                # Keep a visible server-side breadcrumb in logs without inventing a
-                # second migration table that could conflict with existing tooling.
-                print(f"database migration ready: {migration_name}")
-    except Exception as exc:  # noqa: BLE001
-        # Local/unit environments often intentionally have no Postgres instance.
-        # A real deployment with a reachable DB still applies all statements; the
-        # API remains bootable so health/auth diagnostics can expose DB failures.
-        print(f"database migration skipped: {exc.__class__.__name__}")
+            print(f"database migration ready: {migration_name}")
+        except Exception as exc:  # noqa: BLE001
+            # Migrations are additive and independent. A pre-existing object or
+            # legacy schema mismatch must not roll back unrelated fixes.
+            print(f"database migration skipped: {migration_name} ({exc.__class__.__name__})")

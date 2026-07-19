@@ -174,9 +174,11 @@ async def compare_dashboard(
             Crop.name,
             Crop.variety,
             func.coalesce(func.sum(Plot.area_hectares), 0.0),
+            func.coalesce(func.sum(YieldForecast.forecasted_yield_tons), 0.0),
             func.count(DiseaseLog.id),
         )
         .join(Plot, Plot.crop_id == Crop.id, isouter=True)
+        .join(YieldForecast, (YieldForecast.plot_id == Plot.id) & (YieldForecast.generated_at >= current_start) & (YieldForecast.generated_at < now), isouter=True)
         .join(DiseaseLog, DiseaseLog.plot_id == Plot.id, isouter=True)
     )
     if region_filter is not None:
@@ -187,10 +189,10 @@ async def compare_dashboard(
         CropCompareDetail(
             crop_name=f"{name} {variety}",
             area_ha=round(float(area_ha), 2),
-            yield_tons=round(float(area_ha) * 4.2, 2),
+            yield_tons=round(float(yield_tons or 0), 2),
             disease_cases=int(cases),
         )
-        for name, variety, area_ha, cases in details_result.all()
+        for name, variety, area_ha, yield_tons, cases in details_result.all()
     ]
 
     return DashboardCompareResponse(
