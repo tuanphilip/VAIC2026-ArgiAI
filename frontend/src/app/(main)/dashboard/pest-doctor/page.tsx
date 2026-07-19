@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { API_BASE_URL } from "@/lib/api-client";
 import { useActiveUser, useAuthStore } from "@/stores/auth-store";
 
 // Example images for testing (Farmer View)
@@ -174,7 +175,6 @@ function isMeaningfulDiagnosisLog(log: ApiDiseaseLog): boolean {
 export default function Page() {
   const activeUser = useActiveUser();
   const token = useAuthStore((state) => state.token);
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api/v1";
 
   // Farmer States
   const [selectedSample, setSelectedSample] = useState<(typeof sampleImages)[number] | null>(null);
