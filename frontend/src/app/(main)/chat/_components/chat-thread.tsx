@@ -209,7 +209,7 @@ export function ChatThread({ contact, messages, onOpenContact, onBack, showBackB
         </MessageScroller>
       </MessageScrollerProvider>
 
-      <div className="border-t bg-background/80 px-3 py-3 backdrop-blur sm:px-4">
+      <div className="bg-background/80 px-3 pt-2 pb-5 backdrop-blur sm:px-4">
         <MessageComposer placeholder="Hỏi về cây trồng, sâu bệnh, thời tiết..." onSend={sendMessage} disabled={isSending} />
         <p className="mt-2 text-center text-muted-foreground text-[11px]">AI có thể sai. Hãy kiểm tra khuyến nghị thuốc và liều lượng với cán bộ kỹ thuật.</p>
       </div>
@@ -229,13 +229,19 @@ function MessageComposer({ placeholder, onSend, disabled = false }: { placeholde
         if (onSend) setValue("");
       }}
     >
-      <InputGroup className="mx-auto max-w-2xl rounded-xl border bg-muted/30 shadow-none has-[[data-slot=input-group-control]:focus-visible]:border-primary has-[[data-slot=input-group-control]:focus-visible]:ring-1 has-[[data-slot=input-group-control]:focus-visible]:ring-primary/30 dark:bg-muted/20">
+      <InputGroup className="mx-auto max-w-xl rounded-xl border bg-muted/30 shadow-none has-[[data-slot=input-group-control]:focus-visible]:border-primary has-[[data-slot=input-group-control]:focus-visible]:ring-1 has-[[data-slot=input-group-control]:focus-visible]:ring-primary/30 dark:bg-muted/20">
         <InputGroupTextarea
           placeholder={placeholder}
           value={value}
           onChange={(event) => setValue(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && !event.shiftKey) {
+              event.preventDefault();
+              event.currentTarget.form?.requestSubmit();
+            }
+          }}
           disabled={disabled}
-          className="min-h-11 max-h-28 resize-none border-0 bg-transparent px-3 py-2 text-sm shadow-none ring-0 focus-visible:ring-0 aria-invalid:ring-0 dark:aria-invalid:ring-0"
+          className="min-h-9 max-h-20 resize-none border-0 bg-transparent px-3 py-2 text-sm shadow-none ring-0 focus-visible:ring-0 aria-invalid:ring-0 dark:aria-invalid:ring-0"
         />
         <InputGroupAddon align="block-end">
           <InputGroupButton aria-label="Đính kèm tệp" type="button" size="icon-sm">
