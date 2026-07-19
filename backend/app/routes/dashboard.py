@@ -65,8 +65,10 @@ async def dashboard_summary(
             func.coalesce(func.sum(Plot.area_hectares), 0.0),
         )
         .where(*plot_filters)
-        .group_by(func.coalesce(Plot.region, "Chưa phân loại"))
-        .order_by(func.sum(Plot.area_hectares).desc())
+        # group by the source column, not the rendered coalesce expression.
+        # postgres otherwise rejects this aggregate query in production.
+        .group_by(Plot.region)
+        .order_by(func.coalesce(func.sum(Plot.area_hectares), 0.0).desc())
     )
     crop_rows = await db.execute(
         select(
