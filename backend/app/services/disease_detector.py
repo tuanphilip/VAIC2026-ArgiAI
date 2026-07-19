@@ -2,12 +2,14 @@ import base64
 import json
 import logging
 from dataclasses import dataclass, field
+from io import BytesIO
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
 import httpx
 from fastapi import UploadFile
+from PIL import Image, UnidentifiedImageError
 
 from app.core.config import get_settings
 
@@ -498,6 +500,18 @@ def _validate_image_input(file: UploadFile, content: bytes) -> list[str]:
         warnings.append("Ảnh quá nhỏ hoặc không đọc được nội dung.")
     if len(content) > 8 * 1024 * 1024:
         warnings.append("Ảnh vượt quá 8MB; hãy nén hoặc chụp lại ảnh rõ hơn.")
+
+    if not warnings or mime_type.startswith("image/"):
+        try:
+            with Image.open(BytesIO(content)) as image:
+                width, height = image.size
+                if min(width, height) < 256:
+                    warnings.append("Ảnh có độ phân giải quá thấp; cạnh ngắn phải từ 256px.")
+                if width > 8192 or height > 8192:
+                    warnings.append("Ảnh có kích thước quá lớn; hãy giảm kích thước trước khi tải lên.")
+                image.verify()
+        except (UnidentifiedImageError, OSError, ValueError):
+            warnings.append("Không đọc được nội dung ảnh; hãy tải lên JPG hoặc PNG hợp lệ.")
     return warnings
 
 

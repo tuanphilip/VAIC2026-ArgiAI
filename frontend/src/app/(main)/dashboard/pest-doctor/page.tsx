@@ -474,7 +474,7 @@ export default function Page() {
           <Card className="flex flex-col justify-between shadow-sm">
             <CardHeader>
               <CardTitle>Tải lên Hình ảnh Lá/Quả Bị Bệnh</CardTitle>
-              <CardDescription>Kéo thả ảnh hoặc chọn ảnh mẫu phía dưới để chẩn đoán nhanh.</CardDescription>
+              <CardDescription>Tải ảnh thực địa rõ nét, chọn cây trồng và mô tả triệu chứng để tăng độ tin cậy.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <label
@@ -505,34 +505,8 @@ export default function Page() {
                 )}
               </label>
 
-              <div className="space-y-2">
-                <span className="block font-semibold text-slate-600 text-xs dark:text-slate-400">
-                  Hoặc chọn ảnh bệnh phẩm mẫu:
-                </span>
-                <div className="grid grid-cols-3 gap-2">
-                  {sampleImages.map((sample) => (
-                    <button
-                      type="button"
-                      key={sample.id}
-                      onClick={() => {
-                        setSelectedSample(sample);
-                        setUploadedFile(null);
-                        setPreviewUrl(sample.image);
-                        setSelectedCropType(sample.type);
-                        setObservedSymptoms(sample.symptoms);
-                        setResult(null);
-                      }}
-                      className={`rounded-lg border p-2.5 text-left text-xs transition hover:bg-slate-50 dark:hover:bg-slate-900/40 ${
-                        selectedSample?.id === sample.id
-                          ? "border-emerald-500 bg-emerald-50/20 font-medium text-emerald-900 dark:text-emerald-300"
-                          : ""
-                      }`}
-                    >
-                      <span className="block truncate font-semibold">{sample.label}</span>
-                      <span className="text-[10px] text-muted-foreground">{sample.type}</span>
-                    </button>
-                  ))}
-                </div>
+              <div className="rounded-lg border border-dashed bg-muted/20 p-3 text-xs text-muted-foreground">
+                Chỉ dùng ảnh thực địa do bạn tải lên. Ảnh mẫu stock đã được bỏ để không tạo kết quả bệnh giả.
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">
@@ -592,7 +566,7 @@ export default function Page() {
               </CardTitle>
               <CardDescription>Báo cáo phân tích tự động từ mô hình học máy.</CardDescription>
             </CardHeader>
-            <CardContent className="p-6">
+            <CardContent className="max-h-[calc(100vh-10rem)] overflow-y-auto overscroll-contain p-6">
               {result ? (
                 <div className="fade-in animate-in space-y-5 duration-300">
                   <div className="flex items-start justify-between">
@@ -849,7 +823,7 @@ export default function Page() {
                   <Sparkles className="mb-3 size-12 text-slate-300" />
                   <p className="font-semibold text-slate-600 dark:text-slate-400">Chưa có dữ liệu chẩn đoán</p>
                   <p className="mt-1 text-xs">
-                    Chọn ảnh mẫu hoặc tải ảnh thực tế lên và bấm &quot;Bắt đầu Chẩn đoán AI&quot;.
+                    Chọn ảnh thực địa ở khung bên trái rồi bắt đầu phân tích.
                   </p>
                 </div>
               )}
