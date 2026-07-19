@@ -248,7 +248,7 @@ function MessageComposer({ placeholder, onSend, disabled = false }: { placeholde
             <Paperclip />
           </InputGroupButton>
           <InputGroupButton type="submit" variant="default" size="icon-sm" className="ml-auto rounded-lg" disabled={disabled || !value.trim()}>
-            <Send />
+            <Send className="size-5" />
             <span className="sr-only">Gửi</span>
           </InputGroupButton>
         </InputGroupAddon>
