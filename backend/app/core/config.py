@@ -42,6 +42,7 @@ class Settings(BaseSettings):
     vision_api_key: str | None = None
     vision_base_url: str = "https://api.naga.ac/v1"
     vision_model: str = "gemini-2.5-flash"
+    local_vision_fallback_enabled: bool = False
     llm_api_key: str | None = None
     llm_base_url: str = "https://api.deepseek.com/v1"
     llm_model: str = "deepseek-v4-flash"

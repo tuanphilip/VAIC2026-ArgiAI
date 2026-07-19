@@ -158,18 +158,19 @@ async def analyze_image(file: UploadFile, expected_crop: str | None = None) -> D
         )
 
     if not settings.gemini_api_key:
-        logger.warning("No remote vision API key is set; trying the bundled PlantVillage model.")
-        try:
-            from app.services.local_plant_model import classify
+        if settings.local_vision_fallback_enabled:
+            logger.warning("No remote vision API key is set; trying the bundled PlantVillage model.")
+            try:
+                from app.services.local_plant_model import classify
 
-            local_result = classify(content, expected_crop)
-            if local_result is not None:
-                return local_result
-        except Exception as exc:
-            logger.exception("Bundled PlantVillage model failed: %s", _safe_error_message(exc))
+                local_result = classify(content, expected_crop)
+                if local_result is not None:
+                    return local_result
+            except Exception as exc:
+                logger.exception("Bundled PlantVillage model failed: %s", _safe_error_message(exc))
         return _unavailable_result(
             expected_crop=expected_crop,
-            warning="Chưa có model vision phù hợp cho cây này hoặc dịch vụ phân tích chưa sẵn sàng.",
+            warning="Chưa cấu hình vision model đã được kiểm định cho ảnh thực địa.",
         )
 
     models_to_try = _models_to_try(settings.gemini_model)
