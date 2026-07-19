@@ -14,7 +14,7 @@ import {
   useReactTable,
   type VisibilityState,
 } from "@tanstack/react-table";
-import { Cog, Download, Grid, Plus, Rows3, Search, SlidersHorizontal } from "lucide-react";
+import { AlertCircle, Cog, Download, Grid, Loader2, Plus, Rows3, Search, SlidersHorizontal } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,12 +22,34 @@ import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/in
 import { Kbd } from "@/components/ui/kbd";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { getUsers } from "@/lib/users-api";
 
-import { filters, type UserRow } from "./data";
+import { filters, toUserRow, type UserRow } from "./data";
 import { usersColumns } from "./users-columns";
 import { UsersTable } from "./users-table";
 
-export function Users({ users }: { users: UserRow[] }) {
+export function Users() {
+  const [users, setUsers] = React.useState<UserRow[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const loadUsers = React.useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      setUsers((await getUsers()).map(toUserRow));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Không thể tải danh sách người dùng.");
+      setUsers([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    void loadUsers();
+  }, [loadUsers]);
+
   const [rowSelection, setRowSelection] = React.useState({});
   const [sorting, setSorting] = React.useState<SortingState>([{ id: "joinedDate", desc: true }]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
@@ -50,7 +72,7 @@ export function Users({ users }: { users: UserRow[] }) {
       columnVisibility,
       pagination,
     },
-    getRowId: (row) => row.email,
+    getRowId: (row) => row.userId,
     autoResetPageIndex: false,
     enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
@@ -71,7 +93,7 @@ export function Users({ users }: { users: UserRow[] }) {
   const workspaceFilter =
     (table.getColumn("workspace")?.getFilterValue() as string | undefined) ?? filters.workspace[0];
   const selectedCount = table.getFilteredSelectedRowModel().rows.length;
-
+  const roleOptions = ["All", ...new Set(users.map((user) => user.role))];
   function setColumnSelectFilter(columnId: string, value: string) {
     table.getColumn(columnId)?.setFilterValue(value === "All" ? undefined : value);
     table.setPageIndex(0);
@@ -126,7 +148,7 @@ export function Users({ users }: { users: UserRow[] }) {
               </SelectTrigger>
               <SelectContent position="popper" align="start">
                 <SelectGroup>
-                  {filters.role.map((option) => (
+                  {roleOptions.map((option) => (
                     <SelectItem key={option} value={option}>
                       {option}
                     </SelectItem>
@@ -200,7 +222,22 @@ export function Users({ users }: { users: UserRow[] }) {
           </Tabs>
         </div>
 
-        <UsersTable table={table} />
+        {loading ? (
+          <div className="flex min-h-32 items-center justify-center gap-2 text-muted-foreground text-sm">
+            <Loader2 className="size-4 animate-spin" /> Đang tải người dùng...
+          </div>
+        ) : error ? (
+          <div className="flex min-h-32 flex-col items-center justify-center gap-3 px-4 text-center text-destructive text-sm">
+            <div className="flex items-center gap-2"><AlertCircle className="size-4" /> {error}</div>
+            <Button size="sm" variant="outline" onClick={() => void loadUsers()}>Thử lại</Button>
+          </div>
+        ) : users.length === 0 ? (
+          <div className="flex min-h-32 items-center justify-center px-4 text-muted-foreground text-sm">
+            Chưa có người dùng nào trong hệ thống.
+          </div>
+        ) : (
+          <UsersTable table={table} />
+        )}
       </CardContent>
     </Card>
   );
