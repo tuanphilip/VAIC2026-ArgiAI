@@ -65,6 +65,16 @@ async def create_inventory_item(
 ) -> InventoryItemResponse:
     item = InventoryItem(owner_id=current_user.id, **payload.model_dump())
     db.add(item)
+    await db.flush()
+    if payload.quantity > 0:
+        db.add(
+            StockMovement(
+                inventory_item_id=item.id,
+                actor_id=current_user.id,
+                quantity_delta=payload.quantity,
+                reason="Nhập kho ban đầu",
+            )
+        )
     await db.commit()
     await db.refresh(item)
     return _serialize(item)
