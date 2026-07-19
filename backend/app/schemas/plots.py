@@ -48,9 +48,9 @@ class PlotResponse(BaseModel):
     status: str
     health: str
     moisture: str | None
-    owner: str
-    owner_id: UUID
-    owner_username: str
+    owner: str | None = None
+    owner_id: UUID | None = None
+    owner_username: str | None = None
     owner_citizen_id: str | None = None
     owner_email: EmailStr | None = None
     owner_phone: str | None = None

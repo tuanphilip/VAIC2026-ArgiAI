@@ -51,11 +51,11 @@ def serialize_plot(plot: Plot) -> PlotResponse:
         status=plot.status,
         health=plot.health,
         moisture=f"{plot.moisture}%" if plot.moisture is not None else None,
-        owner=plot.owner.full_name,
-        owner_id=plot.owner.id,
-        owner_username=plot.owner.username,
-        owner_citizen_id=plot.owner.citizen_id,
-        owner_email=plot.owner.email,
+        owner=plot.owner.full_name if plot.owner else plot.owner_name,
+        owner_id=plot.owner.id if plot.owner else None,
+        owner_username=plot.owner.username if plot.owner else None,
+        owner_citizen_id=plot.owner.citizen_id if plot.owner else None,
+        owner_email=plot.owner.email if plot.owner else None,
         owner_phone=plot.owner_phone,
         region=plot.region,
         location=Location(lat=plot.location_lat, lng=plot.location_lng),
@@ -86,7 +86,7 @@ async def list_plots(
 ) -> list[PlotResponse]:
     query = (
         select(Plot)
-        .join(User, Plot.user_id == User.id)
+        .outerjoin(User, Plot.user_id == User.id)
         .options(selectinload(Plot.crop), selectinload(Plot.owner))
         .order_by(Plot.created_at.desc())
     )
@@ -159,6 +159,7 @@ async def create_plot(
         moisture=payload.moisture,
         boundary=payload.boundary,
         owner_phone=payload.owner_phone,
+        owner_name=payload.owner if owner_id is None else None,
         region=payload.region,
         livestock=[item.model_dump() for item in payload.livestock],
     )
@@ -200,6 +201,7 @@ async def update_plot(
         plot.user_id = await _resolve_owner_id(
             db, payload.owner_id, payload.owner, payload.owner_citizen_id, payload.owner_email, current_user
         )
+        plot.owner_name = payload.owner if plot.user_id is None else None
     if "owner_phone" in payload.model_fields_set:
         plot.owner_phone = payload.owner_phone
     for field in [
@@ -246,7 +248,7 @@ async def _resolve_owner_id(
     owner_citizen_id: str | None,
     owner_email: str | None,
     current_user: User,
-) -> UUID:
+) -> UUID | None:
     if owner_id is None and owner_name is None and owner_citizen_id is None and owner_email is None:
         return current_user.id
     if current_user.role == "farmer":
@@ -262,9 +264,9 @@ async def _resolve_owner_id(
     else:
         result = await db.execute(select(User).where(or_(User.username == owner_name, User.full_name == owner_name)))
     owner = result.scalar_one_or_none()
-    if owner is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Owner not found")
-    return owner.id
+    # Cán bộ có thể nhập thửa đất trước khi chủ hộ đăng ký tài khoản.
+    # user_id NULL, còn tên nhập tay được lưu ở plots.owner_name để liên kết sau.
+    return owner.id if owner else None
 
 
 def _uuid_or_none(value: str) -> UUID | None:

@@ -238,6 +238,16 @@ _MIGRATIONS = (
         create index if not exists treatment_plans_disease_log_idx on public.treatment_plans(disease_log_id);
         """,
     ),
+    (
+        "026_allow_unregistered_plot_owner",
+        """
+        alter table public.plots alter column user_id drop not null;
+        alter table public.plots drop constraint if exists plots_user_id_fkey;
+        alter table public.plots add constraint plots_user_id_fkey foreign key (user_id) references public.users(id) on delete set null;
+        alter table public.plots add column if not exists owner_name varchar(150);
+        create index if not exists ix_plots_owner_name on public.plots(owner_name);
+        """,
+    ),
 )
 async def run_runtime_migrations(engine: AsyncEngine) -> None:
     for migration_name, sql in _MIGRATIONS:
