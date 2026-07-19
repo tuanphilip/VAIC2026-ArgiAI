@@ -8,7 +8,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.dependencies import get_current_user, require_roles
 from app.database.session import get_db
-from app.models import DiseaseLog, Plot, User
+from app.models import DiseaseLog, Plot, TreatmentPlan, User
 from app.schemas.diseases import (
     DiseaseDetectionData,
     DiseaseDetectionResponse,
@@ -17,6 +17,8 @@ from app.schemas.diseases import (
     DiseaseLogResponse,
     DiseaseStatusUpdateRequest,
     DiseaseStatusUpdateResponse,
+    TreatmentPlanCreate,
+    TreatmentPlanResponse,
 )
 from app.services.crop_doctor_agent import CropDoctorAgent
 from app.services.disease_detector import (
@@ -254,6 +256,42 @@ async def save_disease_feedback(
                 log.treatment_measures = payload.approved_treatment
             return DiseaseFeedbackResponse(disease_log_id=log.id)
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Disease log not found")
+
+
+@router.post("/treatment-plans", response_model=TreatmentPlanResponse, status_code=status.HTTP_201_CREATED)
+async def create_treatment_plan(
+    payload: TreatmentPlanCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> TreatmentPlanResponse:
+    """Persist a treatment plan only when its diagnosis belongs to the caller."""
+    result = await db.execute(
+        select(DiseaseLog.id).where(
+            DiseaseLog.id == payload.disease_log_id,
+            DiseaseLog.reporter_id == current_user.id,
+        )
+    )
+    if result.scalar_one_or_none() is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Disease log not found")
+
+    plan = TreatmentPlan(owner_id=current_user.id, **payload.model_dump())
+    db.add(plan)
+    await db.commit()
+    await db.refresh(plan)
+    return TreatmentPlanResponse.model_validate(plan, from_attributes=True)
+
+
+@router.get("/treatment-plans", response_model=list[TreatmentPlanResponse])
+async def list_treatment_plans(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> list[TreatmentPlanResponse]:
+    result = await db.execute(
+        select(TreatmentPlan)
+        .where(TreatmentPlan.owner_id == current_user.id)
+        .order_by(TreatmentPlan.created_at.desc())
+    )
+    return [TreatmentPlanResponse.model_validate(plan, from_attributes=True) for plan in result.scalars().all()]
 
 
 def _serialize_log(log: DiseaseLog) -> DiseaseLogResponse:

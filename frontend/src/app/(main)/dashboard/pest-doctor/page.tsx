@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { createTreatmentPlan } from "@/lib/diseases-api";
 import { useActiveUser, useAuthStore } from "@/stores/auth-store";
 
 // Example images for testing (Farmer View)
@@ -188,7 +189,7 @@ export default function Page() {
   const [treatmentCrop, setTreatmentCrop] = useState("");
   const [treatmentAgent, setTreatmentAgent] = useState("");
   const [treatmentInterval, setTreatmentInterval] = useState("7");
-
+  const [isSavingTreatmentPlan, setIsSavingTreatmentPlan] = useState(false);
 
   // Official/Admin States
   const [officialLogs, setOfficialLogs] = useState<OfficialLog[]>([]);
@@ -386,13 +387,32 @@ export default function Page() {
     }
   };
 
-  const handleSavePlanner = (e: React.FormEvent) => {
+  const handleSavePlanner = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!result || result.needsHumanReview || result.diagnosisMode !== "vision") {
       toast.warning("Chỉ tạo lịch điều trị sau khi chẩn đoán hình ảnh đã đủ tin cậy.");
       return;
     }
-    toast.info("Lập kế hoạch điều trị chưa được mở vì backend chưa có endpoint persistence. Không lưu giả vào trình duyệt.");
+    if (!result.id) {
+      toast.error("Không có ca chẩn đoán đã lưu để gắn kế hoạch điều trị.");
+      return;
+    }
+
+    setIsSavingTreatmentPlan(true);
+    try {
+      await createTreatmentPlan({
+        disease_log_id: result.id,
+        plot_label: treatmentCrop.trim(),
+        treatment_agent: treatmentAgent.trim(),
+        interval_days: Number(treatmentInterval),
+      });
+      toast.success("Đã lưu lịch điều trị.");
+    } catch (err) {
+      console.error("Error saving treatment plan:", err);
+      toast.error("Không thể lưu lịch điều trị. Vui lòng thử lại.");
+    } finally {
+      setIsSavingTreatmentPlan(false);
+    }
   };
 
   const handleSaveLogStatus = async (e: React.FormEvent) => {
@@ -853,7 +873,7 @@ export default function Page() {
                     type="text"
                     value={treatmentCrop}
                     onChange={(e) => setTreatmentCrop(e.target.value)}
-                    disabled={!canCreateTreatmentPlan}
+                    disabled={!canCreateTreatmentPlan || isSavingTreatmentPlan}
                     placeholder="Ví dụ: Cà phê lô A1"
                     className="w-full rounded-lg border p-2.5 text-xs focus:outline-emerald-500 dark:bg-slate-950"
                     required
@@ -868,7 +888,7 @@ export default function Page() {
                     type="text"
                     value={treatmentAgent}
                     onChange={(e) => setTreatmentAgent(e.target.value)}
-                    disabled={!canCreateTreatmentPlan}
+                    disabled={!canCreateTreatmentPlan || isSavingTreatmentPlan}
                     placeholder="Nhập chế phẩm đã được cán bộ xác nhận"
                     className="w-full rounded-lg border p-2.5 text-xs focus:outline-emerald-500 dark:bg-slate-950"
                     required
@@ -882,7 +902,7 @@ export default function Page() {
                     id="treatment-interval"
                     value={treatmentInterval}
                     onChange={(e) => setTreatmentInterval(e.target.value)}
-                    disabled={!canCreateTreatmentPlan}
+                    disabled={!canCreateTreatmentPlan || isSavingTreatmentPlan}
                     className="w-full rounded-lg border p-2.5 text-xs focus:outline-emerald-500 dark:bg-slate-950"
                   >
                     <option value="3">Mỗi 3 ngày</option>
@@ -893,10 +913,15 @@ export default function Page() {
 
                 <Button
                   type="submit"
-                  disabled={!canCreateTreatmentPlan}
+                  disabled={!canCreateTreatmentPlan || isSavingTreatmentPlan}
                   className="w-full cursor-pointer gap-1.5 bg-emerald-600 font-medium text-white text-xs hover:bg-emerald-700"
                 >
-                  <Save className="size-3.5" /> Lên lịch điều trị
+                  {isSavingTreatmentPlan ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <Save className="size-3.5" />
+                  )}{" "}
+                  {isSavingTreatmentPlan ? "Đang lưu..." : "Lên lịch điều trị"}
                 </Button>
               </form>
             </CardContent>

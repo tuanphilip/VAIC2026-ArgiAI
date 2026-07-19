@@ -1,7 +1,7 @@
 "use client";
 "use no memo";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   type ColumnFiltersState,
@@ -11,16 +11,16 @@ import {
   type PaginationState,
   useReactTable,
 } from "@tanstack/react-table";
-import { AlertTriangle, ChevronRight, FileUp, Search } from "lucide-react";
+import { AlertCircle, FileUp, Loader2, Search } from "lucide-react";
 
-import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { getUsers } from "@/lib/users-api";
 
 import { rolesColumns } from "./roles-table/columns";
-import type { Role } from "./roles-table/data";
+import { toRoles, type Role } from "./roles-table/data";
 import { RolesTable } from "./roles-table/table";
 
 function getRoleTypeFilter(groupFilter: string) {
@@ -47,7 +47,28 @@ function getRoleGroupFilterValue(typeFilter: string) {
   return undefined;
 }
 
-export function Roles({ roles }: { roles: Role[] }) {
+export function Roles() {
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadRoles = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      setRoles(toRoles(await getUsers()));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Không thể tải danh sách vai trò.");
+      setRoles([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadRoles();
+  }, []);
+
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
@@ -109,18 +130,6 @@ export function Roles({ roles }: { roles: Role[] }) {
 
         <TabsContent value="roles">
           <div className="flex flex-col gap-4">
-            <Alert className="border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-50">
-              <AlertTriangle className="size-4" />
-              <AlertTitle>Cần rà soát</AlertTitle>
-              <AlertDescription>3 vai trò có thay đổi quyền chưa được rà soát.</AlertDescription>
-              <AlertAction>
-                <Button size="sm" variant="link">
-                  Rà soát thay đổi
-                  <ChevronRight data-icon="inline-end" />
-                </Button>
-              </AlertAction>
-            </Alert>
-
             <div className="overflow-hidden rounded-xl border border-border/70 bg-background">
               <div className="flex flex-col items-stretch gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
                 <InputGroup className="h-7 w-full rounded-md sm:w-82">
@@ -203,7 +212,22 @@ export function Roles({ roles }: { roles: Role[] }) {
                 </div>
               </div>
 
-              <RolesTable table={table} />
+              {loading ? (
+                <div className="flex min-h-32 items-center justify-center gap-2 text-muted-foreground text-sm">
+                  <Loader2 className="size-4 animate-spin" /> Đang tải vai trò...
+                </div>
+              ) : error ? (
+                <div className="flex min-h-32 flex-col items-center justify-center gap-3 text-destructive text-sm">
+                  <div className="flex items-center gap-2"><AlertCircle className="size-4" /> {error}</div>
+                  <Button size="sm" variant="outline" onClick={() => void loadRoles()}>Thử lại</Button>
+                </div>
+              ) : roles.length === 0 ? (
+                <div className="flex min-h-32 items-center justify-center text-muted-foreground text-sm">
+                  Chưa có vai trò nào được gán.
+                </div>
+              ) : (
+                <RolesTable table={table} />
+              )}
             </div>
           </div>
         </TabsContent>

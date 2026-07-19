@@ -57,7 +57,8 @@ function getAvatarTone(name: string) {
   return tones[name.length % tones.length];
 }
 
-function getLastActiveBadge(lastActive: number) {
+function getLastActiveBadge(lastActive: number | null) {
+  if (lastActive === null) return null;
   if (lastActive < 1) {
     return {
       className: "bg-green-600 text-green-950 [&>svg]:text-white",
@@ -85,14 +86,14 @@ function getLastActiveBadge(lastActive: number) {
   };
 }
 
-function AvatarCell({ lastActive, name }: { lastActive: number; name: string }) {
+function AvatarCell({ lastActive, name }: { lastActive: number | null; name: string }) {
   const badge = getLastActiveBadge(lastActive);
-  const BadgeIcon = badge.icon;
+  const BadgeIcon = badge?.icon;
 
   return (
     <Avatar size="lg" className={cn("font-medium", getAvatarTone(name))}>
       <AvatarFallback>{getInitials(name)}</AvatarFallback>
-      <AvatarBadge className={badge.className}>{BadgeIcon ? <BadgeIcon /> : null}</AvatarBadge>
+      {badge ? <AvatarBadge className={badge.className}>{BadgeIcon ? <BadgeIcon /> : null}</AvatarBadge> : null}
     </Avatar>
   );
 }
@@ -141,7 +142,7 @@ export const usersColumns: ColumnDef<UserRow>[] = [
   },
   {
     id: "search",
-    accessorFn: (row) => `${row.name} ${row.email}`,
+    accessorFn: (row) => `${row.name} ${row.email} ${row.role}`,
     filterFn: "includesString",
     enableHiding: true,
   },
@@ -184,7 +185,7 @@ export const usersColumns: ColumnDef<UserRow>[] = [
   },
   {
     id: "joinedDate",
-    accessorFn: (row) => parse(row.joinedDate, "dd MMM yyyy, h:mm a", new Date()).getTime(),
+    accessorFn: (row) => (row.joinedDate === "—" ? 0 : parse(row.joinedDate, "dd MMM yyyy, h:mm a", new Date()).getTime()),
     header: "Joined date",
     cell: ({ row }) => <div className="text-foreground text-sm">{row.original.joinedDate}</div>,
   },

@@ -35,6 +35,31 @@ export interface DiseaseDetectionResponse {
   };
 }
 
+export interface TreatmentPlan {
+  id: string;
+  disease_log_id: string;
+  plot_label: string;
+  treatment_agent: string;
+  interval_days: number;
+  status: "planned" | "completed" | "cancelled";
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TreatmentPlanCreate {
+  disease_log_id: string;
+  plot_label: string;
+  treatment_agent: string;
+  interval_days: number;
+}
+
+export function createTreatmentPlan(payload: TreatmentPlanCreate): Promise<TreatmentPlan> {
+  return apiFetch<TreatmentPlan>("/diseases/treatment-plans", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
 export function listDiseaseLogs(): Promise<DiseaseLogListResponse> {
   return apiFetch<DiseaseLogListResponse>("/diseases/logs");
 }
