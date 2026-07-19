@@ -66,13 +66,13 @@ export function LoginForm() {
         return;
       } catch (error) {
         // Chỉ tự đăng ký khi backend xác nhận tài khoản chưa đăng nhập được.
-        if (!(error instanceof AuthApiError) || error.status != 401) throw error;
+        if (!(error instanceof AuthApiError) || error.status !== 401) throw error;
       }
       try {
         await register(account);
       } catch (error) {
         // Một lượt click khác có thể vừa tạo tài khoản. 409 không phải lỗi chết.
-        if (!(error instanceof AuthApiError) || error.status != 409) throw error;
+        if (!(error instanceof AuthApiError) || error.status !== 409) throw error;
       }
       const result = await login(account.username, account.password);
       finishLogin(result.access_token, result.user);

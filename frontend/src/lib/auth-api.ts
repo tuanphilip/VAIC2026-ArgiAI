@@ -29,7 +29,22 @@ export class AuthApiError extends Error {
 
 async function parseErrorDetail(res: Response, fallback: string): Promise<string> {
   const body = await res.json().catch(() => null);
-  return body?.detail ?? fallback;
+  const detail = body?.detail;
+  if (typeof detail === "string" && detail.trim()) return detail;
+  if (Array.isArray(detail)) {
+    const messages = detail
+      .map((entry) => {
+        if (typeof entry === "string") return entry;
+        if (entry && typeof entry === "object" && "msg" in entry) {
+          const location = "loc" in entry && Array.isArray(entry.loc) ? entry.loc.filter(Boolean).join(" / ") : "";
+          return location ? `${location}: ${String(entry.msg)}` : String(entry.msg);
+        }
+        return "";
+      })
+      .filter(Boolean);
+    if (messages.length > 0) return messages.join("; ");
+  }
+  return fallback;
 }
 
 export async function login(username: string, password: string): Promise<LoginResult> {
