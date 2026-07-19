@@ -1,7 +1,7 @@
 from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import func, literal, select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import require_roles
@@ -45,11 +45,11 @@ async def dashboard_summary(
             func.coalesce(func.sum(Plot.area_hectares), 0.0),
             func.count(Plot.id).filter(Plot.status != "harvested"),
             func.count(func.distinct(Plot.crop_id)),
-            literal(0),
+            func.count(func.distinct(Plot.region)).filter(Plot.region.is_not(None)),
             func.avg(Plot.moisture),
         ).where(*plot_filters)
     )
-    plot_count, total_area, active_plot_count, crop_count, _legacy_region_count, average_moisture = totals.one()
+    plot_count, total_area, active_plot_count, crop_count, region_count, average_moisture = totals.one()
 
     disease_query = (
         select(func.count(DiseaseLog.id))
@@ -58,25 +58,16 @@ async def dashboard_summary(
     )
     active_disease_count = int((await db.execute(disease_query)).scalar_one())
 
-    try:
-        region_rows = await db.execute(
-            select(
-                func.coalesce(Plot.region, "Chưa phân loại"),
-                func.count(Plot.id),
-                func.coalesce(func.sum(Plot.area_hectares), 0.0),
-            )
-            .where(*plot_filters)
-            .group_by(func.coalesce(Plot.region, "Chưa phân loại"))
-            .order_by(func.sum(Plot.area_hectares).desc())
+    region_rows = await db.execute(
+        select(
+            func.coalesce(Plot.region, "Chưa phân loại"),
+            func.count(Plot.id),
+            func.coalesce(func.sum(Plot.area_hectares), 0.0),
         )
-        regions = region_rows.all()
-    except Exception:
-        # Older production schemas may not have the optional region column yet.
-        # Keep the real totals usable instead of turning the entire dashboard into 500.
-        await db.rollback()
-        regions = []
-
-    region_count = len(regions)
+        .where(*plot_filters)
+        .group_by(func.coalesce(Plot.region, "Chưa phân loại"))
+        .order_by(func.sum(Plot.area_hectares).desc())
+    )
     crop_rows = await db.execute(
         select(
             Crop.name,
@@ -108,7 +99,7 @@ async def dashboard_summary(
         average_moisture=round(float(average_moisture), 1) if average_moisture is not None else None,
         regions=[
             DashboardRegionStat(region=region, plot_count=int(count), area_hectares=round(float(area), 2))
-            for region, count, area in regions
+            for region, count, area in region_rows.all()
         ],
         crops=[
             DashboardCropStat(
@@ -164,44 +155,60 @@ async def compare_dashboard(
         disease_filters.append(DiseaseLog.plot.has(region_filter))
         previous_disease_filters.append(DiseaseLog.plot.has(region_filter))
 
-    yield_result = await db.execute(
-        select(func.coalesce(func.sum(YieldForecast.forecasted_yield_tons), 0.0)).where(*yield_filters)
-    )
+    yield_result = await db.execute(select(func.sum(YieldForecast.forecasted_yield_tons)).where(*yield_filters))
     previous_yield_result = await db.execute(
-        select(func.coalesce(func.sum(YieldForecast.forecasted_yield_tons), 0.0)).where(*previous_yield_filters)
+        select(func.sum(YieldForecast.forecasted_yield_tons)).where(*previous_yield_filters)
     )
-    total_yield = float(yield_result.scalar_one())
-    previous_yield = float(previous_yield_result.scalar_one())
+    total_yield = yield_result.scalar_one()
+    previous_yield = previous_yield_result.scalar_one()
 
     disease_result = await db.execute(select(func.count(DiseaseLog.id)).where(*disease_filters))
     previous_disease_result = await db.execute(select(func.count(DiseaseLog.id)).where(*previous_disease_filters))
     disease_cases = int(disease_result.scalar_one())
     previous_cases = int(previous_disease_result.scalar_one())
 
+    area_by_crop = (
+        select(Plot.crop_id.label("crop_id"), func.sum(Plot.area_hectares).label("area_ha"))
+        .where(*([region_filter] if region_filter is not None else []))
+        .group_by(Plot.crop_id)
+        .subquery()
+    )
+    disease_by_crop = (
+        select(Plot.crop_id.label("crop_id"), func.count(DiseaseLog.id).label("disease_cases"))
+        .join(DiseaseLog, DiseaseLog.plot_id == Plot.id)
+        .where(*disease_filters)
+        .group_by(Plot.crop_id)
+        .subquery()
+    )
+    yield_by_crop = (
+        select(Plot.crop_id.label("crop_id"), func.sum(YieldForecast.forecasted_yield_tons).label("yield_tons"))
+        .join(YieldForecast, YieldForecast.plot_id == Plot.id)
+        .where(*yield_filters)
+        .group_by(Plot.crop_id)
+        .subquery()
+    )
     details_query = (
         select(
             Crop.name,
             Crop.variety,
-            func.coalesce(func.sum(Plot.area_hectares), 0.0),
-            func.coalesce(func.sum(YieldForecast.forecasted_yield_tons), 0.0),
-            func.count(DiseaseLog.id),
+            func.coalesce(area_by_crop.c.area_ha, 0.0),
+            func.coalesce(disease_by_crop.c.disease_cases, 0),
+            yield_by_crop.c.yield_tons,
         )
-        .join(Plot, Plot.crop_id == Crop.id, isouter=True)
-        .join(YieldForecast, (YieldForecast.plot_id == Plot.id) & (YieldForecast.generated_at >= current_start) & (YieldForecast.generated_at < now), isouter=True)
-        .join(DiseaseLog, DiseaseLog.plot_id == Plot.id, isouter=True)
+        .join(area_by_crop, area_by_crop.c.crop_id == Crop.id, isouter=True)
+        .join(disease_by_crop, disease_by_crop.c.crop_id == Crop.id, isouter=True)
+        .join(yield_by_crop, yield_by_crop.c.crop_id == Crop.id, isouter=True)
+        .order_by(Crop.name)
     )
-    if region_filter is not None:
-        details_query = details_query.where(region_filter)
-    details_query = details_query.group_by(Crop.name, Crop.variety).order_by(Crop.name)
     details_result = await db.execute(details_query)
     details = [
         CropCompareDetail(
             crop_name=f"{name} {variety}",
             area_ha=round(float(area_ha), 2),
-            yield_tons=round(float(yield_tons or 0), 2),
+            yield_tons=round(float(yield_tons), 2) if yield_tons is not None else None,
             disease_cases=int(cases),
         )
-        for name, variety, area_ha, yield_tons, cases in details_result.all()
+        for name, variety, area_ha, cases, yield_tons in details_result.all()
     ]
 
     return DashboardCompareResponse(
@@ -213,8 +220,8 @@ async def compare_dashboard(
                 percentage_change=_percent_change(total_area, previous_area),
             ),
             "total_yield_tons": PeriodMetric(
-                current_period_tons=round(total_yield, 2),
-                previous_period_tons=round(previous_yield, 2),
+                current_period_tons=round(float(total_yield), 2) if total_yield is not None else None,
+                previous_period_tons=round(float(previous_yield), 2) if previous_yield is not None else None,
                 percentage_change=_percent_change(total_yield, previous_yield),
             ),
             "disease_incidence_cases": PeriodMetric(
@@ -227,7 +234,7 @@ async def compare_dashboard(
     )
 
 
-def _percent_change(current: float, previous: float) -> float:
-    if previous == 0:
-        return 0.0
+def _percent_change(current: float | None, previous: float | None) -> float | None:
+    if current is None or previous is None or previous == 0:
+        return None
     return round((current - previous) / previous * 100, 2)

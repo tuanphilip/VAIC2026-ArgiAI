@@ -1,16 +1,14 @@
+"use client";
+
+import { useEffect, useState } from "react";
+
 import { CalendarDays, CloudSun, Database, Leaf, MapPinned, ShieldCheck } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
-const crops = [
-  { name: "Lúa Seng Cù Điện Biên", period: "Vụ mùa", status: "Đang theo dõi" },
-  { name: "Cà phê Robusta Mường Ảng", period: "Niên vụ 2026", status: "Đang theo dõi" },
-  { name: "Mắc ca Điện Biên", period: "Chu kỳ sinh trưởng", status: "Đang theo dõi" },
-  { name: "Rau vụ đông cải ngọt", period: "Vụ đông", status: "Đang theo dõi" },
-];
+import { fetchDashboardSummary, type DashboardSummary } from "@/lib/dashboard-api";
 
 function EmptyAnalysis({ children }: { children: string }) {
   return (
@@ -21,6 +19,15 @@ function EmptyAnalysis({ children }: { children: string }) {
 }
 
 export default function Page() {
+  const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchDashboardSummary().then(setSummary).catch((cause) => setError(cause instanceof Error ? cause.message : "Không tải được dữ liệu phân tích."));
+  }, []);
+
+  const crops = summary?.crops ?? [];
+
   return (
     <div className="flex flex-col gap-6">
       <div className="space-y-2">
@@ -39,7 +46,7 @@ export default function Page() {
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Card>
           <CardHeader><CardTitle className="flex items-center gap-2 font-normal text-sm"><Leaf className="size-4 text-primary" />Cây trồng đang theo dõi</CardTitle></CardHeader>
-          <CardContent><div className="text-2xl">{crops.length}</div><p className="text-muted-foreground text-xs">Nhóm cây trồng ưu tiên tại Điện Biên</p></CardContent>
+          <CardContent><div className="text-2xl">{summary ? crops.length : "—"}</div><p className="text-muted-foreground text-xs">Nhóm cây có thửa ruộng trong database</p></CardContent>
         </Card>
         <Card>
           <CardHeader><CardTitle className="flex items-center gap-2 font-normal text-sm"><CalendarDays className="size-4 text-primary" />Mùa vụ hiện tại</CardTitle></CardHeader>
@@ -54,6 +61,8 @@ export default function Page() {
           <CardContent><div className="text-2xl">Theo nguồn</div><p className="text-muted-foreground text-xs">Không suy diễn năng suất hoặc sâu bệnh</p></CardContent>
         </Card>
       </div>
+
+      {error && <Card className="border-rose-300"><CardContent className="p-4 text-rose-700 text-sm">{error}</CardContent></Card>}
 
       <Tabs defaultValue="tong-quan" className="flex flex-col gap-4">
         <TabsList className="w-full justify-start overflow-x-auto">
@@ -79,7 +88,7 @@ export default function Page() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="cay-trong"><Card><CardHeader><CardTitle>Cây trồng ưu tiên</CardTitle></CardHeader><CardContent className="grid gap-3 md:grid-cols-2">{crops.map((crop) => <div className="rounded-lg border p-4" key={crop.name}><div className="flex items-center justify-between gap-3"><p className="font-medium">{crop.name}</p><Badge variant="secondary">{crop.status}</Badge></div><p className="mt-2 text-muted-foreground text-sm">{crop.period}</p></div>)}</CardContent></Card></TabsContent>
+        <TabsContent value="cay-trong"><Card><CardHeader><CardTitle>Cây trồng có dữ liệu</CardTitle></CardHeader><CardContent className="grid gap-3 md:grid-cols-2">{crops.length ? crops.map((crop) => <div className="rounded-lg border p-4" key={crop.crop_name}><div className="flex items-center justify-between gap-3"><p className="font-medium">{crop.crop_name}</p><Badge variant="secondary">{crop.plot_count} thửa</Badge></div><p className="mt-2 text-muted-foreground text-sm">Diện tích: {crop.area_hectares.toLocaleString("vi-VN")} ha</p></div>) : <EmptyAnalysis>MISSING DATA — chưa có cây trồng/thửa ruộng phù hợp.</EmptyAnalysis>}</CardContent></Card></TabsContent>
         <TabsContent value="thoi-tiet"><Card><CardHeader><CardTitle>Điều kiện thời tiết theo mùa vụ</CardTitle></CardHeader><CardContent><EmptyAnalysis>Chưa có thửa ruộng và cây trồng được chọn để đối chiếu dữ liệu thời tiết.</EmptyAnalysis></CardContent></Card></TabsContent>
         <TabsContent value="nang-suat"><Card><CardHeader><CardTitle>Năng suất và sản lượng</CardTitle></CardHeader><CardContent><EmptyAnalysis>Chưa có số liệu năng suất đã xác minh từ hộ dân, hợp tác xã hoặc cơ quan chuyên môn. Không tự tạo số liệu.</EmptyAnalysis></CardContent></Card></TabsContent>
         <TabsContent value="rui-ro"><Card><CardHeader><CardTitle>Rủi ro mùa vụ</CardTitle></CardHeader><CardContent><EmptyAnalysis>Chưa có dữ liệu quan trắc hoặc đánh giá chuyên môn đủ điều kiện để phát hành cảnh báo rủi ro.</EmptyAnalysis></CardContent></Card></TabsContent>
