@@ -195,6 +195,18 @@ class StockTransfer(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class TraceabilityLabel(Base):
+    __tablename__ = "traceability_labels"
+    id: Mapped[UUID] = mapped_column(primary_key=True, server_default=func.gen_random_uuid())
+    owner_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    lot_name: Mapped[str] = mapped_column(String(200))
+    harvest_date: Mapped[date] = mapped_column(Date)
+    standard: Mapped[str] = mapped_column(String(80))
+    farmer: Mapped[str] = mapped_column(String(150))
+    qr_value: Mapped[str] = mapped_column(String(100), unique=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class ShipmentRecord(Base):
     __tablename__ = "shipment_records"
 
