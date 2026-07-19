@@ -15,8 +15,9 @@ import { EventCalendarViews } from "@/components/calendar/event-calendar-views";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { apiFetch } from "@/lib/api-client";
 
-import { demoEvents } from "./events-data";
+
 
 const views = [
   { key: "dayGridMonth", label: "Tháng" },
@@ -37,6 +38,7 @@ const plugins = [dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin, m
 export function Calendar() {
   const controller = useCalendarController();
   const [eventCount, setEventCount] = React.useState(0);
+  const [events, setEvents] = React.useState<Array<{ id: string; title: string; start: string; end?: string }>>([]);
   const [selectedCalendar, setSelectedCalendar] = React.useState(calendars[0].key);
   const [dateInfo, setDateInfo] = React.useState(() => {
     const now = new Date();
@@ -48,6 +50,12 @@ export function Calendar() {
   });
   const title = dateInfo.title;
   const days = dateInfo.days;
+
+  React.useEffect(() => {
+    apiFetch<Array<{ id: string; title: string; start_at: string; end_at?: string | null }>>("/calendar/events")
+      .then((rows) => setEvents(rows.map((event) => ({ id: event.id, title: event.title, start: event.start_at, ...(event.end_at ? { end: event.end_at } : {}) }))))
+      .catch(() => setEvents([]));
+  }, []);
 
   return (
     <div className="flex flex-col overflow-hidden rounded-md border">
@@ -117,7 +125,7 @@ export function Calendar() {
         initialView={views[0].key}
         plugins={[...plugins]}
         popoverCloseContent={() => <XIcon className="size-5 text-muted-foreground group-hover:text-foreground" />}
-        events={demoEvents}
+        events={events}
         nowIndicator
         datesSet={(info) => {
           setDateInfo({
@@ -125,7 +133,7 @@ export function Calendar() {
             days: differenceInCalendarDays(info.view.currentEnd, info.view.currentStart),
           });
           setEventCount(
-            demoEvents.filter((event) => {
+            events.filter((event) => {
               const start = new Date(event.start);
 
               return start >= info.start && start < info.end;

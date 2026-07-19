@@ -1,4 +1,4 @@
-from app.models.entities import ChatMessage, ChatSession, Crop, DisasterWarning, DiseaseLog, FinanceTransaction, InventoryItem, MarketPrice, Plot, PriceAlert, PurchaseRequest, ShipmentRecord, StockMovement, StockTransfer, Supplier, TraceabilityLabel, User, WeatherAlertSubscription, YieldForecast
+from app.models.entities import ChatMessage, ChatSession, Crop, DisasterWarning, DiseaseLog, FinanceTransaction, HarvestPlan, HarvestPlanTask, InventoryItem, MarketPrice, Plot, PriceAlert, PurchaseRequest, SeasonalEvent, ShipmentRecord, StockMovement, StockTransfer, Supplier, TraceabilityLabel, User, UserSettings, WeatherAlertSubscription, YieldForecast
 
 __all__ = [
     "ChatMessage",
@@ -7,17 +7,21 @@ __all__ = [
     "DisasterWarning",
     "DiseaseLog",
     "FinanceTransaction",
+    "HarvestPlan",
+    "HarvestPlanTask",
     "InventoryItem",
     "MarketPrice",
     "Plot",
     "PriceAlert",
     "PurchaseRequest",
+    "SeasonalEvent",
     "ShipmentRecord",
     "StockMovement",
     "StockTransfer",
     "Supplier",
     "TraceabilityLabel",
     "User",
+    "UserSettings",
     "WeatherAlertSubscription",
     "YieldForecast",
 ]
