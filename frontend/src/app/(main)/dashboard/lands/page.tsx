@@ -36,7 +36,7 @@ import { ApiError } from "@/lib/api-client";
 import { createPlot, deletePlot, listPlots, updatePlot, type PlotResponse } from "@/lib/plots-api";
 
 const API_ERROR_MESSAGES: Record<string, string> = {
-  "Owner not found": "Không tìm thấy tài khoản chủ sở hữu với tên này. Chủ sở hữu phải là một tài khoản đã đăng ký (tên phải khớp chính xác họ tên tài khoản đó).",
+  "Owner not found": "Không tìm thấy tài khoản. Hệ thống vẫn cho phép lưu thửa đất với tên chủ sở hữu để liên kết tài khoản sau.",
   "Farmers cannot assign plot ownership": "Tài khoản nông dân không được phép đổi chủ sở hữu thửa đất.",
   "Plot code already exists": "Mã thửa đất này đã tồn tại, vui lòng chọn mã khác.",
 };
@@ -153,9 +153,9 @@ function apiPlotToLand(plot: PlotResponse): Land {
     color: statusToColor(plot.status),
     lat: plot.location.lat,
     lng: plot.location.lng,
-    owner: plot.owner,
-    ownerId: plot.owner_id,
-    ownerUsername: plot.owner_username,
+    owner: plot.owner ?? "Chưa liên kết tài khoản",
+    ownerId: plot.owner_id ?? "",
+    ownerUsername: plot.owner_username ?? "",
     ownerCitizenId: plot.owner_citizen_id ?? "",
     ownerEmail: plot.owner_email ?? "",
     ownerPhone: plot.owner_phone ?? "",

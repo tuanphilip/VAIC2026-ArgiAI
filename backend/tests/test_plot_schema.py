@@ -57,3 +57,23 @@ def test_plot_update_does_not_mark_omitted_identity_fields() -> None:
 
     assert "owner_citizen_id" not in payload.model_fields_set
     assert "owner_email" not in payload.model_fields_set
+
+
+def test_plot_response_allows_pending_owner_without_registered_account() -> None:
+    response = PlotResponse(
+        plot_id="PENDING-001",
+        crop_name="Lúa",
+        crop_variety="Seng Cù",
+        area_hectares=0.8,
+        seeding_date=date(2026, 7, 1),
+        status="growing",
+        health="Khỏe mạnh",
+        moisture=None,
+        owner="Nguyễn Văn Chưa Đăng Ký",
+        owner_id=None,
+        owner_username=None,
+        location={"lat": 21.5, "lng": 103.2},
+    )
+
+    assert response.owner_id is None
+    assert response.owner_username is None

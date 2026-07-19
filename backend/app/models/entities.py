@@ -69,7 +69,7 @@ class Plot(Base):
 
     id: Mapped[UUID] = mapped_column(primary_key=True, server_default=func.gen_random_uuid())
     code: Mapped[str] = mapped_column(String(30), unique=True, index=True)
-    user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    user_id: Mapped[UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     crop_id: Mapped[UUID] = mapped_column(ForeignKey("crops.id", ondelete="RESTRICT"))
     area_hectares: Mapped[float] = mapped_column(Float)
     location_lat: Mapped[float] = mapped_column(Float)
@@ -82,11 +82,12 @@ class Plot(Base):
     livestock: Mapped[list[dict]] = mapped_column(JSONB, default=list, server_default="[]")
     crop_types: Mapped[list[dict]] = mapped_column(JSONB, default=list, server_default="[]")
     owner_phone: Mapped[str | None] = mapped_column(String(20))
+    owner_name: Mapped[str | None] = mapped_column(String(150))
     region: Mapped[str | None] = mapped_column(String(100), index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    owner: Mapped[User] = relationship(back_populates="plots")
+    owner: Mapped[User | None] = relationship(back_populates="plots")
     crop: Mapped[Crop] = relationship(back_populates="plots")
     disease_logs: Mapped[list["DiseaseLog"]] = relationship(back_populates="plot")
     yield_forecasts: Mapped[list["YieldForecast"]] = relationship(back_populates="plot")

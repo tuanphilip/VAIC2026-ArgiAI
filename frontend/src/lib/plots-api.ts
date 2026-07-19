@@ -47,9 +47,9 @@ export interface PlotResponse {
   status: "growing" | "harvested" | "disease_outbreak";
   health: string;
   moisture: string | null;
-  owner: string;
-  owner_id: string;
-  owner_username: string;
+  owner: string | null;
+  owner_id: string | null;
+  owner_username: string | null;
   owner_citizen_id: string | null;
   owner_email: string | null;
   owner_phone: string | null;
