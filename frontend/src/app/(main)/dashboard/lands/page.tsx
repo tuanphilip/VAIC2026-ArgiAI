@@ -92,11 +92,32 @@ function SearchableFilter({
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const filterRef = useRef<HTMLDivElement | null>(null);
   const filteredOptions = options.filter((option) => option.toLowerCase().includes(query.trim().toLowerCase()));
   const selectedLabel = value === "all" ? placeholder : value;
 
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (filterRef.current && !filterRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsOpen(false);
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen]);
+
   return (
-    <div className="relative">
+    <div ref={filterRef} className="relative">
       <button
         type="button"
         aria-expanded={isOpen}
@@ -906,6 +927,9 @@ export default function Page() {
   const maxArea = areaValues.length > 0 ? Math.ceil(Math.max(...areaValues) * 100) / 100 : 1;
   const selectedMinArea = filterMinArea ?? minArea;
   const selectedMaxArea = filterMaxArea ?? maxArea;
+  const areaSpan = Math.max(maxArea - minArea, 0.01);
+  const selectedMinAreaPercent = ((selectedMinArea - minArea) / areaSpan) * 100;
+  const selectedMaxAreaPercent = ((selectedMaxArea - minArea) / areaSpan) * 100;
 
   const selectedLand = lands.find((l) => l.id === selectedId);
 
@@ -1228,6 +1252,11 @@ export default function Page() {
                   </span>
                 </div>
                 <div className="relative h-5">
+                  <div className="absolute top-2.5 right-0 left-0 h-1 rounded-full bg-slate-200 dark:bg-slate-700" />
+                  <div
+                    className="absolute top-2.5 h-1 rounded-full bg-emerald-500"
+                    style={{ left: `${selectedMinAreaPercent}%`, right: `${100 - selectedMaxAreaPercent}%` }}
+                  />
                   <input
                     aria-label="Diện tích tối thiểu"
                     type="range"
@@ -1259,7 +1288,7 @@ export default function Page() {
                   <span>{minArea.toFixed(2)} Ha</span>
                   <button
                     type="button"
-                    className="text-emerald-700 hover:underline dark:text-emerald-400"
+                    className="rounded-lg bg-emerald-600 px-3 py-1.5 font-semibold text-white transition hover:bg-emerald-700"
                     onClick={() => {
                       setFilterMinArea(null);
                       setFilterMaxArea(null);
