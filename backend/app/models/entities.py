@@ -159,6 +159,42 @@ class FinanceTransaction(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class Supplier(Base):
+    __tablename__ = "suppliers"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, server_default=func.gen_random_uuid())
+    owner_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(150))
+    contact: Mapped[str | None] = mapped_column(String(100))
+    email: Mapped[str | None] = mapped_column(String(150))
+    address: Mapped[str | None] = mapped_column(String(255))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class PurchaseRequest(Base):
+    __tablename__ = "purchase_requests"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, server_default=func.gen_random_uuid())
+    owner_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    item_name: Mapped[str] = mapped_column(String(150))
+    quantity: Mapped[float] = mapped_column(Float)
+    supplier_id: Mapped[UUID | None] = mapped_column(ForeignKey("suppliers.id", ondelete="SET NULL"))
+    status: Mapped[str] = mapped_column(String(30), default="pending")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class StockTransfer(Base):
+    __tablename__ = "stock_transfers"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, server_default=func.gen_random_uuid())
+    owner_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    item_name: Mapped[str] = mapped_column(String(150))
+    quantity: Mapped[float] = mapped_column(Float)
+    source: Mapped[str] = mapped_column(String(120))
+    destination: Mapped[str] = mapped_column(String(120))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class ShipmentRecord(Base):
     __tablename__ = "shipment_records"
 

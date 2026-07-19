@@ -80,13 +80,18 @@ export default function Page() {
     }
   };
 
-  const handleCreateRequest = (e: React.FormEvent) => {
+  const handleCreateRequest = async (e: React.FormEvent) => {
     e.preventDefault();
-    setReqSuccess(true);
-    setTimeout(() => {
-      setReqSuccess(false);
+    try {
+      await apiFetch("/procurement/purchase-requests", {
+        method: "POST",
+        body: JSON.stringify({ item_name: reqItem, quantity: Number(reqQty), supplier_id: null }),
+      });
+      setReqSuccess(true);
       setReqQty("");
-    }, 2000);
+    } catch (error) {
+      setInventoryError(error instanceof Error ? error.message : "Không thể tạo yêu cầu mua hàng.");
+    }
   };
 
   const filteredItems = items.filter((item) => {
