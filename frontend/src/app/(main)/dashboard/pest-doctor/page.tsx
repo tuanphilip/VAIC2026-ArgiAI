@@ -469,7 +469,7 @@ export default function Page() {
           </p>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid items-start gap-6 md:grid-cols-2">
           {/* Upload card */}
           <Card className="flex flex-col justify-between shadow-sm">
             <CardHeader>
@@ -811,7 +811,7 @@ export default function Page() {
                   )}
                 </div>
               ) : isAnalyzing ? (
-                <div className="flex h-[260px] flex-col items-center justify-center text-muted-foreground">
+                <div className="flex min-h-[260px] flex-col items-center justify-center text-muted-foreground">
                   <Loader2 className="mb-3 size-10 animate-spin text-emerald-600" />
                   <span className="font-semibold text-emerald-600 text-sm">
                     Hệ thống đang trích xuất đặc trưng hình ảnh...
@@ -819,7 +819,7 @@ export default function Page() {
                   <span className="mt-1 text-xs">So khớp dữ liệu với thư viện bệnh hại và cẩm nang nông nghiệp.</span>
                 </div>
               ) : (
-                <div className="flex h-[260px] flex-col items-center justify-center text-center text-muted-foreground">
+                <div className="flex min-h-[260px] flex-col items-center justify-center text-center text-muted-foreground">
                   <Sparkles className="mb-3 size-12 text-slate-300" />
                   <p className="font-semibold text-slate-600 dark:text-slate-400">Chưa có dữ liệu chẩn đoán</p>
                   <p className="mt-1 text-xs">
