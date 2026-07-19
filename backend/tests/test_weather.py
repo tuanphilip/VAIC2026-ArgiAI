@@ -350,9 +350,9 @@ class TestWeatherRoutes:
 
         assert response.status_code == 200
         assert response.json()["scope"] == "regional"
-        assert response.json()["area"] == {"lat": 21.518, "lng": 103.223, "label": "Điện Biên"}
-        current_fetch.assert_awaited_once_with(21.518, 103.223)
-        forecast_fetch.assert_awaited_once_with(21.518, 103.223)
+        assert response.json()["area"] == {"lat": 21.386, "lng": 103.016, "label": "Điện Biên"}
+        current_fetch.assert_awaited_once_with(21.386, 103.016)
+        forecast_fetch.assert_awaited_once_with(21.386, 103.016)
 
     def test_official_can_list_all_plots(self, client: TestClient) -> None:
         from app.main import app

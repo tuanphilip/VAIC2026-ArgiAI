@@ -8,13 +8,13 @@ class PeriodMetric(BaseModel):
     previous_period_tons: float | None = None
     current_period_cases: int | None = None
     previous_period_cases: int | None = None
-    percentage_change: float
+    percentage_change: float | None = None
 
 
 class CropCompareDetail(BaseModel):
     crop_name: str
     area_ha: float
-    yield_tons: float
+    yield_tons: float | None = None
     disease_cases: int
 
 

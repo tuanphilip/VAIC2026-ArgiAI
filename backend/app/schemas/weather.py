@@ -40,6 +40,10 @@ class WeatherOverviewResponse(BaseModel):
     scope: str = "regional"
     area: dict[str, float | str] | None = None
     location: WeatherLocation
+    requested_coordinates: dict[str, float]
+    model_grid_coordinates: dict[str, float] | None = None
+    timezone: str | None = None
+    data_type: str = "forecast"
     observed_at: str | None = None
     current: WeatherCurrent
     hourly: list[WeatherHourlyItem]
