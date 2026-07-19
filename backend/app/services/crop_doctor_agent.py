@@ -5,6 +5,7 @@ from app.models import Plot
 from app.services.agricultural_retriever import AgriculturalKnowledgeRetriever
 from app.services.crop_doctor_advisor import generate_advisory
 from app.services.crop_doctor_triage import triage_from_symptoms
+from app.services.google_lens_evidence import retrieve_google_lens_evidence
 from app.services.crop_doctor_tools import (
     assess_candidates,
     build_confidence_breakdown,
@@ -42,6 +43,14 @@ class CropDoctorAgent:
         quality = await evaluate_image_quality(image)
         crop_context = build_crop_context(plot, crop_type)
         vision_result = await analyze_image(image, expected_crop=crop_context.crop)
+        await image.seek(0)
+        image_content = await image.read()
+        await image.seek(0)
+        google_evidence = await retrieve_google_lens_evidence(
+            content=image_content,
+            mime_type=image.content_type or "image/jpeg",
+            expected_crop=crop_context.crop,
+        )
         if not has_valid_diagnosis(vision_result) and observed_symptoms:
             symptom_result = await triage_from_symptoms(
                 crop_context,
@@ -64,12 +73,17 @@ class CropDoctorAgent:
         )
         diagnosis_name = _assessment_disease_name(vision_result, best_assessment)
         diagnosis_is_valid = has_valid_diagnosis(vision_result, diagnosis_name)
+        web_context = " ".join(
+            item.title
+            for item in google_evidence[:6]
+            if item.title
+        )
         retrieval = self.retriever.retrieve(
             crop_name=crop_context.crop or vision_result.crop,
             disease_name=diagnosis_name if diagnosis_is_valid else None,
             observed_evidence=" ".join(
                 value
-                for value in [vision_result.visual_evidence, observed_symptoms or ""]
+                for value in [vision_result.visual_evidence, observed_symptoms or "", web_context]
                 if value
             ),
         )
@@ -110,6 +124,7 @@ class CropDoctorAgent:
         )
 
         sources = [*vision_result.sources, *collect_sources(crop_profile, assessed_candidates)]
+        sources.extend(item.url for item in google_evidence if item.url)
         crop = crop_profile.crop if crop_profile else vision_result.crop or crop_context.crop
         treatment = build_treatment(
             vision_result,
@@ -171,16 +186,30 @@ class CropDoctorAgent:
             final_score=final_score,
             diagnosis_explanation=diagnosis_explanation,
             evidence_items=[
-                DiagnosisEvidence(
-                    evidence_id=item.evidence_id,
-                    title=item.title,
-                    section=item.section,
-                    content=item.content,
-                    source_url=item.source_url,
-                    authority=item.authority,
-                    retrieval_score=item.retrieval_score,
-                )
-                for item in retrieval.evidence
+                *[
+                    DiagnosisEvidence(
+                        evidence_id=item.evidence_id,
+                        title=item.title,
+                        section=item.section,
+                        content=item.content,
+                        source_url=item.source_url,
+                        authority=item.authority,
+                        retrieval_score=item.retrieval_score,
+                    )
+                    for item in retrieval.evidence
+                ],
+                *[
+                    DiagnosisEvidence(
+                        evidence_id=f"google-vision:{index}",
+                        title=item.title,
+                        section=f"google_vision_{item.kind}",
+                        content=item.description,
+                        source_url=item.url,
+                        authority="google_vision_web_detection",
+                        retrieval_score=item.score,
+                    )
+                    for index, item in enumerate(google_evidence, start=1)
+                ],
             ],
             confidence_breakdown=build_confidence_breakdown(
                 vision_result,
