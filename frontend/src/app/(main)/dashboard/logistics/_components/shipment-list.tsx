@@ -25,6 +25,16 @@ const progressRingClasses: Record<Shipment["status"], string> = {
   "Customs Hold": "text-amber-500",
 };
 
+const statusLabels: Record<Shipment["status"], string> = {
+  Scheduled: "Đã lên lịch",
+  "In Transit": "Đang vận chuyển",
+  "Out for Delivery": "Đang giao",
+  Delivered: "Đã giao",
+  Delayed: "Trễ",
+  "On Hold": "Tạm giữ",
+  "Customs Hold": "Tạm giữ kiểm tra",
+};
+
 function getProgressRingClass(status: Shipment["status"]) {
   return cn(
     "grid size-3 place-items-center rounded-full p-[0.5px] bg-[conic-gradient(currentColor_0deg_var(--angle),transparent_var(--angle)_360deg)]",
@@ -74,7 +84,7 @@ function ShipmentCard({ shipment, active, onSelectShipment }: ShipmentCardProps)
               <div className="size-1 rounded-full bg-current" />
             </div>
           </div>
-          <div className="text-muted-foreground text-xs">{shipment.status}</div>
+          <div className="text-muted-foreground text-xs">{statusLabels[shipment.status]}</div>
         </div>
       </div>
 
@@ -112,11 +122,11 @@ function ShipmentCard({ shipment, active, onSelectShipment }: ShipmentCardProps)
 
       <div className="flex items-center justify-between">
         <div>
-          <div className="text-muted-foreground text-xs leading-none">Cargo</div>
+          <div className="text-muted-foreground text-xs leading-none">Hàng hóa</div>
           <div className="truncate text-sm tracking-tight">{shipment.cargo}</div>
         </div>
         <div className="text-right">
-          <div className="text-muted-foreground text-xs leading-none">ETA</div>
+          <div className="text-muted-foreground text-xs leading-none">Dự kiến đến</div>
           <div className="text-sm tabular-nums tracking-tight">
             {shipment.eta}
             {shipment.etaMeta && (
@@ -133,7 +143,7 @@ export function ShipmentList({ shipments, selectedShipmentId, onSelectShipment }
   return (
     <Card className="h-full rounded-none ring-0">
       <CardHeader>
-        <CardTitle className="font-normal text-xl">Shipments</CardTitle>
+        <CardTitle className="font-normal text-xl">Lô hàng</CardTitle>
         <CardAction>
           <Button size="icon-sm" variant="ghost">
             <SlidersHorizontal />

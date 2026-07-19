@@ -1,11 +1,18 @@
 import {
-  Bug,
-  CloudSun,
-  LayoutDashboard,
-  type LucideIcon,
-  Map,
-  Sprout,
   BarChart3,
+  Bug,
+  CalendarDays,
+  CloudSun,
+  Database,
+  FileBarChart,
+  LayoutDashboard,
+  Map,
+  MessageCircle,
+  PackageSearch,
+  Store,
+  Truck,
+  Settings,
+  type LucideIcon,
 } from "lucide-react";
 
 export type NavBadge = "new" | "soon";
@@ -49,50 +56,39 @@ export interface NavGroup {
 export const sidebarItems: NavGroup[] = [
   {
     id: 1,
-    label: "Giám sát & Vận hành",
+    label: "Trung tâm công việc",
     items: [
-      {
-        id: "default",
-        title: "Tổng quan Dashboard",
-        url: "/dashboard/default",
-        icon: LayoutDashboard,
-      },
-      {
-        id: "compare",
-        title: "So sánh Chu kỳ",
-        url: "/dashboard/compare",
-        icon: BarChart3,
-      },
-      {
-        id: "lands",
-        title: "Thửa đất & Cây trồng",
-        url: "/dashboard/lands",
-        icon: Map,
-      },
-      {
-        id: "pest-doctor",
-        title: "Bác sĩ Cây trồng AI",
-        url: "/dashboard/pest-doctor",
-        icon: Bug,
-      },
+      { id: "default", title: "Tổng quan", url: "/dashboard/default", icon: LayoutDashboard },
+      { id: "copilot", title: "Trợ lý nông nghiệp AI", url: "/dashboard/chat", icon: MessageCircle, badge: "new" },
+      { id: "calendar", title: "Lịch mùa vụ", url: "/dashboard/calendar", icon: CalendarDays },
     ],
   },
   {
     id: 2,
-    label: "Quản lý & Nghiệp vụ",
+    label: "Dữ liệu & Canh tác",
     items: [
-      {
-        id: "weather",
-        title: "Thời tiết Nông nghiệp",
-        url: "/dashboard/weather",
-        icon: CloudSun,
-      },
-      {
-        id: "market",
-        title: "Giá cả Thị trường",
-        url: "/dashboard/market",
-        icon: Sprout,
-      },
+      { id: "lands", title: "Thửa đất & Cây trồng", url: "/dashboard/lands", icon: Map },
+      { id: "pest-doctor", title: "Bác sĩ Cây trồng AI", url: "/dashboard/pest-doctor", icon: Bug, badge: "new" },
+      { id: "weather", title: "Thời tiết Nông nghiệp", url: "/dashboard/weather", icon: CloudSun },
+      { id: "inventory", title: "Vật tư & Tồn kho", url: "/dashboard/inventory", icon: PackageSearch },
+    ],
+  },
+  {
+    id: 3,
+    label: "Phân tích & Thị trường",
+    items: [
+      { id: "analytics", title: "Phân tích mùa vụ", url: "/dashboard/analytics", icon: BarChart3 },
+      { id: "compare", title: "So sánh chu kỳ", url: "/dashboard/compare", icon: FileBarChart },
+      { id: "market", title: "Giá cả thị trường", url: "/dashboard/market", icon: Store },
+      { id: "traceability", title: "Truy xuất nguồn gốc", url: "/dashboard/traceability", icon: Database },
+      { id: "logistics", title: "Vận chuyển & giao hàng", url: "/dashboard/logistics", icon: Truck },
+    ],
+  },
+  {
+    id: 4,
+    label: "Quản trị",
+    items: [
+      { id: "settings", title: "Cài đặt hệ thống", url: "/dashboard/settings", icon: Settings },
     ],
   },
 ];

@@ -22,9 +22,10 @@ def predict_yield(plot: Plot) -> tuple[float, float, object, object, str]:
     forecasted_yield = round(plot.area_hectares * base_yield_per_ha * health_factor * moisture_factor, 2)
     harvest_start = plot.seeding_date + timedelta(days=max(plot.crop.growth_duration_days - 7, 1))
     harvest_end = harvest_start + timedelta(days=7)
-    confidence = 0.84 if plot.status == "growing" else 0.76
+    confidence = 0.5
     advisory = (
+        "[HEURISTIC - CHƯA PHẢI MÔ HÌNH ML] "
         f"Dự báo dựa trên chu kỳ {plot.crop.growth_duration_days} ngày và ngưỡng GDD nền {base_temp}°C. "
-        f"Nên theo dõi thời tiết trong tuần thu hoạch để giảm rủi ro mưa ẩm."
+        "Nên theo dõi thời tiết trong tuần thu hoạch để giảm rủi ro mưa ẩm."
     )
     return forecasted_yield, confidence, harvest_start, harvest_end, advisory

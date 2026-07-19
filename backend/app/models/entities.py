@@ -15,12 +15,37 @@ class User(Base):
     username: Mapped[str] = mapped_column(String(50), unique=True, index=True)
     password_hash: Mapped[str] = mapped_column(String(255))
     email: Mapped[str | None] = mapped_column(String(100), unique=True)
+    citizen_id: Mapped[str | None] = mapped_column(String(12), unique=True, index=True)
+    phone_number: Mapped[str | None] = mapped_column(String(20))
     full_name: Mapped[str] = mapped_column(String(100))
     role: Mapped[str] = mapped_column(String(20), default="farmer")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     plots: Mapped[list["Plot"]] = relationship(back_populates="owner")
+
+
+class ChatSession(Base):
+    __tablename__ = "chat_sessions"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, server_default=func.gen_random_uuid())
+    user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    title: Mapped[str] = mapped_column(String(200), default="Tư vấn nông nghiệp")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ChatMessage(Base):
+    __tablename__ = "chat_messages"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, server_default=func.gen_random_uuid())
+    session_id: Mapped[UUID] = mapped_column(ForeignKey("chat_sessions.id", ondelete="CASCADE"), index=True)
+    role: Mapped[str] = mapped_column(String(20))
+    content: Mapped[str] = mapped_column(Text)
+    intent: Mapped[str | None] = mapped_column(String(50))
+    confidence: Mapped[float | None] = mapped_column(Float)
+    citations: Mapped[list[dict]] = mapped_column(JSONB, default=list, server_default="[]")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class Crop(Base):
@@ -54,6 +79,7 @@ class Plot(Base):
     livestock: Mapped[list[dict]] = mapped_column(JSONB, default=list, server_default="[]")
     crop_types: Mapped[list[dict]] = mapped_column(JSONB, default=list, server_default="[]")
     owner_phone: Mapped[str | None] = mapped_column(String(20))
+    region: Mapped[str | None] = mapped_column(String(100), index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 

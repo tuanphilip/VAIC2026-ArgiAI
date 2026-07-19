@@ -192,7 +192,7 @@ export function Kanban({ initialBoard }: KanbanProps) {
 
         <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center 2xl:justify-end">
           <InputGroup className="min-w-0 sm:w-64 2xl:w-48">
-            <InputGroupInput type="search" placeholder="Search tasks" />
+            <InputGroupInput type="search" placeholder="Tìm nhiệm vụ" />
             <InputGroupAddon>
               <Search />
             </InputGroupAddon>

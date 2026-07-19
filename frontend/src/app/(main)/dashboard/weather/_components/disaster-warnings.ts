@@ -12,7 +12,7 @@ export interface DisasterWarningApiItem {
   start_date: string | null;
   end_date: string | null;
   source: string;
-  raw_data: string;
+  raw_data: string | null;
 }
 
 export interface GeoJsonPoint {

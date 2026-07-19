@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.dependencies import get_current_user
 from app.database.session import get_db
 from app.models import DisasterWarning, User
-from app.services.disaster_warnings import get_disaster_warnings
+from app.services.disaster_warnings import get_disaster_warnings, persist_disaster_warnings
 
 router = APIRouter(prefix="/weather/disasters", tags=["Disaster Warnings"])
 
@@ -23,6 +23,7 @@ router = APIRouter(prefix="/weather/disasters", tags=["Disaster Warnings"])
 async def list_disaster_warnings(
     include_gfms: bool = Query(False, description="Include GFMS global flood data"),
     include_vndms: bool = Query(False, description="Include VNDMS disaster data"),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> list[dict]:
     """Return all active disaster warnings aggregated from enabled sources.
@@ -32,10 +33,11 @@ async def list_disaster_warnings(
     Results are cached for 30 minutes.
     """
     del current_user  # auth guard; no per-user filtering for now
-    return await get_disaster_warnings(
+    warnings = await get_disaster_warnings(
         include_gfms=include_gfms,
         include_vndms=include_vndms,
     )
+    return await persist_disaster_warnings(db, warnings)
 
 
 # ---------------------------------------------------------------------------

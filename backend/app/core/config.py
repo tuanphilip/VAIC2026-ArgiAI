@@ -30,12 +30,29 @@ class Settings(BaseSettings):
     openweather_api_key: str = ""
     gfms_api_key: str = ""
     vndms_api_url: str | None = None
-    weather_cache_background_enabled: bool = True
+    weather_cache_background_enabled: bool = False
     weather_cache_refresh_interval_seconds: int = 1800
     weather_cache_sqlite_path: str | None = None
 
     upload_dir: str = "uploads"
     public_upload_base_url: str | None = None
+
+    gemini_api_key: str | None = None
+    gemini_model: str = "gemini-2.5-flash"
+    vision_api_key: str | None = None
+    vision_base_url: str = "https://api.naga.ac/v1"
+    vision_model: str = "gemini-2.5-flash"
+    llm_api_key: str | None = None
+    llm_base_url: str = "https://api.deepseek.com/v1"
+    llm_model: str = "deepseek-v4-flash"
+    llm_symptom_triage_enabled: bool = False
+    tavily_api_key: str | None = None
+    tavily_fallback_enabled: bool = False
+    tavily_search_depth: str = "basic"
+    tavily_max_results: int = 4
+    weather_enabled: bool = False
+    weather_provider: str = "open-meteo"
+    weather_timeout_seconds: float = 8.0
 
     @field_validator("backend_cors_origins", mode="before")
     @classmethod

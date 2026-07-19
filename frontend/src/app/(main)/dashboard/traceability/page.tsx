@@ -8,17 +8,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 
 const certificates = [
-  { id: 1, name: "Chứng nhận VietGAP Lúa thơm", code: "VG-2025-84930", issued: "10/12/2025", expires: "10/12/2027", authority: "Sở NN&PTNT TP.HCM" },
+  { id: 1, name: "Chứng nhận VietGAP Lúa thơm", code: "VG-2025-84930", issued: "10/12/2025", expires: "10/12/2027", authority: "Cơ quan chuyên môn tỉnh Điện Biên" },
   { id: 2, name: "Chứng nhận hữu cơ Organic Cải ngọt", code: "ORG-VN-93820", issued: "01/03/2026", expires: "01/03/2028", authority: "Tổ chức Control Union" },
 ];
 
 const labelHistory = [
-  { id: 401, lot: "Lô Lúa Jasmine A1", code: "ARGI-JAS-A1-8592", date: "15/07/2026", printed: "500 tem" },
-  { id: 402, lot: "Cà chua VietGAP lô C1", code: "ARGI-TOM-C1-3940", date: "10/07/2026", printed: "200 tem" },
+  { id: 401, lot: "Lô Lúa Seng Cù Điện Biên", code: "ARGI-JAS-A1-8592", date: "15/07/2026", printed: "500 tem" },
+  { id: 402, lot: "Lô Rau cải ngọt Điện Biên C1", code: "ARGI-TOM-C1-3940", date: "10/07/2026", printed: "200 tem" },
 ];
 
 export default function Page() {
-  const [lotName, setLotName] = useState("Lô Lúa Jasmine A1");
+  const [lotName, setLotName] = useState("Lô Lúa Seng Cù Điện Biên");
   const [harvestDate, setHarvestDate] = useState("2026-07-15");
   const [standard, setStandard] = useState("VietGAP");
   const [farmer, setFarmer] = useState("Nguyễn Văn An");
@@ -33,7 +33,7 @@ export default function Page() {
     farmer: string;
     qrVal: string;
   } | null>({
-    lotName: "Lô Lúa Jasmine A1",
+    lotName: "Lô Lúa Seng Cù Điện Biên",
     harvestDate: "2026-07-15",
     standard: "VietGAP",
     farmer: "Nguyễn Văn An",
@@ -78,7 +78,7 @@ export default function Page() {
                   type="text"
                   value={lotName}
                   onChange={(e) => setLotName(e.target.value)}
-                  placeholder="VD: Cà chua chuỗi A1"
+                  placeholder="VD: Lô lúa Seng Cù Điện Biên A1"
                   className="w-full text-sm p-2.5 border rounded-lg dark:bg-slate-950 focus:outline-emerald-500"
                   required
                 />

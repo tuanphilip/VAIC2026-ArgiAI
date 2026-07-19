@@ -84,16 +84,16 @@ export function Roles({ roles }: { roles: Role[] }) {
     <div className="flex h-full flex-col gap-4">
       <div className="flex flex-col items-start gap-4 sm:flex-row sm:justify-between">
         <div className="flex flex-col gap-1">
-          <h1 className="text-3xl tracking-tight">Roles & Permissions</h1>
-          <p className="text-muted-foreground text-sm">Manage access roles and permissions across your organization.</p>
+          <h1 className="text-3xl tracking-tight">Vai trò & quyền hạn</h1>
+          <p className="text-muted-foreground text-sm">Quản lý vai trò và quyền truy cập trong tổ chức.</p>
         </div>
 
         <div className="flex items-center gap-2">
           <Button size="sm" variant="outline">
             <FileUp data-icon="inline-start" />
-            Import JSON
+            Nhập JSON
           </Button>
-          <Button size="sm">Create role</Button>
+          <Button size="sm">Tạo vai trò</Button>
         </div>
       </div>
 
@@ -102,20 +102,20 @@ export function Roles({ roles }: { roles: Role[] }) {
           variant="line"
           className="w-full justify-start gap-2 border-b ps-0 *:data-[slot=tabs-trigger]:flex-none"
         >
-          <TabsTrigger value="roles">Roles</TabsTrigger>
-          <TabsTrigger value="permission-sets">Permission sets</TabsTrigger>
-          <TabsTrigger value="access-reviews">Access reviews</TabsTrigger>
+          <TabsTrigger value="roles">Vai trò</TabsTrigger>
+          <TabsTrigger value="permission-sets">Bộ quyền</TabsTrigger>
+          <TabsTrigger value="access-reviews">Rà soát quyền</TabsTrigger>
         </TabsList>
 
         <TabsContent value="roles">
           <div className="flex flex-col gap-4">
             <Alert className="border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-50">
               <AlertTriangle className="size-4" />
-              <AlertTitle>Review required</AlertTitle>
-              <AlertDescription>3 roles have unreviewed permission changes.</AlertDescription>
+              <AlertTitle>Cần rà soát</AlertTitle>
+              <AlertDescription>3 vai trò có thay đổi quyền chưa được rà soát.</AlertDescription>
               <AlertAction>
                 <Button size="sm" variant="link">
-                  Review changes
+                  Rà soát thay đổi
                   <ChevronRight data-icon="inline-end" />
                 </Button>
               </AlertAction>
@@ -129,7 +129,7 @@ export function Roles({ roles }: { roles: Role[] }) {
                   </InputGroupAddon>
                   <InputGroupInput
                     className="h-7"
-                    placeholder="Search roles..."
+                    placeholder="Tìm vai trò..."
                     value={search}
                     onChange={(e) => {
                       table.getColumn("search")?.setFilterValue(e.target.value || undefined);
@@ -147,14 +147,14 @@ export function Roles({ roles }: { roles: Role[] }) {
                     }}
                   >
                     <SelectTrigger size="sm">
-                      <span className="text-muted-foreground">Type:</span>
-                      <SelectValue placeholder="All" />
+                      <span className="text-muted-foreground">Loại:</span>
+                      <SelectValue placeholder="Tất cả" />
                     </SelectTrigger>
                     <SelectContent position="popper" align="start">
                       <SelectGroup>
-                        <SelectItem value="All">All</SelectItem>
-                        <SelectItem value="System">System</SelectItem>
-                        <SelectItem value="Custom">Custom</SelectItem>
+                        <SelectItem value="All">Tất cả</SelectItem>
+                        <SelectItem value="System">Hệ thống</SelectItem>
+                        <SelectItem value="Custom">Tùy chỉnh</SelectItem>
                       </SelectGroup>
                     </SelectContent>
                   </Select>
@@ -167,13 +167,13 @@ export function Roles({ roles }: { roles: Role[] }) {
                     }}
                   >
                     <SelectTrigger size="sm">
-                      <span className="text-muted-foreground">Owner:</span>
-                      <SelectValue placeholder="All" />
+                      <span className="text-muted-foreground">Chủ sở hữu:</span>
+                      <SelectValue placeholder="Tất cả" />
                     </SelectTrigger>
                     <SelectContent position="popper" align="start">
                       <SelectGroup>
-                        <SelectItem value="All">All</SelectItem>
-                        <SelectItem value="System">System</SelectItem>
+                        <SelectItem value="All">Tất cả</SelectItem>
+                        <SelectItem value="System">Hệ thống</SelectItem>
                         <SelectItem value="Jane Doe">Jane Doe</SelectItem>
                         <SelectItem value="Alex Kim">Alex Kim</SelectItem>
                         <SelectItem value="Chris Lee">Chris Lee</SelectItem>
@@ -189,14 +189,14 @@ export function Roles({ roles }: { roles: Role[] }) {
                     }}
                   >
                     <SelectTrigger size="sm">
-                      <span className="text-muted-foreground">Status:</span>
-                      <SelectValue placeholder="All" />
+                      <span className="text-muted-foreground">Trạng thái:</span>
+                      <SelectValue placeholder="Tất cả" />
                     </SelectTrigger>
                     <SelectContent position="popper" align="start">
                       <SelectGroup>
-                        <SelectItem value="All">All</SelectItem>
-                        <SelectItem value="Active">Active</SelectItem>
-                        <SelectItem value="Needs review">Needs review</SelectItem>
+                        <SelectItem value="All">Tất cả</SelectItem>
+                        <SelectItem value="Active">Đang hoạt động</SelectItem>
+                        <SelectItem value="Needs review">Cần rà soát</SelectItem>
                       </SelectGroup>
                     </SelectContent>
                   </Select>
@@ -209,12 +209,12 @@ export function Roles({ roles }: { roles: Role[] }) {
         </TabsContent>
         <TabsContent value="permission-sets">
           <div className="flex h-full items-center justify-center rounded-md border border-dashed text-muted-foreground text-sm">
-            Permission Sets Coming Soon
+            Bộ quyền đang được phát triển
           </div>
         </TabsContent>
         <TabsContent value="access-reviews">
           <div className="flex h-full items-center justify-center rounded-md border border-dashed text-muted-foreground text-sm">
-            Access Reviews Coming Soon
+            Rà soát quyền đang được phát triển
           </div>
         </TabsContent>
       </Tabs>

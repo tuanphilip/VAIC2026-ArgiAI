@@ -1,0 +1,547 @@
+{
+  "version": "2026.07.1",
+  "crops": [
+    {
+      "crop": "Lúa",
+      "aliases": ["lua", "rice", "lúa seng cù"],
+      "local_relevance": {
+        "province": "Điện Biên",
+        "priority": "P0",
+        "sources": [
+          "https://dienbien.gov.vn/vi/bai-viet/tinh-hinh-kinh-te---xa-hoi-tinh-dien-bien-thang-12-va-nam-2025"
+        ]
+      },
+      "diseases": [
+        {
+          "id": "rice-blast",
+          "name": "Đạo ôn lúa",
+          "aliases": ["đạo ôn", "rice blast", "blast"],
+          "severity_default": "Cao",
+          "affected_parts": ["lá", "đốt thân", "cổ bông", "hạt"],
+          "cause": "Nấm Pyricularia oryzae (Magnaporthe oryzae).",
+          "pathogen_type": "fungus",
+          "growth_stages": ["mạ", "đẻ nhánh", "làm đòng", "trổ"],
+          "symptoms": ["vết hình thoi", "tâm xám", "viền nâu", "cháy lá", "cổ bông bị thắt"],
+          "favorable_conditions": ["ẩm cao", "sương mù", "mưa kéo dài", "bón thừa đạm"],
+          "severity_criteria": [
+            "Thấp: vết bệnh rải rác trên lá già, chưa lan thành ổ.",
+            "Trung bình: nhiều lá có vết điển hình hoặc ổ bệnh đang lan.",
+            "Cao: bệnh xuất hiện trên lá đòng, cổ bông hoặc gây cháy từng chòm."
+          ],
+          "ipm_treatment": [
+            "Ngừng bón thêm đạm khi bệnh đang phát triển.",
+            "Giữ ruộng thông thoáng và theo dõi vết bệnh lan nhanh sau mưa ẩm.",
+            "Ưu tiên giống chống chịu và vệ sinh tàn dư cây bệnh cho vụ sau.",
+            "Chỉ dùng thuốc BVTV đặc trị theo hướng dẫn cán bộ địa phương khi bệnh có nguy cơ lan rộng."
+          ],
+          "biological_treatment": [
+            "Ưu tiên chế phẩm vi sinh đã đăng ký cho bệnh đạo ôn trên lúa; hiệu quả phải được theo dõi trên một khu vực nhỏ trước khi mở rộng."
+          ],
+          "chemical_treatment": [
+            "Chỉ cân nhắc thuốc đã đăng ký cho bệnh đạo ôn trên lúa khi cán bộ xác nhận bệnh và nguy cơ lan rộng; tuân thủ đúng nhãn, thời gian cách ly và nguyên tắc luân phiên nhóm tác động."
+          ],
+          "active_ingredients": ["tricyclazole", "isoprothiolane"],
+          "prevention": [
+            "Dùng giống và hạt giống sạch bệnh, gieo sạ mật độ hợp lý.",
+            "Bón đạm cân đối với lân và kali; theo dõi sát ruộng ở thời kỳ làm đòng đến trổ.",
+            "Không lấy hạt giống từ ruộng đã bị đạo ôn cổ bông nặng."
+          ],
+          "follow_up_questions": [
+            "Vết bệnh có hình thoi, tâm xám và viền nâu rõ không?",
+            "Vết bệnh nằm trên lá, đốt thân hay cổ bông?",
+            "Ruộng đang ở giai đoạn mạ, đẻ nhánh, làm đòng hay trổ?",
+            "Ba ngày gần đây có mưa, sương mù hoặc ẩm kéo dài không?"
+          ],
+          "weather_rule": {
+            "min_temperature_c": 20,
+            "max_temperature_c": 28,
+            "min_relative_humidity": 90,
+            "min_rainfall_72h_mm": 1
+          },
+          "do_not": ["Không phun thuốc diện rộng khi ảnh hoặc triệu chứng chưa được xác nhận."],
+          "sources": [
+            "https://www.knowledgebank.irri.org/training/fact-sheets/pest-management/diseases/item/blast-leaf-collar",
+            "https://www.ppd.gov.vn/canh-bao-svgh/huong-dan-phong-chong-benh-dao-on-gay-hai-tren-lua-he-thu-cuoi-vu-va-lua-thu-dong---mua-dau-vu-o-cac-tinh-phia-nam.html"
+          ]
+        },
+        {
+          "name": "Bạc lá vi khuẩn",
+          "aliases": ["bạc lá", "bacterial leaf blight", "blight"],
+          "severity_default": "Cao",
+          "symptoms": ["cháy mép lá", "vệt vàng từ chóp lá", "lá bạc trắng", "dịch vi khuẩn"],
+          "favorable_conditions": ["mưa bão", "gió mạnh", "ruộng bón thừa đạm", "vết thương cơ giới"],
+          "ipm_treatment": [
+            "Giữ mực nước hợp lý, tránh làm tổn thương lá khi ruộng đang bệnh.",
+            "Ngừng bón đạm, bổ sung kali/silic theo khuyến cáo kỹ thuật.",
+            "Thu gom tàn dư bệnh sau vụ để giảm nguồn lây.",
+            "Cần cán bộ kiểm tra nếu bệnh lan nhanh trên diện rộng."
+          ],
+          "do_not": ["Không tự phối trộn nhiều loại thuốc khi chưa có xác nhận bệnh."],
+          "sources": ["https://ppd.gov.vn"]
+        },
+        {
+          "name": "Khô vằn",
+          "aliases": ["khô vằn", "sheath blight"],
+          "severity_default": "Trung bình",
+          "symptoms": ["vết loang lổ trên bẹ", "vằn da hổ", "bẹ lá nâu xám", "đám nấm trắng"],
+          "favorable_conditions": ["ruộng rậm", "ẩm cao", "sạ dày", "bón thừa đạm"],
+          "ipm_treatment": [
+            "Giảm rậm rạp, gieo sạ mật độ hợp lý cho vụ sau.",
+            "Điều tiết nước ruộng, hạn chế ẩm kéo dài ở bẹ lá.",
+            "Bón phân cân đối, tránh thừa đạm.",
+            "Theo dõi ổ bệnh ở tầng lá dưới trước khi lan lên lá đòng."
+          ],
+          "do_not": ["Không kết luận khô vằn nếu ảnh chỉ chụp lá, không thấy bẹ/thân."],
+          "sources": ["https://ppd.gov.vn"]
+        },
+        {
+          "name": "Lem lép hạt",
+          "aliases": ["lem lép", "grain discoloration"],
+          "severity_default": "Trung bình",
+          "symptoms": ["hạt lúa bị lem", "hạt lép", "vỏ trấu nâu đen", "bông lúa không đều"],
+          "favorable_conditions": ["mưa ẩm khi trổ", "ruộng bị sâu bệnh", "ẩm độ cao"],
+          "ipm_treatment": [
+            "Theo dõi giai đoạn trổ, nhất là sau mưa ẩm kéo dài.",
+            "Quản lý sâu bệnh trên bông, bón phân cân đối.",
+            "Dùng giống sạch bệnh và vệ sinh đồng ruộng sau thu hoạch."
+          ],
+          "do_not": ["Không chẩn đoán lem lép nếu ảnh không có bông/hạt."],
+          "sources": ["https://ppd.gov.vn"]
+        }
+      ]
+    },
+    {
+      "crop": "Cà phê",
+      "aliases": ["ca phe", "coffee", "robusta", "arabica"],
+      "local_relevance": {
+        "province": "Điện Biên",
+        "priority": "P0",
+        "sources": [
+          "https://dienbien.gov.vn/vi/bai-viet/vpub---dien-bien-de-xuat-ho-tro-xay-dung-vung-nguyen-lieu-ca-phe-cao-su-dap-ung-quy-dinh-chong-mat-rung-cua-lien-minh-chau-au"
+        ]
+      },
+      "diseases": [
+        {
+          "id": "coffee-leaf-rust",
+          "name": "Gỉ sắt cà phê",
+          "aliases": ["gỉ sắt", "rỉ sắt", "coffee leaf rust", "rust", "hemileia"],
+          "severity_default": "Cao",
+          "affected_parts": ["lá"],
+          "cause": "Nấm Hemileia vastatrix.",
+          "pathogen_type": "fungus",
+          "growth_stages": ["kiến thiết cơ bản", "kinh doanh", "sau thu hoạch"],
+          "symptoms": ["đốm vàng", "bột cam mặt dưới lá", "mụn phấn cam", "rụng lá"],
+          "favorable_conditions": ["ẩm cao", "mưa kéo dài", "vườn rậm", "thiếu thông thoáng"],
+          "severity_criteria": [
+            "Thấp: một số lá tầng dưới có đốm vàng và bột cam.",
+            "Trung bình: bệnh xuất hiện trên nhiều cành, bắt đầu rụng lá.",
+            "Cao: rụng lá mạnh, cây suy kiệt hoặc bệnh lan rộng trong vườn."
+          ],
+          "ipm_treatment": [
+            "Tỉa cành tạo thông thoáng và giảm ẩm trong tán.",
+            "Thu gom lá bệnh rụng để giảm nguồn lây.",
+            "Bón phân cân đối giúp cây phục hồi lá.",
+            "Ưu tiên chế phẩm sinh học hoặc thuốc gốc đồng theo khuyến cáo địa phương khi bệnh phát triển mạnh."
+          ],
+          "biological_treatment": [
+            "Bảo vệ hệ vi sinh và thiên địch trong vườn; chỉ dùng chế phẩm sinh học đã đăng ký cho cà phê và đánh giá hiệu quả tại chỗ."
+          ],
+          "chemical_treatment": [
+            "Chỉ sử dụng thuốc đã đăng ký cho gỉ sắt cà phê sau khi xác nhận có lớp bào tử màu cam ở mặt dưới lá; tuân thủ đúng nhãn và thời gian cách ly."
+          ],
+          "active_ingredients": ["copper hydroxide", "copper oxychloride"],
+          "prevention": [
+            "Dùng giống chống chịu phù hợp vùng trồng và duy trì tán cây thông thoáng.",
+            "Bón phân cân đối theo năng suất, quản lý cây che bóng và kiểm tra mặt dưới lá định kỳ.",
+            "Theo dõi sớm sau giai đoạn mưa ẩm kéo dài."
+          ],
+          "follow_up_questions": [
+            "Mặt dưới vết vàng có lớp bột màu cam lau ra được không?",
+            "Vết bệnh tập trung ở lá già hay cả lá non?",
+            "Vườn có rụng lá nhanh sau mưa kéo dài không?",
+            "Có thể chụp thêm mặt dưới lá và toàn bộ cành bị bệnh không?"
+          ],
+          "weather_rule": {
+            "min_temperature_c": 20,
+            "max_temperature_c": 28,
+            "min_relative_humidity": 80,
+            "min_rainfall_72h_mm": 1
+          },
+          "do_not": ["Không kết luận gỉ sắt nếu ảnh không thấy mặt dưới lá hoặc bột màu cam."],
+          "sources": [
+            "https://khuyennongvn.gov.vn/hoat-dong-khuyen-nong/chuyen-giao-tbkt/gia-lai-chuyen-giao-mo-hinh-phong-tru-tong-hop-ipm-tren-cay-ca-phe-6877.html",
+            "https://pmc.ncbi.nlm.nih.gov/articles/PMC6727496/"
+          ]
+        },
+        {
+          "name": "Đốm mắt cua cà phê",
+          "aliases": ["đốm mắt cua", "cercospora", "brown eye spot", "đốm lá"],
+          "severity_default": "Trung bình",
+          "symptoms": ["đốm tròn", "tâm xám", "viền nâu", "quầng vàng", "rụng lá"],
+          "favorable_conditions": ["cây suy yếu", "thiếu dinh dưỡng", "nắng mưa xen kẽ", "vườn thiếu chăm sóc"],
+          "ipm_treatment": [
+            "Bón phân cân đối và che phủ giữ ẩm hợp lý.",
+            "Tỉa bỏ lá/cành bệnh nặng, giữ vườn thông thoáng.",
+            "Theo dõi lá non và cây suy yếu sau các đợt thời tiết bất lợi."
+          ],
+          "do_not": ["Không nhầm với gỉ sắt nếu không có lớp bột cam mặt dưới lá."],
+          "sources": ["https://khuyennongvn.gov.vn"]
+        },
+        {
+          "name": "Khô cành khô quả cà phê",
+          "aliases": ["khô cành", "khô quả", "phoma", "anthracnose"],
+          "severity_default": "Cao",
+          "symptoms": ["cành khô", "quả khô đen", "vết hoại tử", "rụng quả", "chết cành"],
+          "favorable_conditions": ["mưa ẩm", "vườn rậm", "cây suy", "vết thương cơ giới"],
+          "ipm_treatment": [
+            "Cắt tỉa và tiêu hủy cành/quả bệnh.",
+            "Tạo tán thông thoáng, hạn chế ẩm kéo dài trong vườn.",
+            "Bón phân cân đối và phục hồi cây sau thu hoạch.",
+            "Cần cán bộ kiểm tra nếu khô cành lan nhanh."
+          ],
+          "do_not": ["Không kết luận nếu ảnh chỉ có một lá đơn lẻ."],
+          "sources": ["https://khuyennongvn.gov.vn"]
+        },
+        {
+          "name": "Sâu đục lá cà phê",
+          "aliases": ["leaf miner", "sâu đục lá", "sâu vẽ bùa"],
+          "severity_default": "Trung bình",
+          "symptoms": ["đường ngoằn ngoèo trên lá", "lá bị đục", "mảng bạc trên lá", "lá biến dạng"],
+          "favorable_conditions": ["thời tiết khô", "lá non", "vườn ít thiên địch"],
+          "ipm_treatment": [
+            "Theo dõi lá non và bảo vệ thiên địch.",
+            "Tỉa cành thông thoáng, tránh lạm dụng thuốc làm mất thiên địch.",
+            "Thu gom lá bị hại nặng nếu mật độ thấp."
+          ],
+          "do_not": ["Không phun thuốc khi chỉ thấy vài lá bị hại nhẹ."],
+          "sources": ["https://khuyennongvn.gov.vn"]
+        }
+      ]
+    },
+    {
+      "crop": "Rau vụ đông",
+      "aliases": [
+        "rau",
+        "rau vu dong",
+        "rau cải",
+        "cải bắp",
+        "bắp cải",
+        "su hào",
+        "súp lơ",
+        "brassica",
+        "cole crops",
+        "winter vegetables"
+      ],
+      "local_relevance": {
+        "province": "Điện Biên",
+        "priority": "P0",
+        "sources": [
+          "https://khuyennongvn.gov.vn"
+        ]
+      },
+      "diseases": [
+        {
+          "id": "brassica-downy-mildew",
+          "name": "Sương mai rau họ cải",
+          "aliases": ["sương mai", "downy mildew", "peronospora", "hyalo-peronospora"],
+          "severity_default": "Trung bình",
+          "affected_parts": ["lá", "lá mầm", "cụm hoa"],
+          "cause": "Tác nhân giả nấm Hyaloperonospora parasitica (tên cũ Peronospora parasitica).",
+          "pathogen_type": "oomycete",
+          "growth_stages": ["vườn ươm", "cây con", "sinh trưởng thân lá", "cuốn bắp"],
+          "symptoms": [
+            "đốm vàng góc cạnh giới hạn bởi gân lá",
+            "mốc trắng xám hoặc tím ở mặt dưới lá",
+            "lá vàng và khô khi bệnh nặng"
+          ],
+          "favorable_conditions": ["thời tiết mát", "lá ướt kéo dài", "ẩm cao", "ruộng rậm"],
+          "severity_criteria": [
+            "Thấp: vài đốm trên lá già, chưa thấy lan sang cây bên cạnh.",
+            "Trung bình: nhiều lá có đốm và lớp mốc mặt dưới.",
+            "Cao: lá non hoặc lá cuốn bị bệnh, cây vàng khô thành ổ."
+          ],
+          "ipm_treatment": [
+            "Tưới vào buổi sáng và tưới sát gốc, tránh làm lá ướt kéo dài.",
+            "Tỉa bỏ lá bệnh nặng, tăng thông thoáng và giảm mật độ nếu ruộng quá rậm.",
+            "Luân canh cây khác họ và vệ sinh tàn dư sau vụ."
+          ],
+          "biological_treatment": [
+            "Có thể ưu tiên chế phẩm sinh học đã đăng ký cho sương mai trên đúng loại rau; thử trên diện tích nhỏ và theo dõi trước khi mở rộng."
+          ],
+          "chemical_treatment": [
+            "Chỉ cân nhắc thuốc đã đăng ký cho sương mai trên đúng loại rau khi bệnh tiếp tục lan sau biện pháp canh tác; tuân thủ nhãn và thời gian cách ly."
+          ],
+          "active_ingredients": ["copper hydroxide", "mandipropamid"],
+          "prevention": [
+            "Dùng hạt giống và cây con khỏe, bố trí khoảng cách trồng thông thoáng.",
+            "Không tưới phun mưa vào chiều tối và không làm việc trên ruộng khi lá đang ướt.",
+            "Kiểm tra mặt dưới lá non sau các đợt mưa lạnh."
+          ],
+          "follow_up_questions": [
+            "Vết vàng có góc cạnh và bị giới hạn bởi gân lá không?",
+            "Mặt dưới vết bệnh có lớp mốc trắng xám hoặc tím không?",
+            "Triệu chứng xuất hiện sau đợt mưa lạnh hoặc lá ướt kéo dài không?",
+            "Bệnh đang ở lá già, lá non hay phần cuốn bắp?"
+          ],
+          "weather_rule": {
+            "min_temperature_c": 8,
+            "max_temperature_c": 24,
+            "min_relative_humidity": 85,
+            "min_rainfall_72h_mm": 1
+          },
+          "do_not": [
+            "Không kết luận sương mai chỉ từ đốm vàng ở mặt trên; cần kiểm tra lớp mốc ở mặt dưới lá.",
+            "Không tự tăng liều hoặc phối trộn thuốc khi chưa xác nhận bệnh."
+          ],
+          "sources": [
+            "https://ipm.ucanr.edu/agriculture/cole-crops/",
+            "https://apps.extension.umn.edu/garden/diagnose/plant/vegetable/cabbage/headdiscolored.html"
+          ]
+        },
+        {
+          "id": "brassica-black-rot",
+          "name": "Thối đen vi khuẩn rau họ cải",
+          "aliases": ["thối đen", "black rot", "xanthomonas", "bệnh chữ v"],
+          "severity_default": "Cao",
+          "affected_parts": ["lá", "cuống lá", "thân", "bắp"],
+          "cause": "Vi khuẩn Xanthomonas campestris pv. campestris.",
+          "pathogen_type": "bacteria",
+          "growth_stages": ["cây con", "sinh trưởng thân lá", "cuốn bắp", "trước thu hoạch"],
+          "symptoms": [
+            "vết vàng hình chữ V từ mép lá hướng vào gân chính",
+            "gân lá chuyển đen",
+            "lá héo nâu và có thể thối bắp"
+          ],
+          "favorable_conditions": ["ấm ẩm", "mưa hoặc tưới bắn tóe", "lá có vết thương", "hạt giống nhiễm bệnh"],
+          "severity_criteria": [
+            "Thấp: một vài vết chữ V ở lá ngoài.",
+            "Trung bình: nhiều lá có gân đen hoặc cây bắt đầu héo.",
+            "Cao: nhiễm hệ thống, thối bắp hoặc bệnh lan theo hàng."
+          ],
+          "ipm_treatment": [
+            "Loại bỏ cây bệnh nặng và tàn dư, tránh kéo lê cây bệnh qua ruộng.",
+            "Ngừng tưới phun mưa; tưới sát gốc và không làm việc khi lá ướt.",
+            "Khử vệ sinh dụng cụ và kiểm soát côn trùng gây vết thương."
+          ],
+          "biological_treatment": [
+            "Chưa phát hành biện pháp sinh học đặc hiệu nếu chưa có sản phẩm đăng ký và bằng chứng hiệu quả tại địa phương."
+          ],
+          "chemical_treatment": [],
+          "active_ingredients": [],
+          "prevention": [
+            "Dùng hạt giống đã kiểm soát bệnh và cây con sạch bệnh.",
+            "Luân canh ngoài họ cải, kiểm soát cỏ họ cải và thu gom tàn dư.",
+            "Không tưới phun mưa và hạn chế làm tổn thương cây."
+          ],
+          "follow_up_questions": [
+            "Vết vàng có bắt đầu từ mép lá và tạo hình chữ V không?",
+            "Gân bên trong vết bệnh có chuyển nâu đen không?",
+            "Ruộng có được tưới phun mưa hoặc vừa trải qua mưa lớn không?",
+            "Các cây bệnh phân bố thành hàng, thành ổ hay rải rác?"
+          ],
+          "weather_rule": {
+            "min_temperature_c": 24,
+            "max_temperature_c": 35,
+            "min_relative_humidity": 80,
+            "min_rainfall_72h_mm": 1
+          },
+          "do_not": [
+            "Không dùng kháng sinh nông nghiệp hoặc thuốc không đăng ký.",
+            "Không lấy hạt giống từ ruộng có triệu chứng thối đen."
+          ],
+          "sources": [
+            "https://ipm.ucanr.edu/agriculture/cole-crops/black-rot/",
+            "https://extension.umn.edu/disease-management/organic-management-black-rot"
+          ]
+        },
+        {
+          "id": "brassica-clubroot",
+          "name": "Sưng rễ rau họ cải",
+          "aliases": ["sưng rễ", "clubroot", "plasmodiophora", "rễ phình"],
+          "severity_default": "Cao",
+          "affected_parts": ["rễ", "cổ rễ", "toàn cây"],
+          "cause": "Sinh vật ký sinh bắt buộc trong đất Plasmodiophora brassicae.",
+          "pathogen_type": "protist",
+          "growth_stages": ["cây con", "sinh trưởng thân lá", "cuốn bắp"],
+          "symptoms": [
+            "rễ phình to thành chùy hoặc u",
+            "cây còi cọc và vàng lá",
+            "héo ban ngày nhưng có thể hồi lại vào ban đêm"
+          ],
+          "favorable_conditions": ["đất chua", "đất ẩm hoặc thoát nước kém", "trồng họ cải liên tục"],
+          "severity_criteria": [
+            "Thấp: một số rễ bên phình nhẹ, cây còn sinh trưởng.",
+            "Trung bình: rễ chính biến dạng, cây còi và héo ban ngày.",
+            "Cao: rễ phình thối, cây chết hoặc xuất hiện nhiều ổ trong ruộng."
+          ],
+          "ipm_treatment": [
+            "Đánh dấu ổ bệnh, hạn chế di chuyển đất và làm sạch đất bám trên dụng cụ trước khi sang ruộng khác.",
+            "Cải thiện thoát nước; điều chỉnh pH đất chỉ dựa trên kết quả phân tích đất và hướng dẫn địa phương.",
+            "Luân canh dài hạn ngoài họ cải và kiểm soát cỏ dại họ cải."
+          ],
+          "biological_treatment": [
+            "Không phát hành chế phẩm xử lý đặc hiệu nếu chưa có sản phẩm được đăng ký và đánh giá trên điều kiện đất địa phương."
+          ],
+          "chemical_treatment": [],
+          "active_ingredients": [],
+          "prevention": [
+            "Dùng cây giống sạch bệnh và không đưa đất từ ruộng bệnh sang ruộng sạch.",
+            "Ưu tiên giống chống chịu nếu khu vực đã có lịch sử sưng rễ.",
+            "Kiểm tra rễ cây héo trước khi quyết định xử lý."
+          ],
+          "follow_up_questions": [
+            "Đã nhổ cây và thấy rễ phình thành chùy hoặc biến dạng chưa?",
+            "Cây héo ban ngày nhưng hồi lại khi mát không?",
+            "Ruộng có đất chua, úng hoặc đã trồng họ cải nhiều vụ liên tục không?",
+            "Triệu chứng xuất hiện thành từng ổ thấp trũng không?"
+          ],
+          "weather_rule": {
+            "min_temperature_c": 18,
+            "max_temperature_c": 25,
+            "min_relative_humidity": 75,
+            "min_rainfall_72h_mm": 1
+          },
+          "do_not": [
+            "Không chẩn đoán sưng rễ nếu chưa quan sát rễ.",
+            "Không chuyển cây, đất hoặc dụng cụ còn bám đất từ ổ bệnh sang khu vực sạch."
+          ],
+          "sources": [
+            "https://ipm.ucanr.edu/home-and-landscape/clubroot/",
+            "https://extension.umn.edu/plant-diseases/clubroot"
+          ]
+        },
+        {
+          "id": "brassica-diamondback-moth",
+          "name": "Sâu tơ hại rau họ cải",
+          "aliases": ["sâu tơ", "diamondback moth", "plutella xylostella", "dbm"],
+          "severity_default": "Trung bình",
+          "affected_parts": ["lá", "đọt non", "lá cuốn"],
+          "cause": "Ấu trùng bướm Plutella xylostella.",
+          "pathogen_type": "insect",
+          "growth_stages": ["vườn ươm", "cây con", "sinh trưởng thân lá", "cuốn bắp"],
+          "symptoms": [
+            "lá bị ăn tạo lỗ nhỏ hoặc cửa sổ biểu bì",
+            "sâu non xanh nhỏ nhả tơ và buông mình khi bị động",
+            "nhộng nằm trong kén lưới mỏng trên lá"
+          ],
+          "favorable_conditions": ["thời tiết khô", "trồng họ cải liên tục", "lạm dụng thuốc làm giảm thiên địch"],
+          "severity_criteria": [
+            "Thấp: sâu hoặc vết ăn rải rác, chưa ảnh hưởng lá non.",
+            "Trung bình: có sâu non trên nhiều cây hoặc vết ăn tăng nhanh.",
+            "Cao: lá non, đọt hoặc lá cuốn bị hại rõ; mật độ vượt ngưỡng địa phương."
+          ],
+          "ipm_treatment": [
+            "Kiểm tra mặt dưới lá và đọt non, ghi mật độ sâu theo điểm trước khi quyết định xử lý.",
+            "Bắt ổ trứng, sâu non khi diện tích nhỏ và bảo vệ ong ký sinh cùng thiên địch.",
+            "Luân canh ngoài họ cải, thu gom tàn dư và tránh trồng gối vụ liên tục."
+          ],
+          "biological_treatment": [
+            "Ưu tiên Bacillus thuringiensis var. kurstaki đã đăng ký khi sâu còn nhỏ; phun phủ đúng vị trí ăn và đánh giá lại mật độ sau xử lý."
+          ],
+          "chemical_treatment": [
+            "Chỉ dùng thuốc đã đăng ký khi mật độ vượt ngưỡng địa phương; luân phiên nhóm tác động theo IRAC và không lặp liên tiếp cùng nhóm."
+          ],
+          "active_ingredients": ["Bacillus thuringiensis var. kurstaki", "spinosad"],
+          "prevention": [
+            "Theo dõi bẫy và kiểm tra ruộng ít nhất hằng tuần trong giai đoạn lá non.",
+            "Dùng lưới chắn côn trùng phù hợp ở vườn ươm và loại bỏ tàn dư ngay sau thu hoạch.",
+            "Bảo vệ thiên địch, tránh phun thuốc phổ rộng theo lịch cố định."
+          ],
+          "follow_up_questions": [
+            "Có thấy sâu non xanh nhỏ buông mình bằng tơ khi chạm vào lá không?",
+            "Vết hại là lỗ nhỏ hoặc chỉ còn lớp biểu bì dạng cửa sổ không?",
+            "Sâu tập trung ở mặt dưới lá, đọt non hay lá cuốn?",
+            "Đếm được trung bình bao nhiêu sâu trên mỗi cây tại ít nhất năm điểm?"
+          ],
+          "weather_rule": {
+            "min_temperature_c": 15,
+            "max_temperature_c": 32,
+            "min_relative_humidity": 40
+          },
+          "do_not": [
+            "Không phun theo lịch khi chưa kiểm tra mật độ.",
+            "Không lặp liên tiếp thuốc cùng nhóm tác động vì sâu tơ kháng thuốc rất nhanh."
+          ],
+          "sources": [
+            "https://ipm.ucanr.edu/home-and-landscape/diamondback-moth/",
+            "https://irac-online.org/documents/insecticide-resistance-management-for-diamondback-moth-in-cole-crops/?ext=pdf"
+          ]
+        }
+      ]
+    },
+    {
+      "crop": "Mắc ca",
+      "aliases": ["mac ca", "macca", "macadamia"],
+      "local_relevance": {
+        "province": "Điện Biên",
+        "priority": "P0",
+        "sources": [
+          "https://dienbien.gov.vn/vi/bai-viet/VPUB--Doan-cong-tac-CHDCND-Lao-tham-mo-hinh-trong-zjz1za",
+          "https://skhdt.dienbien.gov.vn/Home_x/tintuc/?UserKey=Tinh-hinh-kinh-te---xa-hoi-thang-01"
+        ]
+      },
+      "diseases": [
+        {
+          "name": "Xì mủ mắc ca",
+          "aliases": ["xì mủ", "chảy gôm", "stem canker", "phytophthora"],
+          "severity_default": "Cao",
+          "symptoms": ["vỏ thân nứt", "chảy nhựa", "vết thâm ở thân", "cây vàng lá", "suy cây"],
+          "favorable_conditions": ["đất úng", "thoát nước kém", "ẩm cao", "vết thương thân"],
+          "ipm_treatment": [
+            "Cải thiện thoát nước quanh gốc, tránh úng kéo dài.",
+            "Không làm tổn thương thân/gốc khi chăm sóc.",
+            "Cạo sạch phần vỏ bệnh nhẹ và xử lý theo hướng dẫn cán bộ kỹ thuật.",
+            "Cần cán bộ kiểm tra nếu vết xì mủ lan quanh thân."
+          ],
+          "do_not": ["Không tự đục/cạo sâu vào thân khi chưa có hướng dẫn."],
+          "sources": [
+            "https://khuyennongvn.gov.vn/khoa-hoc-cong-nghe/khcn-trong-nuoc/huong-dan-ky-thuat-trong-cham-soc-cay-mac-ca-12616.html"
+          ]
+        },
+        {
+          "name": "Thán thư mắc ca",
+          "aliases": ["thán thư", "anthracnose", "đốm quả", "đốm lá"],
+          "severity_default": "Trung bình",
+          "symptoms": ["đốm nâu đen", "vết lõm trên quả", "cháy mép lá", "rụng quả non"],
+          "favorable_conditions": ["mưa ẩm", "tán rậm", "quả non", "vườn thiếu thông thoáng"],
+          "ipm_treatment": [
+            "Tỉa cành tạo thông thoáng và giảm ẩm trong tán.",
+            "Thu gom quả/lá bệnh rụng.",
+            "Theo dõi quả non sau mưa kéo dài.",
+            "Ưu tiên vệ sinh vườn và xử lý sinh học trước khi dùng thuốc hóa học."
+          ],
+          "do_not": ["Không kết luận thán thư nếu ảnh không rõ lá/quả có vết hoại tử."],
+          "sources": ["https://khuyennongvn.gov.vn/khoa-hoc-cong-nghe/khcn-trong-nuoc/huong-dan-ky-thuat-trong-cham-soc-cay-mac-ca-12616.html"]
+        },
+        {
+          "name": "Bọ xít muỗi hại mắc ca",
+          "aliases": ["bọ xít muỗi", "helopeltis", "bọ xít", "chích hút"],
+          "severity_default": "Trung bình",
+          "symptoms": ["vết chích đen", "chồi non héo", "quả non sẹo", "lá non biến dạng"],
+          "favorable_conditions": ["chồi non", "quả non", "vườn rậm", "ẩm cao"],
+          "ipm_treatment": [
+            "Theo dõi chồi non và quả non vào giai đoạn phát triển mạnh.",
+            "Tỉa cành thông thoáng, vệ sinh cỏ dại quanh vườn.",
+            "Bảo vệ thiên địch và tham khảo cán bộ nếu mật độ cao."
+          ],
+          "do_not": ["Không tự phun hóa chất nếu chỉ thấy vết hại lẻ tẻ."],
+          "sources": ["https://khuyennongvn.gov.vn"]
+        },
+        {
+          "name": "Sâu hại lá/quả mắc ca",
+          "aliases": ["sâu ăn lá", "sâu hại quả", "sâu cuốn lá", "caterpillar"],
+          "severity_default": "Trung bình",
+          "symptoms": ["lá bị ăn khuyết", "lỗ đục trên quả", "phân sâu", "lá cuốn"],
+          "favorable_conditions": ["tán rậm", "vườn ít kiểm tra", "giai đoạn lá non/quả non"],
+          "ipm_treatment": [
+            "Kiểm tra mặt dưới lá và quả non định kỳ.",
+            "Bắt thủ công ổ trứng/sâu non nếu mật độ thấp.",
+            "Ưu tiên chế phẩm sinh học như BT khi sâu non xuất hiện nhiều."
+          ],
+          "do_not": ["Không xử lý diện rộng nếu chưa xác định mật độ sâu."],
+          "sources": ["https://khuyennongvn.gov.vn"]
+        }
+      ]
+    }
+  ]
+}

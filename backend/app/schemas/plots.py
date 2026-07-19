@@ -1,7 +1,7 @@
 from datetime import date
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 
 class Location(BaseModel):
@@ -16,7 +16,7 @@ class LivestockItem(BaseModel):
 
 class CropTypeItem(BaseModel):
     type: str = Field(min_length=1, max_length=100)
-    variety: str = Field(min_length=1, max_length=100)
+    variety: str = Field(default="", max_length=100)
 
 
 class CropTypeResponseItem(BaseModel):
@@ -49,7 +49,12 @@ class PlotResponse(BaseModel):
     health: str
     moisture: str | None
     owner: str
+    owner_id: UUID
+    owner_username: str
+    owner_citizen_id: str | None = None
+    owner_email: EmailStr | None = None
     owner_phone: str | None = None
+    region: str | None = None
     location: Location
     boundary: list[list[float]] | None = None
     livestock: list[LivestockItem] = []
@@ -60,8 +65,12 @@ class PlotCreateRequest(BaseModel):
     crops: list[CropTypeItem] = Field(min_length=1)
     area_hectares: float = Field(gt=0)
     seeding_date: date
+    owner_id: UUID | None = None
     owner: str | None = None
+    owner_citizen_id: str | None = Field(default=None, min_length=12, max_length=12, pattern=r"^\d{12}$")
+    owner_email: EmailStr | None = None
     owner_phone: str | None = Field(default=None, max_length=20)
+    region: str | None = Field(default=None, max_length=100)
     location_lat: float = Field(ge=-90, le=90)
     location_lng: float = Field(ge=-180, le=180)
     health: str = "Khỏe mạnh"
@@ -81,8 +90,12 @@ class PlotUpdateRequest(BaseModel):
     seeding_date: date | None = None
     status: str | None = Field(default=None, pattern="^(growing|harvested|disease_outbreak)$")
     health: str | None = None
+    owner_id: UUID | None = None
     owner: str | None = None
+    owner_citizen_id: str | None = Field(default=None, min_length=12, max_length=12, pattern=r"^\d{12}$")
+    owner_email: EmailStr | None = None
     owner_phone: str | None = Field(default=None, max_length=20)
+    region: str | None = Field(default=None, max_length=100)
     location_lat: float | None = Field(default=None, ge=-90, le=90)
     location_lng: float | None = Field(default=None, ge=-180, le=180)
     moisture: int | None = Field(default=None, ge=0, le=100)

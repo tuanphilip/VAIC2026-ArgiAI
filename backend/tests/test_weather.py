@@ -319,6 +319,8 @@ def make_plot(code: str = "PLOT-001", owner: User | None = None) -> Plot:
         seeding_date=date(2026, 7, 1),
         health="Khỏe mạnh",
         moisture=62,
+        status="growing",
+        crop_types=json.dumps([{"type": "Rice", "area_hectares": 2.5}]),
     )
     plot.owner = owner
     plot.crop = crop
@@ -326,85 +328,58 @@ def make_plot(code: str = "PLOT-001", owner: User | None = None) -> Plot:
 
 
 class TestWeatherRoutes:
-    def test_routes_require_authentication(self, client: TestClient) -> None:
-        response = client.get("/api/v1/weather/plots")
+    def test_regional_weather_overview_requires_authentication(self, client: TestClient) -> None:
+        response = client.get("/api/v1/weather/overview")
         assert response.status_code == 401
         assert response.json()["detail"] == "Missing bearer token"
 
-    def test_weather_plots_return_database_records(self, client: TestClient) -> None:
+    def test_regional_weather_overview_uses_shared_center(self, client: TestClient) -> None:
         from app.main import app
-
-        current_user = make_user(role="farmer")
-        owned_plot = make_plot("A1", owner=current_user)
-        fake_session = FakeSession([FakeScalarResult(many=[owned_plot])])
-
-        async def override_db() -> object:
-            yield fake_session
 
         async def override_user() -> User:
-            return current_user
+            return make_user(role="official")
 
-        app.dependency_overrides[get_db] = override_db
         app.dependency_overrides[get_current_user] = override_user
-
-        response = client.get("/api/v1/weather/plots")
+        with (
+            patch("app.routes.weather.fetch_current_weather", new_callable=AsyncMock) as current_fetch,
+            patch("app.routes.weather.fetch_forecast", new_callable=AsyncMock) as forecast_fetch,
+        ):
+            current_fetch.return_value = {"current_weather": {"temperature": 30.5}}
+            forecast_fetch.return_value = {"daily": {"time": ["2026-07-18"]}}
+            response = client.get("/api/v1/weather/overview")
 
         assert response.status_code == 200
-        assert response.json() == [
-            {
-                "plot_code": "A1",
-                "crop_name": "Rice",
-                "crop_variety": "ST25",
-                "owner": "Demo User",
-                "location": {"lat": 21.0285, "lng": 105.8542},
-            }
-        ]
+        assert response.json()["scope"] == "regional"
+        assert response.json()["area"] == {"lat": 21.518, "lng": 103.223, "label": "Điện Biên"}
+        current_fetch.assert_awaited_once_with(21.518, 103.223)
+        forecast_fetch.assert_awaited_once_with(21.518, 103.223)
 
-    def test_current_weather_uses_plot_coordinates(self, client: TestClient) -> None:
+    def test_official_can_list_all_plots(self, client: TestClient) -> None:
         from app.main import app
 
-        current_user = make_user(role="farmer")
-        plot = make_plot("A1", owner=current_user)
-        fake_session = FakeSession([FakeScalarResult(one=plot)])
+        official = make_user(role="official")
+        plot = make_plot("A1", owner=make_user(role="farmer"))
+        app.dependency_overrides[get_current_user] = lambda: official
 
         async def override_db() -> object:
-            yield fake_session
-
-        async def override_user() -> User:
-            return current_user
+            yield FakeSession([FakeScalarResult(many=[plot])])
 
         app.dependency_overrides[get_db] = override_db
-        app.dependency_overrides[get_current_user] = override_user
-
-        with patch("app.routes.weather.fetch_current_weather", new_callable=AsyncMock) as mock_fetch:
-            mock_fetch.return_value = {"current_weather": {"temperature": 30.5}}
-
-            response = client.get("/api/v1/weather/current/A1")
+        response = client.get("/api/v1/plots")
 
         assert response.status_code == 200
-        assert response.json() == {
-            "plot_code": "A1",
-            "location": {"lat": 21.0285, "lng": 105.8542},
-            "data": {"current_weather": {"temperature": 30.5}},
-        }
-        mock_fetch.assert_awaited_once_with(21.0285, 105.8542)
+        assert response.json()[0]["plot_id"] == "A1"
 
-    def test_forecast_returns_404_for_unknown_plot(self, client: TestClient) -> None:
+    def test_plot_scoped_weather_endpoints_are_removed(self, client: TestClient) -> None:
         from app.main import app
-
-        async def override_db() -> object:
-            yield FakeSession([FakeScalarResult(one=None)])
 
         async def override_user() -> User:
             return make_user(role="admin")
 
-        app.dependency_overrides[get_db] = override_db
         app.dependency_overrides[get_current_user] = override_user
-
-        response = client.get("/api/v1/weather/forecast/UNKNOWN")
-
-        assert response.status_code == 404
-        assert response.json()["detail"] == "Plot not found"
+        assert client.get("/api/v1/weather/plots").status_code == 404
+        assert client.get("/api/v1/weather/current/A1").status_code == 404
+        assert client.get("/api/v1/weather/forecast/A1").status_code == 404
 
     def test_map_config_returns_weather_layers(self, client: TestClient) -> None:
         from app.main import app

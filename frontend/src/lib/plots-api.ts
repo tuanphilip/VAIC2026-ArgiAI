@@ -48,7 +48,12 @@ export interface PlotResponse {
   health: string;
   moisture: string | null;
   owner: string;
+  owner_id: string;
+  owner_username: string;
+  owner_citizen_id: string | null;
+  owner_email: string | null;
   owner_phone: string | null;
+  region: string | null;
   location: { lat: number; lng: number };
   boundary: [number, number][] | null;
   livestock: { type: string; quantity: number }[];
@@ -62,7 +67,12 @@ export interface PlotCreatePayload {
   location_lat: number;
   location_lng: number;
   health?: string;
+  owner?: string;
+  owner_id?: string;
+  owner_citizen_id?: string;
+  owner_email?: string;
   owner_phone?: string;
+  region?: string;
   boundary?: [number, number][] | null;
   livestock?: { type: string; quantity: number }[];
 }
@@ -73,7 +83,12 @@ export interface PlotUpdatePayload {
   seeding_date?: string;
   status?: "growing" | "harvested" | "disease_outbreak";
   health?: string;
+  owner?: string;
+  owner_id?: string;
+  owner_citizen_id?: string;
+  owner_email?: string;
   owner_phone?: string;
+  region?: string;
   location_lat?: number;
   location_lng?: number;
   boundary?: [number, number][] | null;

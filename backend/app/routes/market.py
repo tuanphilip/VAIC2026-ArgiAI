@@ -2,7 +2,7 @@ from datetime import date
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user, require_roles
@@ -14,8 +14,6 @@ from app.schemas.market import (
     MarketPriceCreateRequest,
     MarketPricePoint,
     MarketPricesResponse,
-    MarketSummaryItem,
-    MarketSummaryResponse,
 )
 from app.services.crops import find_crop, get_or_create_crop
 from app.services.market_analysis import build_market_recommendation
@@ -23,42 +21,35 @@ from app.services.market_analysis import build_market_recommendation
 router = APIRouter(prefix="/market", tags=["Market"])
 
 
-@router.get("/summary", response_model=MarketSummaryResponse)
-async def market_summary(
-    days: int = Query(default=7, ge=2, le=30),
+@router.get("/catalog")
+async def list_catalog(
     db: AsyncSession = Depends(get_db),
-) -> MarketSummaryResponse:
-    result = await db.execute(
-        select(MarketPrice, Crop)
-        .join(Crop, Crop.id == MarketPrice.crop_id)
-        .order_by(MarketPrice.recorded_date.desc(), MarketPrice.created_at.desc())
-        .limit(1000)
+) -> list[dict[str, object]]:
+    """Return the latest recorded quote for every local crop."""
+    latest_date = (
+        select(func.max(MarketPrice.recorded_date))
+        .where(MarketPrice.crop_id == Crop.id)
+        .correlate(Crop)
+        .scalar_subquery()
     )
-    grouped: dict[str, tuple[str, list[MarketPricePoint]]] = {}
-    for price, crop in result.all():
-        key = str(crop.id)
-        if key not in grouped:
-            grouped[key] = (f"{crop.name} {crop.variety}".strip(), [])
-        grouped[key][1].append(MarketPricePoint(id=price.id, date=price.recorded_date, price=price.price_per_kg, source=price.source))
-
-    items: list[MarketSummaryItem] = []
-    for crop_name, history_desc in grouped.values():
-        history = list(reversed(history_desc[:days]))
-        latest = history[-1].price
-        previous = history[-2].price if len(history) > 1 else None
-        change = ((latest - previous) / previous * 100) if previous else None
-        items.append(
-            MarketSummaryItem(
-                crop_name=crop_name,
-                latest_price=latest,
-                previous_price=previous,
-                change_percent=round(change, 2) if change is not None else None,
-                week_min=min(point.price for point in history),
-                week_max=max(point.price for point in history),
-                history=history,
-            )
-        )
-    return MarketSummaryResponse(items=items)
+    query = (
+        select(Crop, MarketPrice)
+        .join(MarketPrice, MarketPrice.crop_id == Crop.id)
+        .where(MarketPrice.recorded_date == latest_date)
+        .order_by(Crop.name, Crop.variety)
+    )
+    rows = (await db.execute(query)).all()
+    return [
+        {
+            "name": f"{crop.name} {crop.variety}",
+            "price": price.price_per_kg,
+            "unit": "kg",
+            "recorded_date": price.recorded_date,
+            "source": price.source,
+            "is_verified_live": "chưa xác minh live" not in price.source.lower(),
+        }
+        for crop, price in rows
+    ]
 
 
 @router.get("/prices", response_model=MarketPricesResponse)
@@ -135,6 +126,45 @@ async def create_alert(
     await db.commit()
     await db.refresh(alert)
     return MarketMutationResponse(message="Price alert configured successfully", id=alert.id)
+
+
+@router.get("/alerts/matches")
+async def list_triggered_alerts(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> list[dict[str, object]]:
+    """Return active user alerts whose latest recorded price meets the target."""
+    latest_recorded_date = (
+        select(func.max(MarketPrice.recorded_date))
+        .where(MarketPrice.crop_id == PriceAlert.crop_id)
+        .correlate(PriceAlert)
+        .scalar_subquery()
+    )
+    query = (
+        select(PriceAlert, Crop, MarketPrice)
+        .join(Crop, Crop.id == PriceAlert.crop_id)
+        .join(MarketPrice, MarketPrice.crop_id == Crop.id)
+        .where(
+            PriceAlert.user_id == current_user.id,
+            PriceAlert.is_active.is_(True),
+            MarketPrice.recorded_date == latest_recorded_date,
+            MarketPrice.price_per_kg >= PriceAlert.target_price,
+        )
+        .order_by(MarketPrice.recorded_date.desc())
+    )
+    result = await db.execute(query)
+    return [
+        {
+            "alert_id": alert.id,
+            "crop_name": crop.name,
+            "crop_variety": crop.variety,
+            "target_price": alert.target_price,
+            "current_price": price.price_per_kg,
+            "recorded_date": price.recorded_date,
+            "source": price.source,
+        }
+        for alert, crop, price in result.all()
+    ]
 
 
 async def _resolve_crop(db: AsyncSession, crop_id: str | None) -> Crop | None:

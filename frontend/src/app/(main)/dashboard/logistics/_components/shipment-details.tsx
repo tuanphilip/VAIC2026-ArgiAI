@@ -37,38 +37,56 @@ const statusBadgeClasses: Record<Shipment["status"], string> = {
   "Customs Hold": "border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400",
 };
 
+const statusLabels: Record<Shipment["status"], string> = {
+  Scheduled: "Đã lên lịch",
+  "In Transit": "Đang vận chuyển",
+  "Out for Delivery": "Đang giao hàng",
+  Delivered: "Đã giao hàng",
+  Delayed: "Bị trễ",
+  "On Hold": "Tạm giữ",
+  "Customs Hold": "Tạm giữ để kiểm tra",
+};
+
+const modeLabels: Record<Shipment["mode"], string> = { land: "Đường bộ", air: "Đường hàng không", sea: "Đường biển" };
+const routeLabels: Record<Shipment["routeType"], string> = { road: "tuyến đường bộ", flight: "tuyến bay", ship: "tuyến đường biển" };
+const tierLabels: Record<Shipment["customer"]["tier"], string> = {
+  Priority: "Ưu tiên",
+  Standard: "Tiêu chuẩn",
+  "Non-priority": "Không ưu tiên",
+};
+
 type ShipmentDetailsProps = {
   shipment: Shipment | null;
 };
 
 function getContactLabel(mode: Shipment["mode"]) {
   if (mode === "land") {
-    return "Call Driver";
+    return "Gọi tài xế";
   }
 
   if (mode === "air") {
-    return "Call Airline Support";
+    return "Gọi hỗ trợ hãng bay";
   }
 
-  return "Call Captain";
+  return "Gọi thuyền trưởng";
 }
 
 function getTransportNumberLabel(mode: Shipment["mode"]) {
   if (mode === "land") {
-    return "Vehicle number";
+    return "Số xe";
   }
 
   if (mode === "air") {
-    return "Flight number";
+    return "Số chuyến bay";
   }
 
-  return "Vessel number";
+  return "Số tàu";
 }
 
 function EmptyShipmentOverview() {
   return (
     <div className="grid min-h-48 place-items-center rounded-lg border border-dashed text-muted-foreground text-sm">
-      Select a shipment to view details.
+      Chọn một lô hàng để xem chi tiết.
     </div>
   );
 }
@@ -91,13 +109,13 @@ function ShipmentOverview({ shipment }: { shipment: Shipment }) {
         <div className="flex items-center gap-2 text-xs sm:text-sm">
           <Badge variant="outline" className={cn("gap-1.5", statusBadgeClasses[shipment.status])}>
             <span className={cn("size-1.5 rounded-full bg-current", progressRingClasses[shipment.status])} />
-            {shipment.status}
+            {statusLabels[shipment.status]}
           </Badge>
           <span className="text-muted-foreground">·</span>
-          <span className="text-foreground tabular-nums">{shipment.progress}% complete</span>
+          <span className="text-foreground tabular-nums">{shipment.progress}% hoàn thành</span>
           <span className="text-muted-foreground">·</span>
           <span className="text-foreground tabular-nums">
-            ETA: {shipment.eta} {shipment.etaMeta}
+            Dự kiến đến: {shipment.eta} {shipment.etaMeta}
           </span>
         </div>
       </div>
@@ -122,7 +140,7 @@ function ShipmentOverview({ shipment }: { shipment: Shipment }) {
         <div className="flex flex-col items-end gap-1">
           <Badge variant="secondary">
             <Star />
-            {shipment.customer.tier}
+            {tierLabels[shipment.customer.tier]}
           </Badge>
           <div className="text-muted-foreground text-xs leading-none">{shipment.customer.tierLabel}</div>
         </div>
@@ -132,7 +150,7 @@ function ShipmentOverview({ shipment }: { shipment: Shipment }) {
 
       <div className="flex flex-col gap-8">
         <div className="flex items-start justify-between gap-4">
-          <h2 className="font-medium">Cargo details</h2>
+          <h2 className="font-medium">Chi tiết hàng hóa</h2>
 
           <Button variant="outline" size="sm">
             <ContactIcon data-icon="inline-start" />
@@ -142,19 +160,19 @@ function ShipmentOverview({ shipment }: { shipment: Shipment }) {
 
         <div className="grid grid-cols-2 gap-x-4 gap-y-5 md:grid-cols-[1.35fr_1fr_1.1fr_1.15fr_1fr]">
           <div className="col-span-2 flex flex-col gap-1 md:col-span-1 md:gap-2">
-            <div className="text-muted-foreground text-xs leading-none md:invisible md:text-sm">Cargo</div>
+            <div className="text-muted-foreground text-xs leading-none md:invisible md:text-sm">Hàng hóa</div>
             <div className="whitespace-nowrap text-sm leading-none">{shipment.cargo}</div>
           </div>
 
           <div className="flex flex-col gap-2">
-            <div className="text-muted-foreground text-xs leading-none md:text-sm">Total weight</div>
+            <div className="text-muted-foreground text-xs leading-none md:text-sm">Tổng khối lượng</div>
             <div className="text-sm leading-none">{shipment.weight}</div>
           </div>
 
           <div className="flex flex-col gap-2">
-            <div className="text-muted-foreground text-xs leading-none md:text-sm">Transport mode</div>
+            <div className="text-muted-foreground text-xs leading-none md:text-sm">Hình thức vận chuyển</div>
             <div className="text-sm capitalize leading-none">
-              {shipment.mode} · {shipment.routeType}
+              {modeLabels[shipment.mode]} · {routeLabels[shipment.routeType]}
             </div>
           </div>
 
@@ -164,8 +182,8 @@ function ShipmentOverview({ shipment }: { shipment: Shipment }) {
           </div>
 
           <div className="flex flex-col gap-2 md:text-right">
-            <div className="text-muted-foreground text-xs leading-none md:text-sm">Status</div>
-            <div className="text-sm leading-none">{shipment.progress}% complete</div>
+            <div className="text-muted-foreground text-xs leading-none md:text-sm">Trạng thái</div>
+            <div className="text-sm leading-none">{shipment.progress}% hoàn thành</div>
           </div>
         </div>
       </div>
@@ -227,19 +245,19 @@ export function ShipmentDetails({ shipment }: ShipmentDetailsProps) {
               variant="line"
             >
               <TabsTrigger className="flex-none" value="overview">
-                Overview
+                Tổng quan
               </TabsTrigger>
               <TabsTrigger className="flex-none" value="route">
-                Route
+                Tuyến đường
               </TabsTrigger>
               <TabsTrigger className="flex-none" value="cargo">
-                Cargo
+                Hàng hóa
               </TabsTrigger>
               <TabsTrigger className="flex-none" value="documents">
-                Documents
+                Chứng từ
               </TabsTrigger>
               <TabsTrigger className="flex-none" value="activity">
-                Activity
+                Hoạt động
               </TabsTrigger>
             </TabsList>
             <TabsContent className="min-h-0 overflow-auto p-4" value="overview">
@@ -247,22 +265,22 @@ export function ShipmentDetails({ shipment }: ShipmentDetailsProps) {
             </TabsContent>
             <TabsContent className="p-4" value="route">
               <div className="grid h-full place-items-center rounded-md border border-dashed text-muted-foreground text-sm">
-                Route view coming soon.
+                Chế độ xem tuyến đường đang được phát triển.
               </div>
             </TabsContent>
             <TabsContent className="p-4" value="cargo">
               <div className="grid h-full place-items-center rounded-md border border-dashed text-muted-foreground text-sm">
-                Cargo view coming soon.
+                Chế độ xem hàng hóa đang được phát triển.
               </div>
             </TabsContent>
             <TabsContent className="p-4" value="documents">
               <div className="grid h-full place-items-center rounded-md border border-dashed text-muted-foreground text-sm">
-                Documents view coming soon.
+                Chế độ xem chứng từ đang được phát triển.
               </div>
             </TabsContent>
             <TabsContent className="p-4" value="activity">
               <div className="grid h-full place-items-center rounded-md border border-dashed text-muted-foreground text-sm">
-                Activity view coming soon.
+                Chế độ xem hoạt động đang được phát triển.
               </div>
             </TabsContent>
           </Tabs>

@@ -1,20 +1,17 @@
 import type { ReactNode } from "react";
 
-import { SidebarProvider } from "@/components/ui/sidebar";
-
-import { ChatHeader } from "./_components/chat-header";
-import { ChatSidebar } from "./_components/chat-sidebar";
+import { AppSidebar } from "@/app/(main)/dashboard/_components/sidebar/app-sidebar";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 
 export default async function Layout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <div className="[--header-height:calc(--spacing(14))]">
-      <SidebarProvider className="flex flex-col">
-        <ChatHeader />
-        <div className="flex flex-1">
-          <ChatSidebar />
-          {children}
-        </div>
-      </SidebarProvider>
-    </div>
+    <SidebarProvider defaultOpen className="[--header-height:calc(--spacing(14))]">
+      <AppSidebar />
+      <SidebarInset className="min-w-0 overflow-hidden">
+        <main className="flex min-h-0 flex-1 overflow-hidden">
+          <section className="min-w-0 flex-1 overflow-hidden">{children}</section>
+        </main>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

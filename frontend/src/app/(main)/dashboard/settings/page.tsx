@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { AlertCircle, Database, Network, Save, Send, Sliders, Users } from "lucide-react";
 
+import { AlertCircle, Database, Save, Send, Sliders, Users } from "lucide-react";
+
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 
 export default function Page() {
   const [moistureMin, setMoistureMin] = useState(40);
@@ -19,10 +20,6 @@ export default function Page() {
   const [webhookUrl, setWebhookUrl] = useState("https://api.zalo.me/v2/oa/message");
   const [webhookToken, setWebhookToken] = useState("zalo_oa_secret_token_12345");
   const [webhookSaved, setWebhookSaved] = useState(false);
-
-  // API Config settings
-  const [apiEndpoint, setApiEndpoint] = useState("https://iot.argiai.com/v1/telemetry");
-  const [apiKey, setApiKey] = useState("argi_sensor_secure_key_x94j");
 
   // Backup settings
   const [backupSchedule, setBackupSchedule] = useState("daily");
@@ -56,31 +53,31 @@ export default function Page() {
     <div className="flex flex-col gap-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
-          Cài đặt Ngưỡng & Hệ thống
+        <h1 className="font-bold text-3xl text-slate-900 tracking-tight dark:text-white">
+          Cài đặt Canh tác & Hệ thống
         </h1>
         <p className="text-muted-foreground">
-          Cấu hình phạm vi kích hoạt thiết bị tự động và quản lý vai trò thành viên trang trại.
+          Cấu hình ngưỡng canh tác, kênh cảnh báo và quản lý vai trò thành viên trang trại.
         </p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
         {/* Sliders settings (2/3 width) */}
-        <div className="md:col-span-2 space-y-6">
+        <div className="space-y-6 md:col-span-2">
           <Card className="shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Sliders className="size-5 text-emerald-600" /> Ngưỡng Thiết bị Cảm biến
+                <Sliders className="size-5 text-emerald-600" /> Ngưỡng Canh tác
               </CardTitle>
               <CardDescription>
-                Hệ thống sẽ gửi cảnh báo khẩn và tự kích hoạt vòi tưới/quạt gió nếu vượt ngoài phạm vi này.
+                Hệ thống sẽ sử dụng các ngưỡng này để đánh giá rủi ro thời tiết và đưa ra khuyến nghị canh tác.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSave} className="space-y-6">
                 {/* Moisture Sliders */}
                 <div className="space-y-4">
-                  <div className="flex justify-between items-center">
+                  <div className="flex items-center justify-between">
                     <span className="font-semibold text-sm">Độ ẩm đất cho phép</span>
                     <Badge variant="outline" className="border-emerald-100 text-emerald-800">
                       {moistureMin}% - {moistureMax}%
@@ -88,33 +85,33 @@ export default function Page() {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
-                      <span className="text-xs text-slate-500 block">Tối thiểu: {moistureMin}%</span>
+                      <span className="block text-slate-500 text-xs">Tối thiểu: {moistureMin}%</span>
                       <input
                         type="range"
                         min="20"
                         max="50"
                         value={moistureMin}
-                        onChange={(e) => setMoistureMin(parseInt(e.target.value))}
-                        className="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-600"
+                        onChange={(e) => setMoistureMin(parseInt(e.target.value, 10))}
+                        className="h-1.5 w-full cursor-pointer appearance-none rounded-lg bg-slate-200 accent-emerald-600 dark:bg-slate-800"
                       />
                     </div>
                     <div className="space-y-1">
-                      <span className="text-xs text-slate-500 block">Tối đa: {moistureMax}%</span>
+                      <span className="block text-slate-500 text-xs">Tối đa: {moistureMax}%</span>
                       <input
                         type="range"
                         min="60"
                         max="90"
                         value={moistureMax}
-                        onChange={(e) => setMoistureMax(parseInt(e.target.value))}
-                        className="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-600"
+                        onChange={(e) => setMoistureMax(parseInt(e.target.value, 10))}
+                        className="h-1.5 w-full cursor-pointer appearance-none rounded-lg bg-slate-200 accent-emerald-600 dark:bg-slate-800"
                       />
                     </div>
                   </div>
                 </div>
 
                 {/* Temperature Sliders */}
-                <div className="space-y-4 pt-4 border-t">
-                  <div className="flex justify-between items-center">
+                <div className="space-y-4 border-t pt-4">
+                  <div className="flex items-center justify-between">
                     <span className="font-semibold text-sm">Nhiệt độ phòng kính cho phép</span>
                     <Badge variant="outline" className="border-emerald-100 text-emerald-800">
                       {tempMin}°C - {tempMax}°C
@@ -122,38 +119,38 @@ export default function Page() {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
-                      <span className="text-xs text-slate-500 block">Tối thiểu: {tempMin}°C</span>
+                      <span className="block text-slate-500 text-xs">Tối thiểu: {tempMin}°C</span>
                       <input
                         type="range"
                         min="10"
                         max="25"
                         value={tempMin}
-                        onChange={(e) => setTempMin(parseInt(e.target.value))}
-                        className="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-600"
+                        onChange={(e) => setTempMin(parseInt(e.target.value, 10))}
+                        className="h-1.5 w-full cursor-pointer appearance-none rounded-lg bg-slate-200 accent-emerald-600 dark:bg-slate-800"
                       />
                     </div>
                     <div className="space-y-1">
-                      <span className="text-xs text-slate-500 block">Tối đa: {tempMax}°C</span>
+                      <span className="block text-slate-500 text-xs">Tối đa: {tempMax}°C</span>
                       <input
                         type="range"
                         min="30"
                         max="45"
                         value={tempMax}
-                        onChange={(e) => setTempMax(parseInt(e.target.value))}
-                        className="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-600"
+                        onChange={(e) => setTempMax(parseInt(e.target.value, 10))}
+                        className="h-1.5 w-full cursor-pointer appearance-none rounded-lg bg-slate-200 accent-emerald-600 dark:bg-slate-800"
                       />
                     </div>
                   </div>
                 </div>
 
                 {saved && (
-                  <div className="p-3 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 rounded-lg flex items-center gap-2 text-emerald-800 dark:text-emerald-300 text-xs font-semibold animate-in fade-in">
-                    <AlertCircle className="size-4" /> Cấu hình ngưỡng đã được lưu thành công trên Gateway IoT!
+                  <div className="fade-in flex animate-in items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 font-semibold text-emerald-800 text-xs dark:bg-emerald-950/20 dark:text-emerald-300">
+                    <AlertCircle className="size-4" /> Cấu hình ngưỡng canh tác đã được lưu thành công.
                   </div>
                 )}
 
-                <div className="pt-4 border-t flex justify-end">
-                  <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2 font-medium">
+                <div className="flex justify-end border-t pt-4">
+                  <Button type="submit" className="gap-2 bg-emerald-600 font-medium text-white hover:bg-emerald-700">
                     <Save className="size-4" /> Lưu cấu hình
                   </Button>
                 </div>
@@ -164,36 +161,40 @@ export default function Page() {
 
         {/* Member Permissions (1/3 width) */}
         <Card className="shadow-sm">
-          <CardHeader className="pb-3 border-b">
+          <CardHeader className="border-b pb-3">
             <CardTitle className="flex items-center gap-2">
               <Users className="size-5 text-emerald-600" /> Quản lý Nhân sự
             </CardTitle>
             <CardDescription>Danh sách nhân công canh tác.</CardDescription>
           </CardHeader>
-          <CardContent className="p-6 space-y-4">
+          <CardContent className="space-y-4 p-6">
             {/* Person 1 */}
-            <div className="flex justify-between items-center pb-2 border-b">
+            <div className="flex items-center justify-between border-b pb-2">
               <div>
-                <span className="font-semibold text-xs text-slate-800 dark:text-slate-200 block">Nguyễn Văn An</span>
+                <span className="block font-semibold text-slate-800 text-xs dark:text-slate-200">Nguyễn Văn An</span>
                 <span className="text-[10px] text-slate-500">Người quản lý chính</span>
               </div>
               <Badge className="bg-emerald-100 text-emerald-800">Admin</Badge>
             </div>
             {/* Person 2 */}
-            <div className="flex justify-between items-center pb-2 border-b">
+            <div className="flex items-center justify-between border-b pb-2">
               <div>
-                <span className="font-semibold text-xs text-slate-800 dark:text-slate-200 block">Lê Thị Hoa</span>
+                <span className="block font-semibold text-slate-800 text-xs dark:text-slate-200">Lê Thị Hoa</span>
                 <span className="text-[10px] text-slate-500">Kỹ sư bảo vệ thực vật</span>
               </div>
-              <Badge variant="outline" className="border-slate-300">Kỹ thuật</Badge>
+              <Badge variant="outline" className="border-slate-300">
+                Kỹ thuật
+              </Badge>
             </div>
             {/* Person 3 */}
-            <div className="flex justify-between items-center">
+            <div className="flex items-center justify-between">
               <div>
-                <span className="font-semibold text-xs text-slate-800 dark:text-slate-200 block">Trần Văn Bình</span>
+                <span className="block font-semibold text-slate-800 text-xs dark:text-slate-200">Trần Văn Bình</span>
                 <span className="text-[10px] text-slate-500">Nhân công bón phân/tưới tiêu</span>
               </div>
-              <Badge variant="outline" className="border-slate-300">Nhân công</Badge>
+              <Badge variant="outline" className="border-slate-300">
+                Nhân công
+              </Badge>
             </div>
           </CardContent>
         </Card>
@@ -212,71 +213,45 @@ export default function Page() {
           <CardContent>
             <form onSubmit={handleSaveWebhook} className="space-y-4">
               <div>
-                <label className="text-xs font-semibold block mb-1">Địa chỉ API Webhook</label>
+                <label htmlFor="webhook-url" className="mb-1 block font-semibold text-xs">Địa chỉ API Webhook</label>
                 <input
+                  id="webhook-url"
                   type="text"
                   value={webhookUrl}
                   onChange={(e) => setWebhookUrl(e.target.value)}
-                  className="w-full text-xs p-2.5 border rounded-lg dark:bg-slate-950 focus:outline-emerald-500"
+                  className="w-full rounded-lg border p-2.5 text-xs focus:outline-emerald-500 dark:bg-slate-950"
                   required
                 />
               </div>
               <div>
-                <label className="text-xs font-semibold block mb-1">Mã bảo mật OA Token</label>
+                <label htmlFor="webhook-token" className="mb-1 block font-semibold text-xs">Mã bảo mật OA Token</label>
                 <input
+                  id="webhook-token"
                   type="password"
                   value={webhookToken}
                   onChange={(e) => setWebhookToken(e.target.value)}
-                  className="w-full text-xs p-2.5 border rounded-lg dark:bg-slate-950 focus:outline-emerald-500"
+                  className="w-full rounded-lg border p-2.5 text-xs focus:outline-emerald-500 dark:bg-slate-950"
                   required
                 />
               </div>
 
               {webhookSaved && (
-                <div className="p-2.5 bg-emerald-50 text-emerald-800 rounded-lg text-xs font-semibold">
+                <div className="rounded-lg bg-emerald-50 p-2.5 font-semibold text-emerald-800 text-xs">
                   Đã cập nhật khóa kết nối Webhook.
                 </div>
               )}
 
-              <Button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium">
+              <Button
+                type="submit"
+                className="w-full bg-emerald-600 font-medium text-white text-xs hover:bg-emerald-700"
+              >
                 Kết nối dịch vụ cảnh báo
               </Button>
             </form>
           </CardContent>
         </Card>
 
-        {/* Sub-Feature 2: IoT API Endpoints Configuration */}
-        <Card className="shadow-sm">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Network className="size-5 text-emerald-600" /> Cấu hình API Server IoT
-            </CardTitle>
-            <CardDescription>Địa chỉ nhận số liệu đo đạc (Telemetry) từ cảm biến thực tế.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <label className="text-xs font-semibold block mb-1">Endpoint Endpoint</label>
-              <span className="w-full text-xs p-2.5 bg-slate-50 dark:bg-slate-800 border rounded-lg block font-mono truncate">
-                {apiEndpoint}
-              </span>
-            </div>
-            <div>
-              <label className="text-xs font-semibold block mb-1">Mã xác thực API Key</label>
-              <input
-                type="password"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                className="w-full text-xs p-2.5 border rounded-lg dark:bg-slate-950 focus:outline-emerald-500"
-                required
-              />
-            </div>
-            <p className="text-[10px] text-muted-foreground">
-              Vui lòng không tiết lộ API Key này. Nó dùng để chứng thực Gateway cảm biến ngoài đồng ruộng.
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Sub-Feature 3: DB Backup Scheduler */}
+        {/* Sub-Feature 2: DB Backup Scheduler */}
         <Card className="shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -287,11 +262,12 @@ export default function Page() {
           <CardContent>
             <form onSubmit={handleSaveBackup} className="space-y-4">
               <div>
-                <label className="text-xs font-semibold block mb-1">Tần suất sao lưu</label>
+                <label htmlFor="backup-schedule" className="mb-1 block font-semibold text-xs">Tần suất sao lưu</label>
                 <select
+                  id="backup-schedule"
                   value={backupSchedule}
                   onChange={(e) => setBackupSchedule(e.target.value)}
-                  className="w-full text-xs p-2.5 border rounded-lg dark:bg-slate-950 focus:outline-emerald-500"
+                  className="w-full rounded-lg border p-2.5 text-xs focus:outline-emerald-500 dark:bg-slate-950"
                 >
                   <option value="hourly">Hàng giờ</option>
                   <option value="daily">Hàng ngày (Vào lúc 02:00 sáng)</option>
@@ -300,12 +276,15 @@ export default function Page() {
               </div>
 
               {backupSaved && (
-                <div className="p-2.5 bg-emerald-50 text-emerald-800 rounded-lg text-xs font-semibold">
+                <div className="rounded-lg bg-emerald-50 p-2.5 font-semibold text-emerald-800 text-xs">
                   Lịch sao lưu đã kích hoạt.
                 </div>
               )}
 
-              <Button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium">
+              <Button
+                type="submit"
+                className="w-full bg-emerald-600 font-medium text-white text-xs hover:bg-emerald-700"
+              >
                 Cập nhật lịch sao lưu
               </Button>
             </form>

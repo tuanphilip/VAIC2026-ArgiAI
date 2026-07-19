@@ -62,7 +62,7 @@ export function ChatSidebar() {
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel className="font-normal">Channels</SidebarGroupLabel>
+          <SidebarGroupLabel className="font-normal">Kênh</SidebarGroupLabel>
           <SidebarMenu className="gap-1">
             {channelItems.map((item) => (
               <SidebarMenuItem key={item.id}>
@@ -81,7 +81,7 @@ export function ChatSidebar() {
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel className="font-normal">Views</SidebarGroupLabel>
+          <SidebarGroupLabel className="font-normal">Góc nhìn</SidebarGroupLabel>
           <SidebarMenu className="gap-1">
             {viewItems.map((item) => (
               <SidebarMenuItem key={item.id}>
@@ -132,17 +132,17 @@ export function ChatSidebar() {
                 <DropdownMenuGroup>
                   <DropdownMenuItem>
                     <UserRound />
-                    Account
+                    Tài khoản
                   </DropdownMenuItem>
                   <DropdownMenuItem>
                     <Settings />
-                    Settings
+                    Cài đặt
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem>
                   <LogOut />
-                  Log out
+                  Đăng xuất
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

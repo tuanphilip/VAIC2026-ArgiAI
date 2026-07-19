@@ -31,8 +31,20 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
-import { useUserStore } from "@/stores/user-store";
+import { useActiveUser } from "@/stores/auth-store";
+import { ApiError } from "@/lib/api-client";
 import { createPlot, deletePlot, listPlots, updatePlot, type PlotResponse } from "@/lib/plots-api";
+
+const API_ERROR_MESSAGES: Record<string, string> = {
+  "Owner not found": "Không tìm thấy tài khoản chủ sở hữu với tên này. Chủ sở hữu phải là một tài khoản đã đăng ký (tên phải khớp chính xác họ tên tài khoản đó).",
+  "Farmers cannot assign plot ownership": "Tài khoản nông dân không được phép đổi chủ sở hữu thửa đất.",
+  "Plot code already exists": "Mã thửa đất này đã tồn tại, vui lòng chọn mã khác.",
+};
+
+function describeApiError(error: unknown, fallback: string): string {
+  if (!(error instanceof ApiError)) return fallback;
+  return API_ERROR_MESSAGES[error.message] ?? error.message;
+}
 
 interface CropEntry {
   type: string;
@@ -51,7 +63,12 @@ interface Land {
   lat: number;
   lng: number;
   owner: string;
+  ownerId: string;
+  ownerUsername: string;
+  ownerCitizenId: string;
+  ownerEmail: string;
   ownerPhone: string;
+  region: string;
   livestock?: { type: string; quantity: number }[];
   /** Polygon ranh giới thửa đất (lat, lng), khoanh vùng quanh tâm [lat, lng]. */
   boundary: [number, number][];
@@ -137,7 +154,12 @@ function apiPlotToLand(plot: PlotResponse): Land {
     lat: plot.location.lat,
     lng: plot.location.lng,
     owner: plot.owner,
+    ownerId: plot.owner_id,
+    ownerUsername: plot.owner_username,
+    ownerCitizenId: plot.owner_citizen_id ?? "",
+    ownerEmail: plot.owner_email ?? "",
     ownerPhone: plot.owner_phone ?? "",
+    region: plot.region ?? "",
     livestock: plot.livestock,
     boundary: plot.boundary ?? makeBoundary(plot.location.lat, plot.location.lng, plot.area_hectares, quadRegular),
   };
@@ -700,18 +722,21 @@ function LandMapOverlay({ land }: { land: Land }) {
 }
 
 export default function Page() {
-  const { activeUser } = useUserStore();
+  const activeUser = useActiveUser();
   const [lands, setLands] = useState<Land[]>([]);
   const [isLoadingLands, setIsLoadingLands] = useState(true);
+  const [landsError, setLandsError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const refreshLands = async () => {
     setIsLoadingLands(true);
+    setLandsError(null);
     try {
       const plots = await listPlots();
       setLands(plots.map(apiPlotToLand));
     } catch (error) {
       console.error("[lands] Failed to load plots:", error);
+      setLandsError(describeApiError(error, "Không thể tải danh sách thửa đất. Vui lòng kiểm tra kết nối API và quyền tài khoản."));
     } finally {
       setIsLoadingLands(false);
     }
@@ -740,6 +765,8 @@ export default function Page() {
   const [editSeedingDate, setEditSeedingDate] = useState("");
   const [editHealth, setEditHealth] = useState<"Khỏe mạnh" | "Cảnh báo độ ẩm" | "Sâu bệnh nhẹ">("Khỏe mạnh");
   const [editOwner, setEditOwner] = useState("");
+  const [editOwnerCitizenId, setEditOwnerCitizenId] = useState("");
+  const [editOwnerEmail, setEditOwnerEmail] = useState("");
   const [editOwnerPhone, setEditOwnerPhone] = useState("");
   const [editStatus, setEditStatus] = useState<"growing" | "harvested" | "disease_outbreak">("growing");
   const [editBoundaryPoints, setEditBoundaryPoints] = useState<{ lat: string; lng: string }[]>([]);
@@ -753,6 +780,8 @@ export default function Page() {
   const [newSeedingDate, setNewSeedingDate] = useState("");
   const [newHealth, setNewHealth] = useState<"Khỏe mạnh" | "Cảnh báo độ ẩm" | "Sâu bệnh nhẹ">("Khỏe mạnh");
   const [newOwner, setNewOwner] = useState("");
+  const [newOwnerCitizenId, setNewOwnerCitizenId] = useState("");
+  const [newOwnerEmail, setNewOwnerEmail] = useState("");
   const [newOwnerPhone, setNewOwnerPhone] = useState("");
   const [newBoundaryPoints, setNewBoundaryPoints] = useState<{ lat: string; lng: string }[]>([]);
   const [newLivestock, setNewLivestock] = useState<{ type: string; quantity: number }[]>([]);
@@ -763,10 +792,9 @@ export default function Page() {
   const markersRef = useRef<any[]>([]);
   const polygonsRef = useRef<any[]>([]);
 
-  // Filter displayed lands based on user role (Farmer only sees their own lands, Cán bộ sees all)
-  const displayedLands = activeUser.role === "farmer"
-    ? lands.filter((l) => l.owner.includes("Nguyễn Văn A"))
-    : lands;
+  // Backend GET /plots đã tự lọc theo current_user (farmer chỉ nhận về thửa đất của chính mình),
+  // nên ở đây không cần lọc lại theo tên chủ sở hữu nữa.
+  const displayedLands = lands;
 
   // Áp dụng tìm kiếm/lọc (chỉ cán bộ có UI để đổi các state này, nông dân luôn ở giá trị mặc định)
   const searchFilteredLands = displayedLands.filter((land) => {
@@ -774,6 +802,9 @@ export default function Page() {
     const matchesSearch =
       !query ||
       land.owner.toLowerCase().includes(query) ||
+      land.ownerUsername.toLowerCase().includes(query) ||
+      land.ownerCitizenId.includes(query) ||
+      land.ownerEmail.toLowerCase().includes(query) ||
       land.ownerPhone.toLowerCase().includes(query) ||
       land.id.toLowerCase().includes(query);
     const matchesCrop = filterCropType === "all" || land.crops.some((c) => c.type === filterCropType);
@@ -911,6 +942,8 @@ export default function Page() {
     setEditSeedingDate(land.seedingDate);
     setEditHealth(land.health);
     setEditOwner(land.owner);
+    setEditOwnerCitizenId(land.ownerCitizenId);
+    setEditOwnerEmail(land.ownerEmail);
     setEditOwnerPhone(land.ownerPhone);
     setEditStatus(land.status);
     setEditBoundaryPoints(land.boundary.map(([lat, lng]) => ({ lat: lat.toString(), lng: lng.toString() })));
@@ -941,6 +974,10 @@ export default function Page() {
         seeding_date: editSeedingDate,
         status: editStatus,
         health: editHealth,
+        // Chỉ cán bộ được phép đổi chủ sở hữu — backend từ chối (403) nếu farmer gửi owner.
+        ...(activeUser.role === "official" ? { owner: editOwner } : {}),
+        ...(activeUser.role === "official" ? { owner_citizen_id: editOwnerCitizenId || undefined } : {}),
+        ...(activeUser.role === "official" ? { owner_email: editOwnerEmail || undefined } : {}),
         owner_phone: editOwnerPhone,
         location_lat: resolved.center[0],
         location_lng: resolved.center[1],
@@ -952,7 +989,7 @@ export default function Page() {
       setSelectedId(null); // Close panel on success
     } catch (error) {
       console.error("[lands] Failed to update plot:", error);
-      alert("Không thể lưu thay đổi thửa đất. Vui lòng thử lại.");
+      alert(describeApiError(error, "Không thể lưu thay đổi thửa đất. Vui lòng thử lại."));
     }
   };
 
@@ -974,6 +1011,10 @@ export default function Page() {
         location_lat: resolved.center[0],
         location_lng: resolved.center[1],
         health: newHealth,
+        // Sheet đăng ký mới chỉ cán bộ mở được nên luôn được phép chỉ định chủ sở hữu.
+        owner: newOwner,
+        owner_citizen_id: newOwnerCitizenId || undefined,
+        owner_email: newOwnerEmail || undefined,
         owner_phone: newOwnerPhone,
         boundary: resolved.boundary,
         livestock: newLivestock,
@@ -983,7 +1024,7 @@ export default function Page() {
       setIsAdding(false);
     } catch (error) {
       console.error("[lands] Failed to create plot:", error);
-      alert("Không thể đăng ký thửa đất. Vui lòng kiểm tra lại thông tin và thử lại.");
+      alert(describeApiError(error, "Không thể đăng ký thửa đất. Vui lòng kiểm tra lại thông tin và thử lại."));
     }
   };
 
@@ -1052,6 +1093,12 @@ export default function Page() {
       <div className="w-full space-y-4">
         {isLoadingLands && (
           <div className="text-center text-xs text-muted-foreground py-2">Đang tải dữ liệu thửa đất...</div>
+        )}
+        {landsError && (
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+            <span>{landsError}</span>
+            <Button onClick={() => void refreshLands()} size="sm" variant="outline">Tải lại</Button>
+          </div>
         )}
 
         {/* Tìm kiếm & bộ lọc (chỉ cán bộ, ở tab danh sách) */}
@@ -1306,6 +1353,31 @@ export default function Page() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
+                <label className="mb-1 block font-semibold text-xs">CCCD chủ hộ</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={12}
+                  placeholder="12 chữ số"
+                  value={newOwnerCitizenId}
+                  onChange={(e) => setNewOwnerCitizenId(e.target.value.replace(/\D/g, "").slice(0, 12))}
+                  className="w-full rounded-lg border p-2 text-xs dark:bg-slate-950 focus:outline-emerald-500"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block font-semibold text-xs">Email chủ hộ</label>
+                <input
+                  type="email"
+                  placeholder="ho.dan@example.com"
+                  value={newOwnerEmail}
+                  onChange={(e) => setNewOwnerEmail(e.target.value)}
+                  className="w-full rounded-lg border p-2 text-xs dark:bg-slate-950 focus:outline-emerald-500"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
                 <label className="text-xs font-semibold block mb-1">Diện tích (Ha)</label>
                 <input
                   type="number"
@@ -1415,6 +1487,31 @@ export default function Page() {
                     value={editOwnerPhone}
                     onChange={(e) => setEditOwnerPhone(e.target.value)}
                     className="w-full text-xs p-2 border rounded-lg dark:bg-slate-950 focus:outline-emerald-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1 block font-semibold text-xs">CCCD chủ hộ</label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={12}
+                    value={editOwnerCitizenId}
+                    onChange={(e) => setEditOwnerCitizenId(e.target.value.replace(/\D/g, "").slice(0, 12))}
+                    className="w-full rounded-lg border p-2 text-xs dark:bg-slate-950 focus:outline-emerald-500"
+                    disabled={activeUser.role === "farmer"}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block font-semibold text-xs">Email chủ hộ</label>
+                  <input
+                    type="email"
+                    value={editOwnerEmail}
+                    onChange={(e) => setEditOwnerEmail(e.target.value)}
+                    className="w-full rounded-lg border p-2 text-xs dark:bg-slate-950 focus:outline-emerald-500"
+                    disabled={activeUser.role === "farmer"}
                   />
                 </div>
               </div>
