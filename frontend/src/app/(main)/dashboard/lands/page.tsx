@@ -1,43 +1,41 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+
 import Link from "next/link";
+
 import {
+  Calendar,
+  Dice1,
   Edit,
+  Grid,
   Grid3X3,
   Layers,
+  List,
+  Map as MapIcon,
   MapPin,
+  Phone,
   Plus,
   Save,
+  Search,
   Sprout,
   Trash,
-  List,
-  Grid,
-  Map as MapIcon,
   User,
-  Calendar,
-  Phone,
-  Search,
   X,
   ChevronDown,
 } from "lucide-react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet";
-import { useActiveUser } from "@/stores/auth-store";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { ApiError } from "@/lib/api-client";
-import { createPlot, deletePlot, listPlots, updatePlot, type PlotResponse } from "@/lib/plots-api";
+import { createPlot, deletePlot, listPlots, type PlotResponse, updatePlot } from "@/lib/plots-api";
+import { useActiveUser } from "@/stores/auth-store";
 
 const API_ERROR_MESSAGES: Record<string, string> = {
-  "Owner not found": "Không tìm thấy tài khoản. Hệ thống vẫn cho phép lưu thửa đất với tên chủ sở hữu để liên kết tài khoản sau.",
+  "Owner not found":
+    "Không tìm thấy tài khoản. Hệ thống vẫn cho phép lưu thửa đất với tên chủ sở hữu để liên kết tài khoản sau.",
   "Farmers cannot assign plot ownership": "Tài khoản nông dân không được phép đổi chủ sở hữu thửa đất.",
   "Plot code already exists": "Mã thửa đất này đã tồn tại, vui lòng chọn mã khác.",
 };
@@ -45,6 +43,154 @@ const API_ERROR_MESSAGES: Record<string, string> = {
 function describeApiError(error: unknown, fallback: string): string {
   if (!(error instanceof ApiError)) return fallback;
   return API_ERROR_MESSAGES[error.message] ?? error.message;
+}
+
+const SURNAMES_VI = [
+  "Lò",
+  "Vàng",
+  "Vừ",
+  "Mào",
+  "Lường",
+  "Thào",
+  "Tráng",
+  "Giàng",
+  "Háng",
+  "Chứ",
+  "Mùa",
+  "Sùng",
+  "Hờ",
+  "Phàng",
+  "Quàng",
+  "Tòng",
+];
+const MIDDLE_NAMES_VI = ["Văn", "Thị", "A", "Thị", "Văn", "Thị"];
+const GIVEN_NAMES_VI = [
+  "Hoa",
+  "Mai",
+  "Đức",
+  "Tùng",
+  "Hà",
+  "Lan",
+  "Dũng",
+  "Phượng",
+  "Hồng",
+  "Phong",
+  "Yến",
+  "Giang",
+  "Hải",
+  "Long",
+  "Ánh",
+  "Quân",
+  "Thu",
+  "Sơn",
+  "Linh",
+  "Nam",
+];
+const PHONE_PREFIXES = [
+  "091",
+  "098",
+  "097",
+  "096",
+  "086",
+  "039",
+  "038",
+  "033",
+  "035",
+  "088",
+  "089",
+  "090",
+  "093",
+  "094",
+  "036",
+];
+
+function randomPick<T>(arr: readonly T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function randomInt(min: number, max: number): number {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function randomPhone(): string {
+  return randomPick(PHONE_PREFIXES) + String(randomInt(1000000, 9999999));
+}
+
+function randomCCCD(): string {
+  return "0" + String(randomInt(100000000000, 999999999999)).slice(0, 11);
+}
+
+function randomEmail(name: string): string {
+  const domain = randomPick(["gmail.com", "yahoo.com", "dienbien.vn", "fpt.vn", "vnpt.vn"]);
+  const normalized = name
+    .toLowerCase()
+    .replace(/đ/g, "d")
+    .replace(/[^a-z]/g, "");
+  return `${normalized}.${randomInt(10, 99)}@${domain}`;
+}
+
+function randomDate(daysBack = 90): string {
+  const d = new Date();
+  d.setDate(d.getDate() - randomInt(0, daysBack));
+  return d.toISOString().split("T")[0];
+}
+
+function randomCrops(): CropEntry[] {
+  const primary = randomPick(DEFAULT_CROP_CATEGORIES);
+  const varietyMap: Record<string, string[]> = {
+    Lúa: ["Seng Cù", "Nếp", "Chiêm hương", "Japonica", "Nương"],
+    "Cà phê": ["Arabica", "Robusta", "Catimor", "Chè", "Moka"],
+    "Rau vụ đông": ["Cải bắp", "Su hào", "Súp lơ", "Cà chua", "Khoai tây"],
+    "Cây ăn quả": ["Xoài", "Nhãn", "Vải", "Bưởi", "Cam", "Chuối"],
+    Ngô: ["Ngô nếp", "Ngô tẻ", "Ngô ngọt", "Ngô lai", "Ngô nương"],
+    Sắn: ["KM94", "KM140", "KM98-1", "SM937-26", "HL2004"],
+  };
+  const varieties = varietyMap[primary] ?? [""];
+  const variety = randomPick(varieties);
+  const crops: CropEntry[] = [{ type: primary, variety }];
+
+  // 30% chance add a second intercropped crop
+  if (Math.random() < 0.3) {
+    const secondary = randomPick(DEFAULT_CROP_CATEGORIES.filter((c) => c !== primary));
+    const secVar = randomPick(varietyMap[secondary] ?? [""]);
+    crops.push({ type: secondary, variety: secVar });
+  }
+  return crops;
+}
+
+function randomLivestock(): { type: string; quantity: number }[] {
+  const count = randomInt(1, 3);
+  const selected = new Set<string>();
+  const list: { type: string; quantity: number }[] = [];
+  for (let i = 0; i < count; i++) {
+    let type = randomPick(DEFAULT_LIVESTOCK_TYPES);
+    while (selected.has(type)) type = randomPick(DEFAULT_LIVESTOCK_TYPES);
+    selected.add(type);
+    list.push({ type, quantity: randomInt(2, 50) });
+  }
+  return list;
+}
+
+function randomFullName(): string {
+  const sur = randomPick(SURNAMES_VI);
+  const mid = randomPick(MIDDLE_NAMES_VI);
+  const given = randomPick(GIVEN_NAMES_VI);
+  return `${sur} ${mid} ${given}`;
+}
+
+function randomPlotData() {
+  const name = randomFullName();
+  return {
+    owner: name,
+    ownerPhone: randomPhone(),
+    ownerCitizenId: randomCCCD(),
+    ownerEmail: randomEmail(name),
+    crops: randomCrops(),
+    livestock: randomLivestock(),
+    size: `${randomInt(3, 80) / 10}`,
+    seedingDate: randomDate(),
+    health: randomPick(["Khỏe mạnh", "Cảnh báo độ ẩm", "Sâu bệnh nhẹ"]),
+  } as const;
 }
 
 interface CropEntry {
@@ -187,7 +333,12 @@ function makeBoundary(lat: number, lng: number, sizeHa: number, corners: [number
   return corners.map(([dLat, dLng]) => [lat + dLat * halfLatDeg, lng + dLng * halfLngDeg]);
 }
 
-const quadRegular: [number, number][] = [[-1, -1], [-1, 1], [1, 1], [1, -1]];
+const quadRegular: [number, number][] = [
+  [-1, -1],
+  [-1, 1],
+  [1, 1],
+  [1, -1],
+];
 
 /** Diện tích đa giác (Ha) từ toạ độ lat/lng, tính bằng công thức Shoelace sau khi quy đổi độ -> mét quanh tâm khu vực. */
 function polygonAreaHectares(points: [number, number][]): number {
@@ -217,7 +368,7 @@ function polygonAreaHectares(points: [number, number][]): number {
  */
 function resolveLocation(
   points: { lat: string; lng: string }[],
-  sizeHa: number
+  sizeHa: number,
 ): { center: [number, number]; boundary: [number, number][] } | null {
   const validPoints = points
     .map(({ lat, lng }) => [Number.parseFloat(lat), Number.parseFloat(lng)] as [number, number])
@@ -330,7 +481,7 @@ function LandBoundaryDrawMap({
       marker.on("dragend", () => {
         const pos = marker.getLatLng();
         onChangeRef.current(
-          pointsRef.current.map((p, i) => (i === idx ? { lat: pos.lat.toFixed(6), lng: pos.lng.toFixed(6) } : p))
+          pointsRef.current.map((p, i) => (i === idx ? { lat: pos.lat.toFixed(6), lng: pos.lng.toFixed(6) } : p)),
         );
       });
       marker.on("click", (e: any) => {
@@ -420,7 +571,10 @@ function LandBoundaryDrawMap({
       <div ref={mapContainerRef} className="h-full w-full" />
       <div className="absolute bottom-4 left-4 z-[400] max-w-[260px] rounded-md border bg-background/95 p-3 shadow-sm backdrop-blur text-xs space-y-1.5">
         <p className="font-semibold">Vẽ ranh giới trên bản đồ</p>
-        <p className="text-muted-foreground">Click để thêm điểm mốc (điểm đầu tiên xác định vị trí thửa đất) · Kéo điểm để chỉnh vị trí · Click vào điểm để xoá.</p>
+        <p className="text-muted-foreground">
+          Click để thêm điểm mốc (điểm đầu tiên xác định vị trí thửa đất) · Kéo điểm để chỉnh vị trí · Click vào điểm để
+          xoá.
+        </p>
         {validPoints.length >= 3 && (
           <div className="flex items-center justify-between gap-2 pt-1.5 border-t">
             <span>
@@ -476,11 +630,23 @@ function BoundaryPointsEditor({
         <span className="font-semibold text-slate-700 dark:text-slate-300">Ranh giới &amp; vị trí thửa đất</span>
         <div className="flex gap-1.5">
           {points.length > 0 && (
-            <Button type="button" variant="outline" size="xs" onClick={() => onChange([])} className="text-[10px] text-rose-600 gap-1 py-1 h-auto">
+            <Button
+              type="button"
+              variant="outline"
+              size="xs"
+              onClick={() => onChange([])}
+              className="text-[10px] text-rose-600 gap-1 py-1 h-auto"
+            >
               <Trash className="size-3.5" /> Xoá hết
             </Button>
           )}
-          <Button type="button" variant="outline" size="xs" onClick={addPoint} className="text-[10px] text-emerald-600 gap-1 py-1 h-auto">
+          <Button
+            type="button"
+            variant="outline"
+            size="xs"
+            onClick={addPoint}
+            className="text-[10px] text-emerald-600 gap-1 py-1 h-auto"
+          >
             <Plus className="size-3.5" /> Thêm điểm mốc
           </Button>
         </div>
@@ -492,7 +658,8 @@ function BoundaryPointsEditor({
       {validPoints.length >= 3 && (
         <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900">
           <span className="text-[11px]">
-            Diện tích tính từ ranh giới: <b className="text-emerald-700 dark:text-emerald-400">{areaHa.toFixed(2)} Ha</b>
+            Diện tích tính từ ranh giới:{" "}
+            <b className="text-emerald-700 dark:text-emerald-400">{areaHa.toFixed(2)} Ha</b>
           </span>
           {onApplyArea && (
             <Button
@@ -546,17 +713,11 @@ function BoundaryPointsEditor({
 }
 
 /** Cho phép chọn/thêm nhiều loại cây trồng cho 1 thửa đất (danh mục có sẵn + tự tạo danh mục mới). */
-function CropTypesEditor({
-  crops,
-  onChange,
-}: {
-  crops: CropEntry[];
-  onChange: (crops: CropEntry[]) => void;
-}) {
+function CropTypesEditor({ crops, onChange }: { crops: CropEntry[]; onChange: (crops: CropEntry[]) => void }) {
   const [customCategories, setCustomCategories] = useState<string[]>([]);
   const [newCategoryInput, setNewCategoryInput] = useState("");
   const categories = Array.from(
-    new Set([...DEFAULT_CROP_CATEGORIES, ...customCategories, ...crops.map((c) => c.type)])
+    new Set([...DEFAULT_CROP_CATEGORIES, ...customCategories, ...crops.map((c) => c.type)]),
   );
 
   const updateCrop = (index: number, field: "type" | "variety", value: string) => {
@@ -575,7 +736,13 @@ function CropTypesEditor({
     <div className="p-4 bg-slate-50 dark:bg-slate-900/40 rounded-xl border space-y-3">
       <div className="flex justify-between items-center">
         <span className="font-semibold text-slate-700 dark:text-slate-300">Loại cây trồng</span>
-        <Button type="button" variant="outline" size="xs" onClick={addCrop} className="text-[10px] text-emerald-600 gap-1 py-1 h-auto">
+        <Button
+          type="button"
+          variant="outline"
+          size="xs"
+          onClick={addCrop}
+          className="text-[10px] text-emerald-600 gap-1 py-1 h-auto"
+        >
           <Plus className="size-3.5" /> Thêm loại cây
         </Button>
       </div>
@@ -641,15 +808,13 @@ function LivestockEditor({
 }) {
   const [customTypes, setCustomTypes] = useState<string[]>([]);
   const [newTypeInput, setNewTypeInput] = useState("");
-  const types = Array.from(
-    new Set([...DEFAULT_LIVESTOCK_TYPES, ...customTypes, ...livestock.map((l) => l.type)])
-  );
+  const types = Array.from(new Set([...DEFAULT_LIVESTOCK_TYPES, ...customTypes, ...livestock.map((l) => l.type)]));
 
   const updateItem = (index: number, field: "type" | "quantity", value: string) => {
     onChange(
       livestock.map((l, i) =>
-        i === index ? { ...l, [field]: field === "quantity" ? Number.parseInt(value, 10) || 0 : value } : l
-      )
+        i === index ? { ...l, [field]: field === "quantity" ? Number.parseInt(value, 10) || 0 : value } : l,
+      ),
     );
   };
   const removeItem = (index: number) => onChange(livestock.filter((_, i) => i !== index));
@@ -665,7 +830,13 @@ function LivestockEditor({
     <div className="p-4 bg-slate-50 dark:bg-slate-900/40 rounded-xl border space-y-3">
       <div className="flex justify-between items-center">
         <span className="font-semibold text-slate-700 dark:text-slate-300">Gia súc / Gia cầm</span>
-        <Button type="button" variant="outline" size="xs" onClick={addItem} className="text-[10px] text-emerald-600 gap-1 py-1 h-auto">
+        <Button
+          type="button"
+          variant="outline"
+          size="xs"
+          onClick={addItem}
+          className="text-[10px] text-emerald-600 gap-1 py-1 h-auto"
+        >
           <Plus className="size-3.5" /> Thêm vật nuôi
         </Button>
       </div>
@@ -754,7 +925,7 @@ function LandMapOverlay({ land }: { land: Land }) {
         }).setView([land.lat, land.lng], 15);
 
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-          attribution: '&copy; OpenStreetMap contributors',
+          attribution: "&copy; OpenStreetMap contributors",
           maxZoom: 18,
         }).addTo(mapRef.current);
       }
@@ -837,7 +1008,9 @@ export default function Page() {
       setLands(plots.map(apiPlotToLand));
     } catch (error) {
       console.error("[lands] Failed to load plots:", error);
-      setLandsError(describeApiError(error, "Không thể tải danh sách thửa đất. Vui lòng kiểm tra kết nối API và quyền tài khoản."));
+      setLandsError(
+        describeApiError(error, "Không thể tải danh sách thửa đất. Vui lòng kiểm tra kết nối API và quyền tài khoản."),
+      );
     } finally {
       setIsLoadingLands(false);
     }
@@ -920,7 +1093,7 @@ export default function Page() {
 
   const cropTypeOptions = Array.from(new Set(displayedLands.flatMap((l) => l.crops.map((c) => c.type))));
   const livestockTypeOptions = Array.from(
-    new Set(displayedLands.flatMap((l) => (l.livestock ?? []).map((item) => item.type)))
+    new Set(displayedLands.flatMap((l) => (l.livestock ?? []).map((item) => item.type))),
   );
   const areaValues = displayedLands.map((land) => land.size).filter(Number.isFinite);
   const minArea = areaValues.length > 0 ? Math.floor(Math.min(...areaValues) * 100) / 100 : 0;
@@ -983,8 +1156,11 @@ export default function Page() {
     // Add boundary polygons + markers for displayed lands
     searchFilteredLands.forEach((land) => {
       const statusText =
-        land.status === "growing" ? "Đang gieo trồng" :
-        land.status === "harvested" ? "Đã thu hoạch" : "Dịch bệnh bùng phát";
+        land.status === "growing"
+          ? "Đang gieo trồng"
+          : land.status === "harvested"
+            ? "Đã thu hoạch"
+            : "Dịch bệnh bùng phát";
       const livestockHtml = land.livestock?.length
         ? `<p style="margin: 2px 0;"><b>Gia súc/gia cầm:</b> ${land.livestock.map((l) => `${l.type} x${l.quantity}`).join(", ")}</p>`
         : "";
@@ -1015,9 +1191,7 @@ export default function Page() {
         .bindPopup(popupHtml);
       polygonsRef.current.push(polygon);
 
-      const marker = L.marker([land.lat, land.lng])
-        .addTo(mapRef.current)
-        .bindPopup(popupHtml);
+      const marker = L.marker([land.lat, land.lng]).addTo(mapRef.current).bindPopup(popupHtml);
 
       markersRef.current.push(marker);
     });
@@ -1029,7 +1203,6 @@ export default function Page() {
       startEditById(id);
       setIsEditing(false); // Default open in view details mode
     };
-
   }, [searchFilteredLands, activeTab]);
 
   // Adjust Leaflet map sizing on tab toggle
@@ -1151,7 +1324,9 @@ export default function Page() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight text-emerald-800 dark:text-emerald-400">
-            {activeUser.role === "farmer" ? "Sơ đồ Thửa đất & Cây trồng của tôi" : "Quản lý Thửa đất & Cây trồng địa bàn"}
+            {activeUser.role === "farmer"
+              ? "Sơ đồ Thửa đất & Cây trồng của tôi"
+              : "Quản lý Thửa đất & Cây trồng địa bàn"}
           </h1>
           <p className="text-muted-foreground font-medium">
             {activeUser.role === "farmer"
@@ -1172,6 +1347,8 @@ export default function Page() {
               setNewHealth("Khỏe mạnh");
               setNewOwner("");
               setNewOwnerPhone("");
+              setNewOwnerCitizenId("");
+              setNewOwnerEmail("");
               setNewBoundaryPoints([]);
               setNewLivestock([]);
             }}
@@ -1214,7 +1391,9 @@ export default function Page() {
         {landsError && (
           <div className="flex items-center justify-between gap-3 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
             <span>{landsError}</span>
-            <Button onClick={() => void refreshLands()} size="sm" variant="outline">Tải lại</Button>
+            <Button onClick={() => void refreshLands()} size="sm" variant="outline">
+              Tải lại
+            </Button>
           </div>
         )}
 
@@ -1233,104 +1412,104 @@ export default function Page() {
             </div>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
               <SearchableFilter
-                value={filterCropType}
-                options={cropTypeOptions}
-                placeholder="Tất cả loại cây trồng"
-                onChange={setFilterCropType}
-              />
-              <SearchableFilter
-                value={filterLivestockType}
-                options={livestockTypeOptions}
-                placeholder="Tất cả gia súc/gia cầm"
-                onChange={setFilterLivestockType}
-              />
-              <div className="rounded-lg border p-3 text-xs dark:bg-slate-900 sm:col-span-3">
-                <div className="mb-2 flex items-center justify-between gap-2">
-                  <span className="font-medium">Diện tích (Ha)</span>
-                  <span className="font-semibold text-emerald-700 dark:text-emerald-400">
-                    {selectedMinArea.toFixed(2)} – {selectedMaxArea.toFixed(2)} Ha
-                  </span>
-                </div>
-                <div className="space-y-3">
-                  <div className="grid grid-cols-[auto_5rem] items-center gap-x-3 gap-y-1">
-                    <label htmlFor="lands-area-min" className="text-[11px] font-medium text-muted-foreground">
-                      Diện tích tối thiểu
-                    </label>
-                    <input
-                      id="lands-area-min"
-                      type="number"
-                      min={minArea}
-                      max={selectedMaxArea}
-                      step="0.01"
-                      value={selectedMinArea.toFixed(2)}
-                      onChange={(event) => {
-                        const nextValue = Number(event.target.value);
-                        if (Number.isFinite(nextValue)) setFilterMinArea(Math.max(minArea, Math.min(nextValue, selectedMaxArea)));
-                      }}
-                      className="w-20 rounded-md border px-2 py-1 text-right text-xs dark:bg-slate-950"
-                    />
-                    <input
-                      aria-label="Kéo để chọn diện tích tối thiểu"
-                      type="range"
-                      min={minArea}
-                      max={maxArea}
-                      step="0.01"
-                      value={selectedMinArea}
-                      onChange={(event) => setFilterMinArea(Math.min(Number(event.target.value), selectedMaxArea))}
-                      style={{ background: `linear-gradient(to right, #10b981 0%, #10b981 ${selectedMinAreaPercent}%, #e2e8f0 ${selectedMinAreaPercent}%, #e2e8f0 100%)` }}
-                      className="h-2 w-full cursor-pointer appearance-none rounded-full accent-emerald-600"
-                    />
-                    <span className="text-[10px] text-muted-foreground">{minArea.toFixed(2)} Ha</span>
+                  value={filterCropType}
+                  options={cropTypeOptions}
+                  placeholder="Tất cả loại cây trồng"
+                  onChange={setFilterCropType}
+                />
+                <SearchableFilter
+                  value={filterLivestockType}
+                  options={livestockTypeOptions}
+                  placeholder="Tất cả gia súc/gia cầm"
+                  onChange={setFilterLivestockType}
+                />
+                <div className="rounded-lg border p-3 text-xs dark:bg-slate-900 sm:col-span-3">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <span className="font-medium">Diện tích (Ha)</span>
+                    <span className="font-semibold text-emerald-700 dark:text-emerald-400">
+                      {selectedMinArea.toFixed(2)} – {selectedMaxArea.toFixed(2)} Ha
+                    </span>
                   </div>
-                  <div className="grid grid-cols-[auto_5rem] items-center gap-x-3 gap-y-1">
-                    <label htmlFor="lands-area-max" className="text-[11px] font-medium text-muted-foreground">
-                      Diện tích tối đa
-                    </label>
-                    <input
-                      id="lands-area-max"
-                      type="number"
-                      min={selectedMinArea}
-                      max={maxArea}
-                      step="0.01"
-                      value={selectedMaxArea.toFixed(2)}
-                      onChange={(event) => {
-                        const nextValue = Number(event.target.value);
-                        if (Number.isFinite(nextValue)) setFilterMaxArea(Math.min(maxArea, Math.max(nextValue, selectedMinArea)));
-                      }}
-                      className="w-20 rounded-md border px-2 py-1 text-right text-xs dark:bg-slate-950"
-                    />
-                    <input
-                      aria-label="Kéo để chọn diện tích tối đa"
-                      type="range"
-                      min={minArea}
-                      max={maxArea}
-                      step="0.01"
-                      value={selectedMaxArea}
-                      onChange={(event) => setFilterMaxArea(Math.max(Number(event.target.value), selectedMinArea))}
-                      style={{ background: `linear-gradient(to right, #e2e8f0 0%, #e2e8f0 ${selectedMaxAreaPercent}%, #10b981 ${selectedMaxAreaPercent}%, #10b981 100%)` }}
-                      className="h-2 w-full cursor-pointer appearance-none rounded-full accent-emerald-600"
-                    />
-                    <span className="text-[10px] text-muted-foreground">{maxArea.toFixed(2)} Ha</span>
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-[auto_5rem] items-center gap-x-3 gap-y-1">
+                      <label htmlFor="lands-area-min" className="text-[11px] font-medium text-muted-foreground">
+                        Diện tích tối thiểu
+                      </label>
+                      <input
+                        id="lands-area-min"
+                        type="number"
+                        min={minArea}
+                        max={selectedMaxArea}
+                        step="0.01"
+                        value={selectedMinArea.toFixed(2)}
+                        onChange={(event) => {
+                          const nextValue = Number(event.target.value);
+                          if (Number.isFinite(nextValue)) setFilterMinArea(Math.max(minArea, Math.min(nextValue, selectedMaxArea)));
+                        }}
+                        className="w-20 rounded-md border px-2 py-1 text-right text-xs dark:bg-slate-950"
+                      />
+                      <input
+                        aria-label="Kéo để chọn diện tích tối thiểu"
+                        type="range"
+                        min={minArea}
+                        max={maxArea}
+                        step="0.01"
+                        value={selectedMinArea}
+                        onChange={(event) => setFilterMinArea(Math.min(Number(event.target.value), selectedMaxArea))}
+                        style={{ background: `linear-gradient(to right, #10b981 0%, #10b981 ${selectedMinAreaPercent}%, #e2e8f0 ${selectedMinAreaPercent}%, #e2e8f0 100%)` }}
+                        className="h-2 w-full cursor-pointer appearance-none rounded-full accent-emerald-600"
+                      />
+                      <span className="text-[10px] text-muted-foreground">{minArea.toFixed(2)} Ha</span>
+                    </div>
+                    <div className="grid grid-cols-[auto_5rem] items-center gap-x-3 gap-y-1">
+                      <label htmlFor="lands-area-max" className="text-[11px] font-medium text-muted-foreground">
+                        Diện tích tối đa
+                      </label>
+                      <input
+                        id="lands-area-max"
+                        type="number"
+                        min={selectedMinArea}
+                        max={maxArea}
+                        step="0.01"
+                        value={selectedMaxArea.toFixed(2)}
+                        onChange={(event) => {
+                          const nextValue = Number(event.target.value);
+                          if (Number.isFinite(nextValue)) setFilterMaxArea(Math.min(maxArea, Math.max(nextValue, selectedMinArea)));
+                        }}
+                        className="w-20 rounded-md border px-2 py-1 text-right text-xs dark:bg-slate-950"
+                      />
+                      <input
+                        aria-label="Kéo để chọn diện tích tối đa"
+                        type="range"
+                        min={minArea}
+                        max={maxArea}
+                        step="0.01"
+                        value={selectedMaxArea}
+                        onChange={(event) => setFilterMaxArea(Math.max(Number(event.target.value), selectedMinArea))}
+                        style={{ background: `linear-gradient(to right, #e2e8f0 0%, #e2e8f0 ${selectedMaxAreaPercent}%, #10b981 ${selectedMaxAreaPercent}%, #10b981 100%)` }}
+                        className="h-2 w-full cursor-pointer appearance-none rounded-full accent-emerald-600"
+                      />
+                      <span className="text-[10px] text-muted-foreground">{maxArea.toFixed(2)} Ha</span>
+                    </div>
                   </div>
-                </div>
-                <div className="mt-3 flex items-center justify-between gap-2 border-t pt-3 text-[11px]">
-                  <span className="text-muted-foreground">Khoảng đang lọc: <b className="text-foreground">{selectedMinArea.toFixed(2)} – {selectedMaxArea.toFixed(2)} Ha</b></span>
-                  <button
-                    type="button"
-                    className="shrink-0 rounded-lg bg-emerald-600 px-3 py-1.5 font-semibold text-white transition hover:bg-emerald-700"
-                    onClick={() => {
-                      setFilterMinArea(null);
-                      setFilterMaxArea(null);
-                    }}
-                  >
-                    Đặt lại diện tích
-                  </button>
+                  <div className="mt-3 flex items-center justify-between gap-2 border-t pt-3 text-[11px]">
+                    <span className="text-muted-foreground">Khoảng đang lọc: <b className="text-foreground">{selectedMinArea.toFixed(2)} – {selectedMaxArea.toFixed(2)} Ha</b></span>
+                    <button
+                      type="button"
+                      className="shrink-0 rounded-lg bg-emerald-600 px-3 py-1.5 font-semibold text-white transition hover:bg-emerald-700"
+                      onClick={() => {
+                        setFilterMinArea(null);
+                        setFilterMaxArea(null);
+                      }}
+                    >
+                      Đặt lại diện tích
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         )}
-
         {/* Controls for toggling Card/Table views when showing list */}
         {activeTab === "list" && (
           <div className="flex justify-between items-center bg-white dark:bg-slate-950 p-4 rounded-xl border shadow-xs">
@@ -1359,7 +1538,9 @@ export default function Page() {
               <div className="flex justify-between items-center">
                 <div>
                   <CardTitle>Bản đồ số hóa vệ tinh địa lý</CardTitle>
-                  <CardDescription>Click vào từng marker và chọn &quot;Xem chi tiết&quot; để quản lý và chỉnh sửa.</CardDescription>
+                  <CardDescription>
+                    Click vào từng marker và chọn &quot;Xem chi tiết&quot; để quản lý và chỉnh sửa.
+                  </CardDescription>
                 </div>
                 <Badge className="bg-emerald-50 text-emerald-800 border-emerald-200">
                   <Layers className="size-3.5 mr-1" /> Mường Ảng OSM Map
@@ -1394,11 +1575,20 @@ export default function Page() {
                     <CardHeader className="pb-2 border-b bg-slate-50/50 dark:bg-slate-900/30">
                       <div className="flex justify-between items-center">
                         <span className="text-xs font-bold text-slate-500 uppercase">Thửa {land.id}</span>
-                        <Badge className={
-                          land.status === "growing" ? "bg-emerald-100 text-emerald-800" :
-                          land.status === "harvested" ? "bg-slate-100 text-slate-800" : "bg-rose-100 text-rose-800"
-                        }>
-                          {land.status === "growing" ? "Đang trồng" : land.status === "harvested" ? "Đã thu hoạch" : "Dịch bệnh"}
+                        <Badge
+                          className={
+                            land.status === "growing"
+                              ? "bg-emerald-100 text-emerald-800"
+                              : land.status === "harvested"
+                                ? "bg-slate-100 text-slate-800"
+                                : "bg-rose-100 text-rose-800"
+                          }
+                        >
+                          {land.status === "growing"
+                            ? "Đang trồng"
+                            : land.status === "harvested"
+                              ? "Đã thu hoạch"
+                              : "Dịch bệnh"}
                         </Badge>
                       </div>
                       <CardTitle className="text-base font-bold mt-1 text-slate-800 dark:text-slate-100">
@@ -1466,11 +1656,20 @@ export default function Page() {
                             <td className="p-4 font-bold">{land.size} Ha</td>
                             <td className="p-4 text-slate-400">{land.seedingDate}</td>
                             <td className="p-4">
-                              <Badge className={
-                                land.status === "growing" ? "bg-emerald-100 text-emerald-800" :
-                                land.status === "harvested" ? "bg-slate-100 text-slate-800" : "bg-rose-100 text-rose-800"
-                              }>
-                                {land.status === "growing" ? "Đang trồng" : land.status === "harvested" ? "Đã thu hoạch" : "Dịch bệnh"}
+                              <Badge
+                                className={
+                                  land.status === "growing"
+                                    ? "bg-emerald-100 text-emerald-800"
+                                    : land.status === "harvested"
+                                      ? "bg-slate-100 text-slate-800"
+                                      : "bg-rose-100 text-rose-800"
+                                }
+                              >
+                                {land.status === "growing"
+                                  ? "Đang trồng"
+                                  : land.status === "harvested"
+                                    ? "Đã thu hoạch"
+                                    : "Dịch bệnh"}
                               </Badge>
                             </td>
                           </tr>
@@ -1504,8 +1703,33 @@ export default function Page() {
           overlayClassName="backdrop-blur-none bg-slate-950/10"
         >
           <SheetHeader className="p-0 mb-6">
-            <SheetTitle className="text-xl font-bold text-emerald-700 dark:text-emerald-400">Đăng ký Thửa đất {newId}</SheetTitle>
-            <SheetDescription>Nhập thông tin địa lý và nông học cho lô đất mới gieo trồng.</SheetDescription>
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <SheetTitle className="text-xl font-bold text-emerald-700 dark:text-emerald-400">
+                  Đăng ký Thửa đất {newId}
+                </SheetTitle>
+                <SheetDescription>Nhập thông tin địa lý và nông học cho lô đất mới gieo trồng.</SheetDescription>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const d = randomPlotData();
+                  setNewOwner(d.owner);
+                  setNewOwnerPhone(d.ownerPhone);
+                  setNewOwnerCitizenId(d.ownerCitizenId);
+                  setNewOwnerEmail(d.ownerEmail);
+                  setNewCrops(d.crops);
+                  setNewLivestock(d.livestock);
+                  setNewSize(d.size);
+                  setNewSeedingDate(d.seedingDate);
+                  setNewHealth(d.health as "Khỏe mạnh" | "Cảnh báo độ ẩm" | "Sâu bệnh nhẹ");
+                }}
+              >
+                <Dice1 className="size-3.5 mr-1" /> Điền nhanh
+              </Button>
+            </div>
           </SheetHeader>
           <form onSubmit={handleAddPlot} className="space-y-4 text-xs">
             <div className="grid grid-cols-2 gap-3">
@@ -1637,12 +1861,39 @@ export default function Page() {
           overlayClassName={selectedLand ? "backdrop-blur-none bg-slate-950/10" : undefined}
         >
           <SheetHeader className="p-0 mb-6">
-            <SheetTitle className="text-xl font-bold text-emerald-800 dark:text-emerald-400">
-              {isEditing ? `Chỉnh sửa Thửa đất ${selectedLand?.id}` : `Hồ sơ Thửa đất ${selectedLand?.id}`}
-            </SheetTitle>
-            <SheetDescription>
-              {isEditing ? "Thay đổi các thông tin địa lý hoặc cây trồng gieo cấy." : `Thông tin chi tiết thuộc hộ ${selectedLand?.owner}`}
-            </SheetDescription>
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <SheetTitle className="text-xl font-bold text-emerald-800 dark:text-emerald-400">
+                  {isEditing ? `Chỉnh sửa Thửa đất ${selectedLand?.id}` : `Hồ sơ Thửa đất ${selectedLand?.id}`}
+                </SheetTitle>
+                <SheetDescription>
+                  {isEditing
+                    ? "Thay đổi các thông tin địa lý hoặc cây trồng gieo cấy."
+                    : `Thông tin chi tiết thuộc hộ ${selectedLand?.owner}`}
+                </SheetDescription>
+              </div>
+              {isEditing && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const d = randomPlotData();
+                    setEditOwner(d.owner);
+                    setEditOwnerPhone(d.ownerPhone);
+                    setEditOwnerCitizenId(d.ownerCitizenId);
+                    setEditOwnerEmail(d.ownerEmail);
+                    setEditCrops(d.crops);
+                    setEditLivestock(d.livestock);
+                    setEditSize(d.size);
+                    setEditSeedingDate(d.seedingDate);
+                    setEditHealth(d.health as "Khỏe mạnh" | "Cảnh báo độ ẩm" | "Sâu bệnh nhẹ");
+                  }}
+                >
+                  <Dice1 className="size-3.5 mr-1" /> Điền nhanh
+                </Button>
+              )}
+            </div>
           </SheetHeader>
 
           {isEditing ? (
@@ -1782,7 +2033,9 @@ export default function Page() {
                   <Phone className="size-5 text-emerald-600" />
                   <div>
                     <span className="text-[10px] text-muted-foreground block">Số điện thoại</span>
-                    <span className="font-bold text-slate-800 dark:text-slate-200 text-sm">{selectedLand.ownerPhone || "Chưa cập nhật"}</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200 text-sm">
+                      {selectedLand.ownerPhone || "Chưa cập nhật"}
+                    </span>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 mt-2">
@@ -1796,7 +2049,9 @@ export default function Page() {
                   <Calendar className="size-5 text-slate-500" />
                   <div>
                     <span className="text-[10px] text-muted-foreground block">Ngày xuống giống</span>
-                    <span className="font-bold text-slate-800 dark:text-slate-200 text-sm">{selectedLand.seedingDate}</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200 text-sm">
+                      {selectedLand.seedingDate}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -1809,7 +2064,8 @@ export default function Page() {
                 <div className="flex flex-wrap gap-2">
                   {selectedLand.crops.map((crop, index) => (
                     <Badge key={`${crop.type}-${index}`} variant="outline" className="text-xs py-1 px-2.5">
-                      {crop.type}{crop.variety ? ` — ${crop.variety}` : ""}
+                      {crop.type}
+                      {crop.variety ? ` — ${crop.variety}` : ""}
                     </Badge>
                   ))}
                 </div>
@@ -1821,30 +2077,53 @@ export default function Page() {
                     <MapPin className="size-5 text-slate-400" />
                     <span className="font-semibold text-sm">Vị trí địa lý</span>
                   </div>
-                  <Badge variant="outline" className="text-[10px] font-normal">OSM Registered</Badge>
+                  <Badge variant="outline" className="text-[10px] font-normal">
+                    OSM Registered
+                  </Badge>
                 </div>
                 <div className="flex justify-between text-slate-600 dark:text-slate-400 font-mono text-xs">
-                  <span>Vĩ độ (Lat): <b className="text-slate-800 dark:text-slate-200">{selectedLand.lat.toFixed(6)}</b></span>
-                  <span>Kinh độ (Lng): <b className="text-slate-800 dark:text-slate-200">{selectedLand.lng.toFixed(6)}</b></span>
+                  <span>
+                    Vĩ độ (Lat): <b className="text-slate-800 dark:text-slate-200">{selectedLand.lat.toFixed(6)}</b>
+                  </span>
+                  <span>
+                    Kinh độ (Lng): <b className="text-slate-800 dark:text-slate-200">{selectedLand.lng.toFixed(6)}</b>
+                  </span>
                 </div>
               </div>
 
               <div className="p-4 border rounded-xl space-y-3">
                 <span className="font-semibold text-sm block">Tình trạng sinh trưởng & Sức khỏe</span>
                 <div className="flex flex-wrap gap-2">
-                  <Badge className={
-                    selectedLand.status === "growing" ? "bg-emerald-100 text-emerald-800 border-emerald-200 text-xs py-1 px-2.5" :
-                    selectedLand.status === "harvested" ? "bg-slate-100 text-slate-800 border-slate-200 text-xs py-1 px-2.5" : "bg-rose-100 text-rose-800 border-rose-200 text-xs py-1 px-2.5"
-                  }>
-                    Trạng thái: {selectedLand.status === "growing" ? "Đang trồng" : selectedLand.status === "harvested" ? "Đã thu hoạch" : "Dịch bệnh"}
+                  <Badge
+                    className={
+                      selectedLand.status === "growing"
+                        ? "bg-emerald-100 text-emerald-800 border-emerald-200 text-xs py-1 px-2.5"
+                        : selectedLand.status === "harvested"
+                          ? "bg-slate-100 text-slate-800 border-slate-200 text-xs py-1 px-2.5"
+                          : "bg-rose-100 text-rose-800 border-rose-200 text-xs py-1 px-2.5"
+                    }
+                  >
+                    Trạng thái:{" "}
+                    {selectedLand.status === "growing"
+                      ? "Đang trồng"
+                      : selectedLand.status === "harvested"
+                        ? "Đã thu hoạch"
+                        : "Dịch bệnh"}
                   </Badge>
-                  <Badge className={
-                    selectedLand.health === "Khỏe mạnh" ? "bg-emerald-100 text-emerald-800 border-emerald-200 text-xs py-1 px-2.5" :
-                    selectedLand.health === "Cảnh báo độ ẩm" ? "bg-amber-100 text-amber-800 border-amber-200 text-xs py-1 px-2.5" : "bg-rose-100 text-rose-800 border-rose-200 text-xs py-1 px-2.5"
-                  }>
+                  <Badge
+                    className={
+                      selectedLand.health === "Khỏe mạnh"
+                        ? "bg-emerald-100 text-emerald-800 border-emerald-200 text-xs py-1 px-2.5"
+                        : selectedLand.health === "Cảnh báo độ ẩm"
+                          ? "bg-amber-100 text-amber-800 border-amber-200 text-xs py-1 px-2.5"
+                          : "bg-rose-100 text-rose-800 border-rose-200 text-xs py-1 px-2.5"
+                    }
+                  >
                     Sức khỏe: {selectedLand.health}
                   </Badge>
-                  <Badge variant="outline" className="text-xs py-1 px-2.5">Độ ẩm đất: {selectedLand.moisture}</Badge>
+                  <Badge variant="outline" className="text-xs py-1 px-2.5">
+                    Độ ẩm đất: {selectedLand.moisture}
+                  </Badge>
                 </div>
               </div>
 
