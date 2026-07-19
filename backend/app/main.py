@@ -6,6 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.core.config import get_settings
+from app.database.migrations import run_runtime_migrations
+from app.database.session import engine
 from app.routes import auth, calendar, chat, dashboard, diseases, disaster_warnings, finance, health, inventory, market, plots, procurement, settings as settings_routes, shipments, traceability, users, weather, yield_forecasts
 from app.services.weather import shutdown_weather_cache_lifespan, weather_cache_lifespan
 
@@ -14,6 +16,7 @@ settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    await run_runtime_migrations(engine)
     stop_event, task = await weather_cache_lifespan()
     app.state.weather_cache_stop_event = stop_event
     app.state.weather_cache_task = task
