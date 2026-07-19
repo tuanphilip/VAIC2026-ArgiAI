@@ -19,6 +19,7 @@ import {
   Phone,
   Search,
   X,
+  ChevronDown,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -77,6 +78,85 @@ interface Land {
 const DEFAULT_MAP_CENTER: [number, number] = [21.517, 103.224];
 const DEFAULT_CROP_CATEGORIES = ["Lúa", "Cà phê", "Rau vụ đông", "Cây ăn quả", "Ngô", "Sắn"];
 const DEFAULT_LIVESTOCK_TYPES = ["Gà", "Bò", "Heo", "Dê", "Trâu", "Vịt"];
+
+function SearchableFilter({
+  value,
+  options,
+  placeholder,
+  onChange,
+}: {
+  value: string;
+  options: string[];
+  placeholder: string;
+  onChange: (value: string) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const filteredOptions = options.filter((option) => option.toLowerCase().includes(query.trim().toLowerCase()));
+  const selectedLabel = value === "all" ? placeholder : value;
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        aria-expanded={isOpen}
+        aria-haspopup="listbox"
+        onClick={() => setIsOpen((open) => !open)}
+        className="flex w-full items-center justify-between rounded-lg border p-2 text-left text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/30 dark:bg-slate-900"
+      >
+        <span className={value === "all" ? "text-muted-foreground" : "text-foreground"}>{selectedLabel}</span>
+        <ChevronDown className="size-3.5 text-muted-foreground" />
+      </button>
+      {isOpen && (
+        <div className="absolute z-30 mt-1 w-full rounded-lg border bg-white p-2 shadow-lg dark:bg-slate-950">
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Gõ để tìm nhanh..."
+            aria-label={placeholder}
+            className="mb-1 w-full rounded-md border p-2 text-xs outline-none focus:ring-2 focus:ring-emerald-500/30 dark:bg-slate-900"
+          />
+          <div role="listbox" className="max-h-44 overflow-y-auto">
+            <button
+              type="button"
+              role="option"
+              aria-selected={value === "all"}
+              onClick={() => {
+                onChange("all");
+                setQuery("");
+                setIsOpen(false);
+              }}
+              className="w-full rounded-md px-2 py-1.5 text-left text-xs hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+            >
+              {placeholder}
+            </button>
+            {filteredOptions.length > 0 ? (
+              filteredOptions.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  role="option"
+                  aria-selected={value === option}
+                  onClick={() => {
+                    onChange(option);
+                    setQuery("");
+                    setIsOpen(false);
+                  }}
+                  className="w-full rounded-md px-2 py-1.5 text-left text-xs hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+                >
+                  {option}
+                </button>
+              ))
+            ) : (
+              <p className="px-2 py-2 text-muted-foreground text-xs">Không tìm thấy dữ liệu phù hợp.</p>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 /** Sinh ranh giới đa giác quanh tâm thửa đất, diện tích xấp xỉ theo Ha. corners lệch theo hệ số [dLat, dLng]. */
 function makeBoundary(lat: number, lng: number, sizeHa: number, corners: [number, number][]): [number, number][] {
@@ -756,7 +836,8 @@ export default function Page() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterCropType, setFilterCropType] = useState("all");
   const [filterLivestockType, setFilterLivestockType] = useState("all");
-  const [filterAreaRange, setFilterAreaRange] = useState("all");
+  const [filterMinArea, setFilterMinArea] = useState<number | null>(null);
+  const [filterMaxArea, setFilterMaxArea] = useState<number | null>(null);
 
   // Edit Mode state
   const [isEditing, setIsEditing] = useState(false);
@@ -811,11 +892,8 @@ export default function Page() {
     const matchesLivestock =
       filterLivestockType === "all" || (land.livestock ?? []).some((item) => item.type === filterLivestockType);
     const matchesArea =
-      filterAreaRange === "all" ||
-      (filterAreaRange === "lt1" && land.size < 1) ||
-      (filterAreaRange === "1-3" && land.size >= 1 && land.size <= 3) ||
-      (filterAreaRange === "3-5" && land.size > 3 && land.size <= 5) ||
-      (filterAreaRange === "gt5" && land.size > 5);
+      (filterMinArea === null || land.size >= filterMinArea) &&
+      (filterMaxArea === null || land.size <= filterMaxArea);
     return matchesSearch && matchesCrop && matchesLivestock && matchesArea;
   });
 
@@ -823,6 +901,11 @@ export default function Page() {
   const livestockTypeOptions = Array.from(
     new Set(displayedLands.flatMap((l) => (l.livestock ?? []).map((item) => item.type)))
   );
+  const areaValues = displayedLands.map((land) => land.size).filter(Number.isFinite);
+  const minArea = areaValues.length > 0 ? Math.floor(Math.min(...areaValues) * 100) / 100 : 0;
+  const maxArea = areaValues.length > 0 ? Math.ceil(Math.max(...areaValues) * 100) / 100 : 1;
+  const selectedMinArea = filterMinArea ?? minArea;
+  const selectedMaxArea = filterMaxArea ?? maxArea;
 
   const selectedLand = lands.find((l) => l.id === selectedId);
 
@@ -1124,38 +1207,69 @@ export default function Page() {
                 className="w-full text-xs pl-9 pr-3 py-2 border rounded-lg dark:bg-slate-900 focus:outline-emerald-500"
               />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              <select
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              <SearchableFilter
                 value={filterCropType}
-                onChange={(e) => setFilterCropType(e.target.value)}
-                className="text-xs p-2 border rounded-lg dark:bg-slate-900 focus:outline-emerald-500"
-              >
-                <option value="all">Tất cả loại cây trồng</option>
-                {cropTypeOptions.map((type) => (
-                  <option key={type} value={type}>{type}</option>
-                ))}
-              </select>
-              <select
+                options={cropTypeOptions}
+                placeholder="Tất cả loại cây trồng"
+                onChange={setFilterCropType}
+              />
+              <SearchableFilter
                 value={filterLivestockType}
-                onChange={(e) => setFilterLivestockType(e.target.value)}
-                className="text-xs p-2 border rounded-lg dark:bg-slate-900 focus:outline-emerald-500"
-              >
-                <option value="all">Tất cả gia súc/gia cầm</option>
-                {livestockTypeOptions.map((type) => (
-                  <option key={type} value={type}>{type}</option>
-                ))}
-              </select>
-              <select
-                value={filterAreaRange}
-                onChange={(e) => setFilterAreaRange(e.target.value)}
-                className="text-xs p-2 border rounded-lg dark:bg-slate-900 focus:outline-emerald-500"
-              >
-                <option value="all">Tất cả diện tích</option>
-                <option value="lt1">Dưới 1 Ha</option>
-                <option value="1-3">1 - 3 Ha</option>
-                <option value="3-5">3 - 5 Ha</option>
-                <option value="gt5">Trên 5 Ha</option>
-              </select>
+                options={livestockTypeOptions}
+                placeholder="Tất cả gia súc/gia cầm"
+                onChange={setFilterLivestockType}
+              />
+              <div className="rounded-lg border p-3 text-xs dark:bg-slate-900 sm:col-span-3">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <span className="font-medium">Diện tích (Ha)</span>
+                  <span className="font-semibold text-emerald-700 dark:text-emerald-400">
+                    {selectedMinArea.toFixed(2)} – {selectedMaxArea.toFixed(2)} Ha
+                  </span>
+                </div>
+                <div className="relative h-5">
+                  <input
+                    aria-label="Diện tích tối thiểu"
+                    type="range"
+                    min={minArea}
+                    max={maxArea}
+                    step="0.01"
+                    value={selectedMinArea}
+                    onChange={(event) => {
+                      const nextValue = Number(event.target.value);
+                      setFilterMinArea(Math.min(nextValue, selectedMaxArea));
+                    }}
+                    className="absolute inset-0 z-20 h-5 w-full cursor-pointer appearance-none bg-transparent accent-emerald-600"
+                  />
+                  <input
+                    aria-label="Diện tích tối đa"
+                    type="range"
+                    min={minArea}
+                    max={maxArea}
+                    step="0.01"
+                    value={selectedMaxArea}
+                    onChange={(event) => {
+                      const nextValue = Number(event.target.value);
+                      setFilterMaxArea(Math.max(nextValue, selectedMinArea));
+                    }}
+                    className="absolute inset-0 z-10 h-5 w-full cursor-pointer appearance-none bg-transparent accent-emerald-600"
+                  />
+                </div>
+                <div className="flex justify-between text-[10px] text-muted-foreground">
+                  <span>{minArea.toFixed(2)} Ha</span>
+                  <button
+                    type="button"
+                    className="text-emerald-700 hover:underline dark:text-emerald-400"
+                    onClick={() => {
+                      setFilterMinArea(null);
+                      setFilterMaxArea(null);
+                    }}
+                  >
+                    Đặt lại diện tích
+                  </button>
+                  <span>{maxArea.toFixed(2)} Ha</span>
+                </div>
+              </div>
             </div>
           </div>
         )}
