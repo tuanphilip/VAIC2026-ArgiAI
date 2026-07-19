@@ -1,5 +1,5 @@
 from datetime import UTC, datetime
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
 from sqlalchemy import select
@@ -40,7 +40,6 @@ async def detect_disease(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> DiseaseDetectionResponse:
-    actor = {"username": current_user.username, "full_name": current_user.full_name, "role": current_user.role}
     plot: Plot | None = None
     try:
         plot = await _get_plot_for_report(db, plot_id, current_user) if plot_id else None
@@ -59,6 +58,7 @@ async def detect_disease(
     image_url = await save_upload(image) if should_persist else ""
     disease_log_id: UUID | None = None
     saved_to_history = False
+    persistence_warning: str | None = None
 
     if should_persist:
         try:
@@ -84,27 +84,10 @@ async def detect_disease(
             raise
         except Exception:
             await db.rollback()
-            disease_log_id = uuid4()
-            saved_to_history = True
-            _memory_logs.insert(
-                0,
-                (
-                    DiseaseLogResponse(
-                        id=disease_log_id,
-                        reporter_name=actor["full_name"],
-                        location=None,
-                        crop_name=analysis.crop,
-                        detected_disease=analysis.detected_disease,
-                        confidence=analysis.confidence,
-                        severity=analysis.severity,
-                        treatment_measures=analysis.treatment_measures,
-                        status="active",
-                        image_url=image_url,
-                        created_at=datetime.now(UTC),
-                    ),
-                    actor["username"],
-                ),
-            )
+            disease_log_id = None
+            saved_to_history = False
+            image_url = ""
+            persistence_warning = "Không thể lưu ca bệnh vào cơ sở dữ liệu; kết quả chỉ mang tính tham khảo và không được ghi vào lịch sử."
 
     return DiseaseDetectionResponse(
         data=DiseaseDetectionData(
@@ -119,7 +102,7 @@ async def detect_disease(
             diagnosis_mode=analysis.diagnosis_mode,
             saved_to_history=saved_to_history,
             needs_human_review=analysis.needs_human_review,
-            warnings=analysis.warnings,
+            warnings=[*analysis.warnings, *([persistence_warning] if persistence_warning else [])],
             visual_evidence=analysis.visual_evidence,
             sources=analysis.sources,
             quality_score=analysis.quality_score,
