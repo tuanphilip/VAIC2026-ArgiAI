@@ -12,7 +12,8 @@
     "check:fix": "biome check --write",
     "test:unit": "vitest run",
     "prepare": "husky",
-    "generate:presets": "ts-node -P tsconfig.scripts.json src/scripts/generate-theme-presets.ts"
+    "generate:presets": "ts-node -P tsconfig.scripts.json src/scripts/generate-theme-presets.ts",
+    "sync:weather": "python scripts/sync_dien_bien_weather.py"
   },
   "lint-staged": {
     "*.{js,ts,jsx,tsx}": ["biome check --write --no-errors-on-unmatched"]
