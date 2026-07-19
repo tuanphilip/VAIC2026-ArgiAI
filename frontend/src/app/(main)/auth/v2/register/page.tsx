@@ -10,15 +10,15 @@ import { GoogleButton } from "../../_components/social-auth/google-button";
 export default function RegisterV2() {
   return (
     <>
-      <div className="mx-auto flex w-full flex-col justify-center space-y-8 sm:w-[350px]">
+      <div className="mx-auto flex w-full flex-col justify-start space-y-8 overflow-y-auto px-4 py-10 sm:w-[350px] sm:justify-center sm:px-0 sm:py-0">
         <div className="space-y-2 text-center">
-          <h1 className="font-medium text-3xl">Tạo tài khoản</h1>
-          <p className="text-muted-foreground text-sm">Vui lòng nhập thông tin để đăng ký.</p>
+          <h1 className="font-medium text-3xl">Đăng ký tài khoản</h1>
+          <p className="text-muted-foreground text-sm">Tạo tài khoản để bắt đầu quản lý nông nghiệp.</p>
         </div>
         <div className="space-y-4">
           <GoogleButton className="w-full" />
           <div className="relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-border after:border-t">
-            <span className="relative z-10 bg-background px-2 text-muted-foreground">Or continue with</span>
+            <span className="relative z-10 bg-background px-2 text-muted-foreground">Hoặc tiếp tục với</span>
           </div>
           <RegisterForm />
         </div>
@@ -37,7 +37,7 @@ export default function RegisterV2() {
         <div className="text-sm">{APP_CONFIG.copyright}</div>
         <div className="flex items-center gap-1 text-sm">
           <Globe className="size-4 text-muted-foreground" />
-          ENG
+          VI
         </div>
       </div>
     </>
