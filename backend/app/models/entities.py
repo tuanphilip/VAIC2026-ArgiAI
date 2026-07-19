@@ -195,6 +195,18 @@ class StockTransfer(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class SeasonalEvent(Base):
+    __tablename__ = "seasonal_events"
+    id: Mapped[UUID] = mapped_column(primary_key=True, server_default=func.gen_random_uuid())
+    owner_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    title: Mapped[str] = mapped_column(String(200))
+    start_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    end_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    calendar_key: Mapped[str] = mapped_column(String(40), default="work")
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class TraceabilityLabel(Base):
     __tablename__ = "traceability_labels"
     id: Mapped[UUID] = mapped_column(primary_key=True, server_default=func.gen_random_uuid())
