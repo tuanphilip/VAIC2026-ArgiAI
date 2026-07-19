@@ -27,23 +27,16 @@ export default function Page() {
   const [cropPrices, setCropPrices] = useState<Array<MarketCatalogItem & { change: number; status: "up" | "down" | "flat"; min: number; max: number }>>([]);
   const [marketLoading, setMarketLoading] = useState(true);
 
-  useEffect(() => {
-    let active = true;
-    apiFetch<MarketCatalogItem[]>("/market/catalog")
-      .then((items) => {
-        if (!active) return;
-        setCropPrices(items.map((item) => ({ ...item, change: 0, status: "flat" as const, min: item.price, max: item.price })));
-      })
-      .catch(() => {
-        if (active) setCropPrices([]);
-      })
-      .finally(() => {
-        if (active) setMarketLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
+  const loadCatalog = async () => {
+    setMarketLoading(true);
+    try {
+      const items = await apiFetch<MarketCatalogItem[]>("/market/catalog");
+      setCropPrices(items.map((item) => ({ ...item, change: 0, status: "flat" as const, min: item.price, max: item.price })));
+    } catch { setCropPrices([]); }
+    finally { setMarketLoading(false); }
+  };
+
+  useEffect(() => { void loadCatalog(); }, []);
 
   // Alert form state
   const [alertCrop, setAlertCrop] = useState("Cà phê Robusta Mường Ảng");
@@ -173,24 +166,13 @@ export default function Page() {
         {isAddingPrice && (
           <CardContent className="p-6 border-b bg-slate-50/50 dark:bg-slate-900/30">
             <form
-              onSubmit={(e) => {
+              onSubmit={async (e) => {
                 e.preventDefault();
-                const priceNum = Number.parseFloat(newCropPrice);
-                const changeNum = Number.parseFloat(newCropChange);
-                const newPrice = {
-                  name: newCropName,
-                  price: priceNum,
-                  unit: newCropUnit,
-                  recorded_date: new Date().toISOString().slice(0, 10),
-                  source: "Nhập thủ công — chưa xác minh live",
-                  is_verified_live: false,
-                  change: changeNum,
-                  status: newCropStatus,
-                  min: priceNum * 0.95,
-                  max: priceNum * 1.05,
-                };
-                setCropPrices([newPrice, ...cropPrices]);
-                setIsAddingPrice(false);
+                try {
+                  await apiFetch("/market/prices", { method: "POST", body: JSON.stringify({ crop_name: newCropName, price: Number.parseFloat(newCropPrice), unit: newCropUnit, source: "Nhập thủ công — chưa xác minh live" }) });
+                  setIsAddingPrice(false);
+                  await loadCatalog();
+                } catch (error) { window.alert(error instanceof Error ? error.message : "Không thể lưu giá."); }
               }}
               className="grid gap-4 md:grid-cols-5 items-end"
             >
@@ -291,18 +273,7 @@ export default function Page() {
                     <td className="p-4 text-slate-500 text-xs">{new Intl.NumberFormat("vi-VN").format(crop.max)} đ</td>
                     {activeUser.role !== "farmer" && (
                       <td className="p-4 text-center">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            if (confirm(`Bạn có chắc chắn muốn xóa dòng giá cho ${crop.name}?`)) {
-                              setCropPrices(cropPrices.filter((_, idx) => idx !== i));
-                            }
-                          }}
-                          className="text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20"
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
+                        <span className="text-xs text-muted-foreground">Quản lý qua lịch sử giá</span>
                       </td>
                     )}
                   </tr>
@@ -390,14 +361,7 @@ export default function Page() {
             <CardDescription>Bản tin tổng hợp giá cả thị trường hàng tuần.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 text-xs text-slate-700 dark:text-slate-300">
-            <div className="pb-2 border-b">
-              <span className="font-bold block text-slate-800 dark:text-slate-200">Thị trường Hồ tiêu:</span>
-              <p className="text-slate-500 mt-0.5">Dự báo giá tiêu duy trì đi ngang ở mức 145.000đ/kg do nhu cầu sụt giảm nhẹ từ EU.</p>
-            </div>
-            <div>
-              <span className="font-bold block text-slate-800 dark:text-slate-200">Xuất khẩu Lúa gạo:</span>
-              <p className="text-slate-500 mt-0.5">Các nước xuất khẩu gạo châu Á có xu hướng tăng nhẹ giá chào bán 10-15 USD/tấn.</p>
-            </div>
+            <div className="rounded-lg border border-dashed p-4 text-muted-foreground">Chưa có nguồn dữ liệu thị trường được xác minh để phát hành bản tin. Không hiển thị dự báo ngoài backend.</div>
           </CardContent>
         </Card>
       </div>
