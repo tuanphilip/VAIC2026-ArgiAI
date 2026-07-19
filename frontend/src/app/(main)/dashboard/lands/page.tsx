@@ -6,6 +6,7 @@ import Link from "next/link";
 
 import {
   Calendar,
+  ChevronDown,
   Dice1,
   Edit,
   Grid,
@@ -22,7 +23,6 @@ import {
   Trash,
   User,
   X,
-  ChevronDown,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -189,8 +189,8 @@ function randomPlotData() {
     livestock: randomLivestock(),
     size: `${randomInt(3, 80) / 10}`,
     seedingDate: randomDate(),
-    health: randomPick(["Khỏe mạnh", "Cảnh báo độ ẩm", "Sâu bệnh nhẹ"]),
-  } as const;
+    health: randomPick(["Khỏe mạnh" as const, "Cảnh báo độ ẩm" as const, "Sâu bệnh nhẹ" as const]),
+  };
 }
 
 interface CropEntry {
@@ -1086,8 +1086,7 @@ export default function Page() {
     const matchesLivestock =
       filterLivestockType === "all" || (land.livestock ?? []).some((item) => item.type === filterLivestockType);
     const matchesArea =
-      (filterMinArea === null || land.size >= filterMinArea) &&
-      (filterMaxArea === null || land.size <= filterMaxArea);
+      (filterMinArea === null || land.size >= filterMinArea) && (filterMaxArea === null || land.size <= filterMaxArea);
     return matchesSearch && matchesCrop && matchesLivestock && matchesArea;
   });
 
@@ -1347,8 +1346,6 @@ export default function Page() {
               setNewHealth("Khỏe mạnh");
               setNewOwner("");
               setNewOwnerPhone("");
-              setNewOwnerCitizenId("");
-              setNewOwnerEmail("");
               setNewBoundaryPoints([]);
               setNewLivestock([]);
             }}
@@ -1412,104 +1409,115 @@ export default function Page() {
             </div>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
               <SearchableFilter
-                  value={filterCropType}
-                  options={cropTypeOptions}
-                  placeholder="Tất cả loại cây trồng"
-                  onChange={setFilterCropType}
-                />
-                <SearchableFilter
-                  value={filterLivestockType}
-                  options={livestockTypeOptions}
-                  placeholder="Tất cả gia súc/gia cầm"
-                  onChange={setFilterLivestockType}
-                />
-                <div className="rounded-lg border p-3 text-xs dark:bg-slate-900 sm:col-span-3">
-                  <div className="mb-2 flex items-center justify-between gap-2">
-                    <span className="font-medium">Diện tích (Ha)</span>
-                    <span className="font-semibold text-emerald-700 dark:text-emerald-400">
-                      {selectedMinArea.toFixed(2)} – {selectedMaxArea.toFixed(2)} Ha
-                    </span>
-                  </div>
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-[auto_5rem] items-center gap-x-3 gap-y-1">
-                      <label htmlFor="lands-area-min" className="text-[11px] font-medium text-muted-foreground">
-                        Diện tích tối thiểu
-                      </label>
-                      <input
-                        id="lands-area-min"
-                        type="number"
-                        min={minArea}
-                        max={selectedMaxArea}
-                        step="0.01"
-                        value={selectedMinArea.toFixed(2)}
-                        onChange={(event) => {
-                          const nextValue = Number(event.target.value);
-                          if (Number.isFinite(nextValue)) setFilterMinArea(Math.max(minArea, Math.min(nextValue, selectedMaxArea)));
-                        }}
-                        className="w-20 rounded-md border px-2 py-1 text-right text-xs dark:bg-slate-950"
-                      />
-                      <input
-                        aria-label="Kéo để chọn diện tích tối thiểu"
-                        type="range"
-                        min={minArea}
-                        max={maxArea}
-                        step="0.01"
-                        value={selectedMinArea}
-                        onChange={(event) => setFilterMinArea(Math.min(Number(event.target.value), selectedMaxArea))}
-                        style={{ background: `linear-gradient(to right, #10b981 0%, #10b981 ${selectedMinAreaPercent}%, #e2e8f0 ${selectedMinAreaPercent}%, #e2e8f0 100%)` }}
-                        className="h-2 w-full cursor-pointer appearance-none rounded-full accent-emerald-600"
-                      />
-                      <span className="text-[10px] text-muted-foreground">{minArea.toFixed(2)} Ha</span>
-                    </div>
-                    <div className="grid grid-cols-[auto_5rem] items-center gap-x-3 gap-y-1">
-                      <label htmlFor="lands-area-max" className="text-[11px] font-medium text-muted-foreground">
-                        Diện tích tối đa
-                      </label>
-                      <input
-                        id="lands-area-max"
-                        type="number"
-                        min={selectedMinArea}
-                        max={maxArea}
-                        step="0.01"
-                        value={selectedMaxArea.toFixed(2)}
-                        onChange={(event) => {
-                          const nextValue = Number(event.target.value);
-                          if (Number.isFinite(nextValue)) setFilterMaxArea(Math.min(maxArea, Math.max(nextValue, selectedMinArea)));
-                        }}
-                        className="w-20 rounded-md border px-2 py-1 text-right text-xs dark:bg-slate-950"
-                      />
-                      <input
-                        aria-label="Kéo để chọn diện tích tối đa"
-                        type="range"
-                        min={minArea}
-                        max={maxArea}
-                        step="0.01"
-                        value={selectedMaxArea}
-                        onChange={(event) => setFilterMaxArea(Math.max(Number(event.target.value), selectedMinArea))}
-                        style={{ background: `linear-gradient(to right, #e2e8f0 0%, #e2e8f0 ${selectedMaxAreaPercent}%, #10b981 ${selectedMaxAreaPercent}%, #10b981 100%)` }}
-                        className="h-2 w-full cursor-pointer appearance-none rounded-full accent-emerald-600"
-                      />
-                      <span className="text-[10px] text-muted-foreground">{maxArea.toFixed(2)} Ha</span>
-                    </div>
-                  </div>
-                  <div className="mt-3 flex items-center justify-between gap-2 border-t pt-3 text-[11px]">
-                    <span className="text-muted-foreground">Khoảng đang lọc: <b className="text-foreground">{selectedMinArea.toFixed(2)} – {selectedMaxArea.toFixed(2)} Ha</b></span>
-                    <button
-                      type="button"
-                      className="shrink-0 rounded-lg bg-emerald-600 px-3 py-1.5 font-semibold text-white transition hover:bg-emerald-700"
-                      onClick={() => {
-                        setFilterMinArea(null);
-                        setFilterMaxArea(null);
+                value={filterCropType}
+                options={cropTypeOptions}
+                placeholder="Tất cả loại cây trồng"
+                onChange={setFilterCropType}
+              />
+              <SearchableFilter
+                value={filterLivestockType}
+                options={livestockTypeOptions}
+                placeholder="Tất cả gia súc/gia cầm"
+                onChange={setFilterLivestockType}
+              />
+              <div className="rounded-lg border p-3 text-xs dark:bg-slate-900 sm:col-span-3">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <span className="font-medium">Diện tích (Ha)</span>
+                  <span className="font-semibold text-emerald-700 dark:text-emerald-400">
+                    {selectedMinArea.toFixed(2)} – {selectedMaxArea.toFixed(2)} Ha
+                  </span>
+                </div>
+                <div className="space-y-3">
+                  <div className="grid grid-cols-[auto_5rem] items-center gap-x-3 gap-y-1">
+                    <label htmlFor="lands-area-min" className="text-[11px] font-medium text-muted-foreground">
+                      Diện tích tối thiểu
+                    </label>
+                    <input
+                      id="lands-area-min"
+                      type="number"
+                      min={minArea}
+                      max={selectedMaxArea}
+                      step="0.01"
+                      value={selectedMinArea.toFixed(2)}
+                      onChange={(event) => {
+                        const nextValue = Number(event.target.value);
+                        if (Number.isFinite(nextValue))
+                          setFilterMinArea(Math.max(minArea, Math.min(nextValue, selectedMaxArea)));
                       }}
-                    >
-                      Đặt lại diện tích
-                    </button>
+                      className="w-20 rounded-md border px-2 py-1 text-right text-xs dark:bg-slate-950"
+                    />
+                    <input
+                      aria-label="Kéo để chọn diện tích tối thiểu"
+                      type="range"
+                      min={minArea}
+                      max={maxArea}
+                      step="0.01"
+                      value={selectedMinArea}
+                      onChange={(event) => setFilterMinArea(Math.min(Number(event.target.value), selectedMaxArea))}
+                      style={{
+                        background: `linear-gradient(to right, #10b981 0%, #10b981 ${selectedMinAreaPercent}%, #e2e8f0 ${selectedMinAreaPercent}%, #e2e8f0 100%)`,
+                      }}
+                      className="h-2 w-full cursor-pointer appearance-none rounded-full accent-emerald-600"
+                    />
+                    <span className="text-[10px] text-muted-foreground">{minArea.toFixed(2)} Ha</span>
                   </div>
+                  <div className="grid grid-cols-[auto_5rem] items-center gap-x-3 gap-y-1">
+                    <label htmlFor="lands-area-max" className="text-[11px] font-medium text-muted-foreground">
+                      Diện tích tối đa
+                    </label>
+                    <input
+                      id="lands-area-max"
+                      type="number"
+                      min={selectedMinArea}
+                      max={maxArea}
+                      step="0.01"
+                      value={selectedMaxArea.toFixed(2)}
+                      onChange={(event) => {
+                        const nextValue = Number(event.target.value);
+                        if (Number.isFinite(nextValue))
+                          setFilterMaxArea(Math.min(maxArea, Math.max(nextValue, selectedMinArea)));
+                      }}
+                      className="w-20 rounded-md border px-2 py-1 text-right text-xs dark:bg-slate-950"
+                    />
+                    <input
+                      aria-label="Kéo để chọn diện tích tối đa"
+                      type="range"
+                      min={minArea}
+                      max={maxArea}
+                      step="0.01"
+                      value={selectedMaxArea}
+                      onChange={(event) => setFilterMaxArea(Math.max(Number(event.target.value), selectedMinArea))}
+                      style={{
+                        background: `linear-gradient(to right, #e2e8f0 0%, #e2e8f0 ${selectedMaxAreaPercent}%, #10b981 ${selectedMaxAreaPercent}%, #10b981 100%)`,
+                      }}
+                      className="h-2 w-full cursor-pointer appearance-none rounded-full accent-emerald-600"
+                    />
+                    <span className="text-[10px] text-muted-foreground">{maxArea.toFixed(2)} Ha</span>
+                  </div>
+                </div>
+                <div className="mt-3 flex items-center justify-between gap-2 border-t pt-3 text-[11px]">
+                  <span className="text-muted-foreground">
+                    Khoảng đang lọc:{" "}
+                    <b className="text-foreground">
+                      {selectedMinArea.toFixed(2)} – {selectedMaxArea.toFixed(2)} Ha
+                    </b>
+                  </span>
+                  <button
+                    type="button"
+                    className="shrink-0 rounded-lg bg-emerald-600 px-3 py-1.5 font-semibold text-white transition hover:bg-emerald-700"
+                    onClick={() => {
+                      setFilterMinArea(null);
+                      setFilterMaxArea(null);
+                    }}
+                  >
+                    Đặt lại diện tích
+                  </button>
                 </div>
               </div>
             </div>
           </div>
         )}
+
         {/* Controls for toggling Card/Table views when showing list */}
         {activeTab === "list" && (
           <div className="flex justify-between items-center bg-white dark:bg-slate-950 p-4 rounded-xl border shadow-xs">
@@ -1724,7 +1732,7 @@ export default function Page() {
                   setNewLivestock(d.livestock);
                   setNewSize(d.size);
                   setNewSeedingDate(d.seedingDate);
-                  setNewHealth(d.health as "Khỏe mạnh" | "Cảnh báo độ ẩm" | "Sâu bệnh nhẹ");
+                  setNewHealth(d.health);
                 }}
               >
                 <Dice1 className="size-3.5 mr-1" /> Điền nhanh
@@ -1887,7 +1895,7 @@ export default function Page() {
                     setEditLivestock(d.livestock);
                     setEditSize(d.size);
                     setEditSeedingDate(d.seedingDate);
-                    setEditHealth(d.health as "Khỏe mạnh" | "Cảnh báo độ ẩm" | "Sâu bệnh nhẹ");
+                    setEditHealth(d.health);
                   }}
                 >
                   <Dice1 className="size-3.5 mr-1" /> Điền nhanh
