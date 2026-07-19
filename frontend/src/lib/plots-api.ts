@@ -10,6 +10,33 @@ export interface CropTypeItem {
   variety: string;
 }
 
+export interface MarketPricePoint {
+  id: string;
+  date: string;
+  price: number;
+  source: string;
+}
+
+export interface MarketSummaryItem {
+  crop_name: string;
+  unit: string;
+  latest_price: number;
+  previous_price: number | null;
+  change_percent: number | null;
+  week_min: number;
+  week_max: number;
+  history: MarketPricePoint[];
+}
+
+export interface MarketSummaryResponse {
+  currency: string;
+  items: MarketSummaryItem[];
+}
+
+export function getMarketSummary(days = 7): Promise<MarketSummaryResponse> {
+  return apiFetch<MarketSummaryResponse>(`/market/summary?days=${days}`);
+}
+
 export interface PlotResponse {
   plot_id: string;
   crop_name: string;
@@ -70,6 +97,10 @@ export interface PlotUpdatePayload {
 
 export function listPlots(): Promise<PlotResponse[]> {
   return apiFetch<PlotResponse[]>("/plots");
+}
+
+export function getPlot(plotId: string): Promise<PlotResponse> {
+  return apiFetch<PlotResponse>(`/plots/${plotId}`);
 }
 
 export function createPlot(payload: PlotCreatePayload): Promise<{ plot_id: string }> {

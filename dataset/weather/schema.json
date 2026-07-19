@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["observation_date", "temperature_max_c", "temperature_min_c", "precipitation_mm", "source_url", "crawl_date", "verified"],
+  "properties": {
+    "observation_date": {"type": "string", "format": "date"},
+    "latitude": {"type": "number"},
+    "longitude": {"type": "number"},
+    "temperature_max_c": {"type": ["number", "null"]},
+    "temperature_min_c": {"type": ["number", "null"]},
+    "precipitation_mm": {"type": ["number", "null"]},
+    "precipitation_probability_pct": {"type": ["number", "null"]},
+    "wind_max_kmh": {"type": ["number", "null"]},
+    "wind_gust_max_kmh": {"type": ["number", "null"]},
+    "source_name": {"type": "string"},
+    "source_url": {"type": "string", "format": "uri"},
+    "publish_date": {"type": "string"},
+    "license": {"type": "string"},
+    "crawl_date": {"type": "string", "format": "date-time"},
+    "verified": {"type": "boolean"},
+    "data_type": {"enum": ["forecast", "observation", "modeled"]},
+    "geographic_scope": {"type": "string"}
+  }
+}

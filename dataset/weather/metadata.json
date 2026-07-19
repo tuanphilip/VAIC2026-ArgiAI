@@ -1,0 +1,20 @@
+{
+  "dataset_id": "dien-bien-weather-forecast",
+  "description": "Dự báo thời tiết 7 ngày tại tọa độ trung tâm Điện Biên. Đây là forecast, không phải quan trắc tại ruộng.",
+  "source_name": "Open-Meteo Forecast API",
+  "source_url": "https://api.open-meteo.com/v1/forecast?latitude=21.386&longitude=103.016&current=temperature_2m,relative_humidity_2m,precipitation,rain,weather_code,wind_speed_10m,wind_gusts_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,wind_gusts_10m_max&timezone=Asia%2FBangkok&forecast_days=7",
+  "crawl_date": "2026-07-18T20:04:15.633914+00:00",
+  "verified": true,
+  "license": "CC BY 4.0 / Open-Meteo attribution",
+  "geographic_scope": "Điện Biên, Việt Nam",
+  "coordinates": {
+    "latitude": 21.386,
+    "longitude": 103.016
+  },
+  "records": 7,
+  "missing_fields": [
+    "publish_date",
+    "field_observation_id",
+    "soil_moisture"
+  ]
+}
