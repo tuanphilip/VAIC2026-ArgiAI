@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import LiveAgricultureOverview from "./_components/live-agriculture-overview";
 
 export default function Page() {
-  redirect("/dashboard/default");
+  return <LiveAgricultureOverview />;
 }
