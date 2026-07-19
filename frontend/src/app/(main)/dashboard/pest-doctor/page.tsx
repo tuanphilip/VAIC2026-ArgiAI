@@ -188,7 +188,7 @@ export default function Page() {
   const [treatmentCrop, setTreatmentCrop] = useState("");
   const [treatmentAgent, setTreatmentAgent] = useState("");
   const [treatmentInterval, setTreatmentInterval] = useState("7");
-  const [plannerSaved, setPlannerSaved] = useState(false);
+
 
   // Official/Admin States
   const [officialLogs, setOfficialLogs] = useState<OfficialLog[]>([]);
@@ -392,10 +392,7 @@ export default function Page() {
       toast.warning("Chỉ tạo lịch điều trị sau khi chẩn đoán hình ảnh đã đủ tin cậy.");
       return;
     }
-    setPlannerSaved(true);
-    setTimeout(() => {
-      setPlannerSaved(false);
-    }, 2500);
+    toast.info("Lập kế hoạch điều trị chưa được mở vì backend chưa có endpoint persistence. Không lưu giả vào trình duyệt.");
   };
 
   const handleSaveLogStatus = async (e: React.FormEvent) => {
@@ -893,12 +890,6 @@ export default function Page() {
                     <option value="14">Mỗi 14 ngày (2 tuần)</option>
                   </select>
                 </div>
-
-                {plannerSaved && (
-                  <div className="rounded-lg bg-emerald-50 p-2.5 font-semibold text-emerald-800 text-xs">
-                    Đã tạo phác đồ phun điều trị.
-                  </div>
-                )}
 
                 <Button
                   type="submit"
