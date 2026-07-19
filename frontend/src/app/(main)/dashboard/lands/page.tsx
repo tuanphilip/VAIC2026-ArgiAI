@@ -850,6 +850,16 @@ export default function Page() {
       shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
     });
 
+    // The map container is conditionally rendered by the tab. When the list tab
+    // unmounts it, Leaflet keeps the old instance attached to the detached DOM
+    // node. Reusing that instance leaves the newly mounted container blank.
+    if (mapRef.current && mapRef.current.getContainer() !== mapContainerRef.current) {
+      mapRef.current.remove();
+      mapRef.current = null;
+      markersRef.current = [];
+      polygonsRef.current = [];
+    }
+
     if (!mapRef.current) {
       mapRef.current = L.map(mapContainerRef.current).setView(DEFAULT_MAP_CENTER, 13);
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
