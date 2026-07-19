@@ -11,6 +11,106 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 _MIGRATIONS = (
     (
+        "003_plot_geometry_and_livestock",
+        """
+        alter table public.plots add column if not exists boundary jsonb;
+        alter table public.plots add column if not exists livestock jsonb not null default '[]'::jsonb;
+        """,
+    ),
+    (
+        "004_plot_crop_types_and_owner_phone",
+        """
+        alter table public.plots add column if not exists crop_types jsonb not null default '[]'::jsonb;
+        alter table public.plots add column if not exists owner_phone varchar(20);
+        """,
+    ),
+    (
+        "005_plot_region",
+        """
+        alter table public.plots add column if not exists region varchar(100);
+        create index if not exists ix_plots_region on public.plots(region);
+        """,
+    ),
+    (
+        "006_disaster_warnings",
+        """
+        create table if not exists public.disaster_warnings (
+          id uuid primary key default gen_random_uuid(),
+          type varchar(50) not null,
+          severity varchar(20) not null,
+          title varchar(255) not null,
+          description text not null,
+          affected_region text not null,
+          start_date timestamptz not null,
+          end_date timestamptz,
+          source varchar(100) not null,
+          raw_data text,
+          created_at timestamptz not null default now()
+        );
+        create index if not exists idx_disaster_warnings_start_date on public.disaster_warnings(start_date desc);
+        """,
+    ),
+    (
+        "008_user_identity_fields",
+        """
+        alter table public.users add column if not exists citizen_id varchar(12);
+        alter table public.users add column if not exists phone_number varchar(20);
+        create index if not exists idx_users_phone_number on public.users(phone_number);
+        """,
+    ),
+    (
+        "012_chat_history",
+        """
+        create table if not exists public.chat_sessions (
+          id uuid primary key default gen_random_uuid(),
+          user_id uuid not null references public.users(id) on delete cascade,
+          title varchar(200) not null default 'Tư vấn nông nghiệp',
+          created_at timestamptz not null default now(),
+          updated_at timestamptz not null default now()
+        );
+        create table if not exists public.chat_messages (
+          id uuid primary key default gen_random_uuid(),
+          session_id uuid not null references public.chat_sessions(id) on delete cascade,
+          role varchar(20) not null,
+          content text not null,
+          intent varchar(50),
+          confidence double precision,
+          citations jsonb not null default '[]'::jsonb,
+          created_at timestamptz not null default now()
+        );
+        create index if not exists idx_chat_sessions_user_updated on public.chat_sessions(user_id, updated_at desc);
+        create index if not exists idx_chat_messages_session_created on public.chat_messages(session_id, created_at asc);
+        """,
+    ),
+    (
+        "022_seasonal_events",
+        """
+        create table if not exists public.seasonal_events (
+          id uuid primary key default gen_random_uuid(),
+          owner_id uuid not null references public.users(id) on delete cascade,
+          title varchar(200) not null,
+          start_at timestamptz not null,
+          end_at timestamptz,
+          calendar_key varchar(40) not null default 'work',
+          description text,
+          created_at timestamptz not null default now()
+        );
+        create index if not exists seasonal_events_owner_start_idx on public.seasonal_events(owner_id, start_at);
+        """,
+    ),
+    (
+        "023_user_settings",
+        """
+        create table if not exists public.user_settings (
+          id uuid primary key default gen_random_uuid(),
+          owner_id uuid not null references public.users(id) on delete cascade,
+          settings jsonb not null default '{}'::jsonb,
+          updated_at timestamptz not null default now(),
+          unique(owner_id)
+        );
+        """,
+    ),
+    (
         "017_inventory_and_stock_movements",
         """
         create table if not exists public.inventory_items (
