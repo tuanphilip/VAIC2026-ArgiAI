@@ -71,20 +71,18 @@ export async function listInventoryItems(): Promise<InventoryItem[]> {
 }
 
 export async function listInventoryMovements(items: InventoryItem[]): Promise<InventoryMovement[]> {
-  const grouped = await Promise.all(items.map(async (item) => {
-    const rows = await apiFetch<InventoryApiMovement[]>(`/inventory/${item.id}/movements`);
-    return rows.map((movement) => ({
-      id: movement.id,
-      item_id: movement.inventory_item_id,
-      item_name: item.name,
-      quantity_change: movement.quantity_delta,
-      movement_type: movement.quantity_delta >= 0 ? "receipt" as const : "issue" as const,
-      supplier: null,
-      note: movement.reason,
-      created_at: movement.created_at,
-    }));
+  const rows = await apiFetch<InventoryApiMovement[]>("/inventory/movements?limit=100");
+  const itemNames = new Map(items.map((item) => [item.id, item.name]));
+  return rows.map((movement) => ({
+    id: movement.id,
+    item_id: movement.inventory_item_id,
+    item_name: itemNames.get(movement.inventory_item_id) ?? "Vật tư không còn trong danh mục",
+    quantity_change: movement.quantity_delta,
+    movement_type: movement.quantity_delta >= 0 ? "receipt" as const : "issue" as const,
+    supplier: null,
+    note: movement.reason,
+    created_at: movement.created_at,
   }));
-  return grouped.flat().sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
 }
 
 export async function receiveInventory(payload: InventoryReceiptInput): Promise<InventoryItem> {

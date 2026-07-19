@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -117,6 +117,24 @@ async def adjust_inventory_item(
     await db.commit()
     await db.refresh(item)
     return _serialize(item)
+
+
+@router.get("/movements", response_model=list[StockMovementResponse])
+async def list_all_inventory_movements(
+    limit: int = Query(default=100, ge=1, le=500),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> list[StockMovementResponse]:
+    query = (
+        select(StockMovement)
+        .join(InventoryItem, InventoryItem.id == StockMovement.inventory_item_id)
+        .order_by(StockMovement.created_at.desc())
+        .limit(limit)
+    )
+    if current_user.role not in {"official", "admin"}:
+        query = query.where(InventoryItem.owner_id == current_user.id)
+    result = await db.execute(query)
+    return [StockMovementResponse.model_validate(movement) for movement in result.scalars().all()]
 
 
 @router.get("/{item_id}/movements", response_model=list[StockMovementResponse])
