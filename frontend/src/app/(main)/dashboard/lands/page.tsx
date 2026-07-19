@@ -1251,44 +1251,73 @@ export default function Page() {
                     {selectedMinArea.toFixed(2)} – {selectedMaxArea.toFixed(2)} Ha
                   </span>
                 </div>
-                <div className="relative h-5">
-                  <div className="absolute top-2.5 right-0 left-0 h-1 rounded-full bg-slate-200 dark:bg-slate-700" />
-                  <div
-                    className="absolute top-2.5 h-1 rounded-full bg-emerald-500"
-                    style={{ left: `${selectedMinAreaPercent}%`, right: `${100 - selectedMaxAreaPercent}%` }}
-                  />
-                  <input
-                    aria-label="Diện tích tối thiểu"
-                    type="range"
-                    min={minArea}
-                    max={maxArea}
-                    step="0.01"
-                    value={selectedMinArea}
-                    onChange={(event) => {
-                      const nextValue = Number(event.target.value);
-                      setFilterMinArea(Math.min(nextValue, selectedMaxArea));
-                    }}
-                    className="absolute inset-0 z-20 h-5 w-full cursor-pointer appearance-none bg-transparent accent-emerald-600"
-                  />
-                  <input
-                    aria-label="Diện tích tối đa"
-                    type="range"
-                    min={minArea}
-                    max={maxArea}
-                    step="0.01"
-                    value={selectedMaxArea}
-                    onChange={(event) => {
-                      const nextValue = Number(event.target.value);
-                      setFilterMaxArea(Math.max(nextValue, selectedMinArea));
-                    }}
-                    className="absolute inset-0 z-10 h-5 w-full cursor-pointer appearance-none bg-transparent accent-emerald-600"
-                  />
+                <div className="space-y-3">
+                  <div className="grid grid-cols-[auto_5rem] items-center gap-x-3 gap-y-1">
+                    <label htmlFor="lands-area-min" className="text-[11px] font-medium text-muted-foreground">
+                      Diện tích tối thiểu
+                    </label>
+                    <input
+                      id="lands-area-min"
+                      type="number"
+                      min={minArea}
+                      max={selectedMaxArea}
+                      step="0.01"
+                      value={selectedMinArea.toFixed(2)}
+                      onChange={(event) => {
+                        const nextValue = Number(event.target.value);
+                        if (Number.isFinite(nextValue)) setFilterMinArea(Math.max(minArea, Math.min(nextValue, selectedMaxArea)));
+                      }}
+                      className="w-20 rounded-md border px-2 py-1 text-right text-xs dark:bg-slate-950"
+                    />
+                    <input
+                      aria-label="Kéo để chọn diện tích tối thiểu"
+                      type="range"
+                      min={minArea}
+                      max={maxArea}
+                      step="0.01"
+                      value={selectedMinArea}
+                      onChange={(event) => setFilterMinArea(Math.min(Number(event.target.value), selectedMaxArea))}
+                      style={{ background: `linear-gradient(to right, #10b981 0%, #10b981 ${selectedMinAreaPercent}%, #e2e8f0 ${selectedMinAreaPercent}%, #e2e8f0 100%)` }}
+                      className="h-2 w-full cursor-pointer appearance-none rounded-full accent-emerald-600"
+                    />
+                    <span className="text-[10px] text-muted-foreground">{minArea.toFixed(2)} Ha</span>
+                  </div>
+                  <div className="grid grid-cols-[auto_5rem] items-center gap-x-3 gap-y-1">
+                    <label htmlFor="lands-area-max" className="text-[11px] font-medium text-muted-foreground">
+                      Diện tích tối đa
+                    </label>
+                    <input
+                      id="lands-area-max"
+                      type="number"
+                      min={selectedMinArea}
+                      max={maxArea}
+                      step="0.01"
+                      value={selectedMaxArea.toFixed(2)}
+                      onChange={(event) => {
+                        const nextValue = Number(event.target.value);
+                        if (Number.isFinite(nextValue)) setFilterMaxArea(Math.min(maxArea, Math.max(nextValue, selectedMinArea)));
+                      }}
+                      className="w-20 rounded-md border px-2 py-1 text-right text-xs dark:bg-slate-950"
+                    />
+                    <input
+                      aria-label="Kéo để chọn diện tích tối đa"
+                      type="range"
+                      min={minArea}
+                      max={maxArea}
+                      step="0.01"
+                      value={selectedMaxArea}
+                      onChange={(event) => setFilterMaxArea(Math.max(Number(event.target.value), selectedMinArea))}
+                      style={{ background: `linear-gradient(to right, #e2e8f0 0%, #e2e8f0 ${selectedMaxAreaPercent}%, #10b981 ${selectedMaxAreaPercent}%, #10b981 100%)` }}
+                      className="h-2 w-full cursor-pointer appearance-none rounded-full accent-emerald-600"
+                    />
+                    <span className="text-[10px] text-muted-foreground">{maxArea.toFixed(2)} Ha</span>
+                  </div>
                 </div>
-                <div className="flex justify-between text-[10px] text-muted-foreground">
-                  <span>{minArea.toFixed(2)} Ha</span>
+                <div className="mt-3 flex items-center justify-between gap-2 border-t pt-3 text-[11px]">
+                  <span className="text-muted-foreground">Khoảng đang lọc: <b className="text-foreground">{selectedMinArea.toFixed(2)} – {selectedMaxArea.toFixed(2)} Ha</b></span>
                   <button
                     type="button"
-                    className="rounded-lg bg-emerald-600 px-3 py-1.5 font-semibold text-white transition hover:bg-emerald-700"
+                    className="shrink-0 rounded-lg bg-emerald-600 px-3 py-1.5 font-semibold text-white transition hover:bg-emerald-700"
                     onClick={() => {
                       setFilterMinArea(null);
                       setFilterMaxArea(null);
@@ -1296,7 +1325,6 @@ export default function Page() {
                   >
                     Đặt lại diện tích
                   </button>
-                  <span>{maxArea.toFixed(2)} Ha</span>
                 </div>
               </div>
             </div>
