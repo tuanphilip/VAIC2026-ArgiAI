@@ -1,4 +1,8 @@
 import unittest
+from io import BytesIO
+from types import SimpleNamespace
+
+from PIL import Image
 
 from app.routes.diseases import _should_persist_analysis
 from app.services.crop_doctor_tools import (
@@ -15,6 +19,7 @@ from app.services.disease_detector import (
     DiseaseAnalysisResult,
     DiseaseCandidate,
     _build_openai_vision_payload,
+    _validate_image_input,
     has_valid_diagnosis,
 )
 from app.services.disease_knowledge import DiseaseKnowledgeRepository
@@ -226,6 +231,27 @@ class CropDoctorPipelineTests(unittest.TestCase):
         )
 
         self.assertLessEqual(abs(with_weather - without_weather), 0.05)
+    def test_review_gated_vision_result_is_not_persisted(self) -> None:
+        result = DiseaseAnalysisResult(
+            detected_disease="Đạo ôn lúa",
+            confidence=0.92,
+            severity="Cao",
+            treatment_measures="",
+            source="crop_doctor_agent",
+            diagnosis_mode="vision",
+            needs_human_review=True,
+        )
+        self.assertFalse(_should_persist_analysis(result))
+
+    def test_image_validation_rejects_low_resolution_and_invalid_bytes(self) -> None:
+        tiny = BytesIO()
+        Image.new("RGB", (128, 128), "green").save(tiny, format="JPEG")
+        file = SimpleNamespace(content_type="image/jpeg", filename="tiny.jpg")
+        warnings = _validate_image_input(file, tiny.getvalue())
+        self.assertTrue(any("độ phân giải" in warning for warning in warnings))
+
+        invalid = _validate_image_input(file, b"not-an-image")
+        self.assertTrue(any("Không đọc được" in warning for warning in invalid))
 
 
 if __name__ == "__main__":

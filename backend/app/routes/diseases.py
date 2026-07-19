@@ -294,10 +294,14 @@ def _serialize_log(log: DiseaseLog) -> DiseaseLogResponse:
 
 
 def _should_persist_analysis(analysis: DiseaseAnalysisResult) -> bool:
+    # A review-gated prediction is advisory only. Do not turn it into a
+    # disease case or update plot health; otherwise bad guesses become truth
+    # in history and contaminate future dashboards.
     return (
         analysis.diagnosis_mode == "vision"
+        and not analysis.needs_human_review
         and has_valid_diagnosis(analysis)
-        and analysis.confidence >= 0.2
+        and analysis.confidence >= 0.8
     )
 
 
