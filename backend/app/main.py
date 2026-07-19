@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.core.config import get_settings
-from app.routes import auth, chat, dashboard, diseases, disaster_warnings, finance, health, inventory, market, plots, procurement, shipments, users, weather, yield_forecasts
+from app.routes import auth, chat, dashboard, diseases, disaster_warnings, finance, health, inventory, market, plots, procurement, shipments, traceability, users, weather, yield_forecasts
 from app.services.weather import shutdown_weather_cache_lifespan, weather_cache_lifespan
 
 settings = get_settings()
@@ -54,6 +54,7 @@ app.include_router(yield_forecasts.router, prefix=settings.api_v1_prefix)
 app.include_router(inventory.router, prefix=settings.api_v1_prefix)
 app.include_router(finance.router, prefix=settings.api_v1_prefix)
 app.include_router(procurement.router, prefix=settings.api_v1_prefix)
+app.include_router(traceability.router, prefix=settings.api_v1_prefix)
 app.include_router(shipments.router, prefix=settings.api_v1_prefix)
 app.include_router(market.router, prefix=settings.api_v1_prefix)
 app.include_router(dashboard.router, prefix=settings.api_v1_prefix)
