@@ -38,6 +38,10 @@ export interface WeatherDaily {
 
 export interface WeatherOverviewResponse {
   location: WeatherLocation;
+  requested_coordinates?: { latitude: number; longitude: number };
+  model_grid_coordinates?: { latitude: number; longitude: number } | null;
+  timezone?: string | null;
+  data_type?: "forecast" | "observation" | "modeled";
   observed_at: string | null;
   current: WeatherCurrent;
   hourly: WeatherHourly[];
@@ -57,8 +61,8 @@ export interface WeatherMapConfigResponse {
 const DEFAULT_LOCATION: WeatherLocation = {
   id: "dien-bien",
   label: "Điện Biên",
-  lat: 21.518,
-  lon: 103.223,
+  lat: 21.386,
+  lon: 103.016,
   source: "default",
 };
 

@@ -22,7 +22,7 @@ import {
 
 type LoadStatus = "loading" | "ready" | "error";
 
-const DEFAULT_LOCATION: WeatherLocation = { id: "dien-bien", label: "Điện Biên", lat: 21.518, lon: 103.223, source: "default" };
+const DEFAULT_LOCATION: WeatherLocation = { id: "dien-bien", label: "Điện Biên", lat: 21.386, lon: 103.016, source: "default" };
 
 export default function WeatherPage() {
   const [locations, setLocations] = useState<WeatherLocation[]>([DEFAULT_LOCATION]);
@@ -111,6 +111,7 @@ export default function WeatherPage() {
               <Button onClick={() => void loadWeather(location)} variant="outline" size="sm" className="gap-2"><RefreshCw className="size-4" /> Cập nhật</Button>
             </div>
             <CurrentWeather weather={weather} />
+            <WeatherProvenance weather={weather} />
             <HourlyForecast weather={weather} />
             <DailyForecast daily={weather?.daily ?? []} />
           </TabsContent>
@@ -131,6 +132,24 @@ function CurrentWeather({ weather }: { weather: WeatherOverviewResponse | null }
     { label: "Tốc độ gió", value: `${value(current?.wind_speed_kmh)} km/h`, icon: Wind },
   ];
   return <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{cards.map(({ label, value: displayValue, icon: Icon }) => <Card key={label}><CardContent className="flex items-center gap-3 p-5"><span className="rounded-xl bg-emerald-100 p-3 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"><Icon className="size-5" /></span><div><p className="text-muted-foreground text-xs">{label}</p><p className="font-bold text-2xl">{displayValue}</p></div></CardContent></Card>)}</div>;
+}
+
+function WeatherProvenance({ weather }: { weather: WeatherOverviewResponse | null }) {
+  const requested = weather?.requested_coordinates;
+  const grid = weather?.model_grid_coordinates;
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-base">Nguồn và phạm vi dữ liệu</CardTitle><CardDescription>Đây là forecast mô hình, không phải quan trắc tại ruộng.</CardDescription></CardHeader>
+      <CardContent className="grid gap-3 text-xs sm:grid-cols-2 lg:grid-cols-4">
+        <div><p className="text-muted-foreground">Nguồn</p><p className="font-medium">{weather?.source ?? "—"}</p></div>
+        <div><p className="text-muted-foreground">Loại dữ liệu</p><p className="font-medium">{weather?.data_type ?? "forecast"}</p></div>
+        <div><p className="text-muted-foreground">Tọa độ yêu cầu</p><p className="font-medium">{requested ? `${requested.latitude}, ${requested.longitude}` : "—"}</p></div>
+        <div><p className="text-muted-foreground">Ô lưới trả về</p><p className="font-medium">{grid ? `${grid.latitude}, ${grid.longitude}` : "—"}</p></div>
+        <div><p className="text-muted-foreground">Múi giờ</p><p className="font-medium">{weather?.timezone ?? "—"}</p></div>
+        <div><p className="text-muted-foreground">Cập nhật</p><p className="font-medium">{weather?.fetched_at ? new Date(weather.fetched_at).toLocaleString("vi-VN") : "—"}</p></div>
+      </CardContent>
+    </Card>
+  );
 }
 
 function HourlyForecast({ weather }: { weather: WeatherOverviewResponse | null }) {

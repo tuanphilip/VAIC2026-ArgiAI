@@ -52,7 +52,9 @@ MAP_LAYERS = (
 )
 
 
-AGRICULTURAL_WEATHER_CENTER = {"lat": 21.518, "lng": 103.223, "label": "Điện Biên"}
+# Canonical Điện Biên contract. Open-Meteo may return the nearest model-grid cell;
+# the response preserves both requested and returned coordinates.
+AGRICULTURAL_WEATHER_CENTER = {"lat": 21.386, "lng": 103.016, "label": "Điện Biên"}
 
 
 @router.get("/locations")
@@ -162,6 +164,15 @@ def _normalize_weather_payload(
         scope="regional",
         area={"lat": lat, "lng": lon, "label": label},
         location={"id": label.lower().replace(" ", "-"), "label": label, "lat": lat, "lon": lon, "source": "open-meteo"},
+        requested_coordinates={"latitude": lat, "longitude": lon},
+        model_grid_coordinates={
+            "latitude": float(forecast_payload["latitude"]),
+            "longitude": float(forecast_payload["longitude"]),
+        }
+        if forecast_payload.get("latitude") is not None and forecast_payload.get("longitude") is not None
+        else None,
+        timezone=forecast_payload.get("timezone") or current_payload.get("timezone"),
+        data_type="forecast",
         observed_at=current_raw.get("time"),
         current=current,
         hourly=hourly,

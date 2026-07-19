@@ -23,6 +23,7 @@ export function NavUser({
 }: {
   readonly user: {
     readonly name: string;
+    readonly username?: string;
     readonly email: string;
     readonly avatar: string;
   };
@@ -30,6 +31,9 @@ export function NavUser({
   const { isMobile } = useSidebar();
   const logout = useAuthStore((s) => s.logout);
   const router = useRouter();
+  const displayName = user.name || user.username || "Người dùng";
+  const displayEmail = user.email || "Tài khoản nông nghiệp";
+  const initials = getInitials(displayName) || "U";
 
   return (
     <SidebarMenu>
@@ -38,15 +42,16 @@ export function NavUser({
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
               size="lg"
+              aria-label={`Mở tài khoản ${displayName}`}
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
               <Avatar className="h-8 w-8 rounded-lg grayscale">
-                <AvatarImage src={user.avatar || undefined} alt={user.name} />
-                <AvatarFallback className="rounded-lg">{getInitials(user.name)}</AvatarFallback>
+                <AvatarImage src={user.avatar || undefined} alt={displayName} />
+                <AvatarFallback className="rounded-lg bg-emerald-600 font-semibold text-white">{initials}</AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">{user.name}</span>
-                <span className="truncate text-muted-foreground text-xs">{user.email}</span>
+                <span className="truncate font-medium">{displayName}</span>
+                <span className="truncate text-muted-foreground text-xs">{displayEmail}</span>
               </div>
               <EllipsisVertical className="ml-auto size-4" />
             </SidebarMenuButton>
@@ -60,12 +65,12 @@ export function NavUser({
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <Avatar className="h-8 w-8 rounded-lg">
-                  <AvatarImage src={user.avatar || undefined} alt={user.name} />
-                  <AvatarFallback className="rounded-lg">{getInitials(user.name)}</AvatarFallback>
+                  <AvatarImage src={user.avatar || undefined} alt={displayName} />
+                  <AvatarFallback className="rounded-lg bg-emerald-600 font-semibold text-white">{initials}</AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">{user.name}</span>
-                  <span className="truncate text-muted-foreground text-xs">{user.email}</span>
+                  <span className="truncate font-medium">{displayName}</span>
+                  <span className="truncate text-muted-foreground text-xs">{displayEmail}</span>
                 </div>
               </div>
             </DropdownMenuLabel>
@@ -73,15 +78,15 @@ export function NavUser({
             <DropdownMenuGroup>
               <DropdownMenuItem>
                 <CircleUser />
-                Account
+                Tài khoản
               </DropdownMenuItem>
               <DropdownMenuItem>
                 <CreditCard />
-                Billing
+                Thanh toán
               </DropdownMenuItem>
               <DropdownMenuItem>
                 <MessageSquareDot />
-                Notifications
+                Thông báo
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
